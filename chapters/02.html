@@ -1,0 +1,137 @@
+<article id="chapter-02" data-title="陣列與字串：雙指標、視窗、前綴和">
+<h2>02｜陣列與字串：讓邊界替你記住工作</h2>
+<p>陣列題最常見的浪費，是對重疊區間重複掃描。雙指標把可排除的候選丟掉，滑動視窗把相鄰區間的共同資訊留住，前綴和則把歷史整理成可相減的摘要。三者都在利用結構，但各自需要不同前提，不能只因題目提到「連續」就套同一個模板。</p>
+<div class="callout"><p><strong>本章目標：</strong>能證明指標為什麼可以前進、辨認負數何時破壞視窗條件，並用半開區間避免索引錯位。範例的加減、索引與整數比較採固定成本模型。所有「區間」預設連續；子序列可以跳過元素，兩者不同。</p></div>
+
+<h3 id="c02-model">1. 索引與區間是你的座標系</h3>
+<p>長度 n 的 Python list，合法索引是 0 到 n − 1；負索引是語言的便利功能，卻可能掩蓋越界的邏輯錯誤。list 可修改，字串不可修改。Python str 的索引依 Unicode 碼位，不等於使用者眼中的完整字形；組合重音與某些 emoji 可能包含多個碼位。若題目關心「看起來一個字」，需要另外定義文字分割方式。</p>
+<p>本章以 <strong>[left, right)</strong> 表示含左、不含右的半開區間。長度直接是 right − left；空區間可寫成 [i,i)；相鄰的 [a,b) 與 [b,c) 合起來剛好是 [a,c)。注意：程式中兩端夾逼的 two_sum_sorted 使用兩個<strong>包含端點</strong>的索引，回傳也是元素索引；其餘回傳區間的函式會明寫半開區間，不能混用。</p>
+<p>Python 的 nums[left:right] 會建立新 list，長度 k 就需 O(k) 時間與空間。維護一對邊界則只需 O(1) 空間。想驗證目前視窗，可以在小測試中印出切片；正式迴圈若每輪都切片或重新 sum，就可能把線性算法變回平方級。</p>
+
+<h3 id="c02-two-pointers">2. 左右夾逼：用排序證明整批排除</h3>
+<p>問題：給定已依非遞減順序排序的整數陣列，找兩個<strong>不同位置</strong>使其和為 target；任意一組即可，無解回傳 None。用 left 指向最小、right 指向最大。若兩者和太小，連目前最大的搭檔都不夠，left 不可能和剩餘任何元素成功，因此可以丟掉；太大則對稱地丟掉 right。</p>
+<pre><code class="language-python">def two_sum_sorted(nums: list[int], target: int):
+    &quot;&quot;&quot;前置條件：nums 已依非遞減順序排序。回傳兩個不同索引或 None。&quot;&quot;&quot;
+    left, right = 0, len(nums) - 1
+    while left &lt; right:
+        current = nums[left] + nums[right]
+        if current == target:
+            return left, right
+        if current &lt; target:
+            left += 1
+        else:
+            right -= 1
+    return None</code></pre>
+<div class="diagram">
+<svg role="img" aria-labelledby="c02-pointers-title" viewBox="0 0 680 248" width="680" style="max-width:100%;background:#f8fafc;border-radius:12px;font-family:system-ui,sans-serif">
+<title id="c02-pointers-title">排序陣列負六、負二、一、五、九中，負六加最大值九仍小於六，因此排除負六</title>
+<g fill="#0f172a" font-size="17"><text x="24" y="32" font-weight="700">target = 6：最左配最右仍太小</text></g>
+<g fill="#dbeafe" stroke="#2563eb"><rect x="40" y="69" width="104" height="55" rx="5"/><rect x="163" y="69" width="104" height="55" rx="5"/><rect x="286" y="69" width="104" height="55" rx="5"/><rect x="409" y="69" width="104" height="55" rx="5"/><rect x="532" y="69" width="104" height="55" rx="5"/></g>
+<g fill="#0f172a" text-anchor="middle" font-size="23"><text x="92" y="104">−6</text><text x="215" y="104">−2</text><text x="338" y="104">1</text><text x="461" y="104">5</text><text x="584" y="104">9</text></g>
+<g fill="#1d4ed8" text-anchor="middle" font-size="17"><text x="92" y="154">left</text><text x="584" y="154">right</text></g>
+<path d="M96 177H213L201 170M213 177L201 184" stroke="#2563eb" stroke-width="3" fill="none"/>
+<g fill="#0f172a" font-size="16"><text x="247" y="183">−6 + 9 = 3 &lt; 6，left 向右</text><text x="40" y="220">其餘搭檔 ≤ 9，所以所有包含目前 −6 的候選都不可能成功。</text></g></svg></div>
+<div class="example"><p><strong>逐步範例 A：</strong>nums = [−6, −2, 1, 5, 9]，target = 6。</p><table><thead><tr><th>left、right</th><th>相加</th><th>動作與理由</th></tr></thead><tbody><tr><td>0、4</td><td>−6 + 9 = 3</td><td>太小，排除 left = 0</td></tr><tr><td>1、4</td><td>−2 + 9 = 7</td><td>太大，排除 right = 4</td></tr><tr><td>1、3</td><td>−2 + 5 = 3</td><td>太小，排除 left = 1</td></tr><tr><td>2、3</td><td>1 + 5 = 6</td><td>回傳 (2,3)</td></tr></tbody></table></div>
+<p><strong>不變量：</strong>如果答案存在，至少有一組完整位於目前的 [left,right] 中。每次排除端點都有上述大小關係支持，所以不會丟掉全部答案。停止於 left ≥ right，表示已沒有兩個不同位置。每輪至少縮短一格，故必定終止。</p>
+<div class="complexity"><p>已排序前提下，時間 O(n)、額外空間 O(1)。負數與重複值都允許。若輸入未排序，不能直接套用；先排序需 O(n log n)，若還要原始索引，就要保留值與索引的配對。第 03 章會用雜湊解未排序版本。</p></div>
+
+<h3 id="c02-read-write">3. 同向雙指標：讀取與寫入分開</h3>
+<p>問題：原地刪去所有 unwanted，保留其他元素的相對順序，回傳有效長度。read 逐一讀原位置，write 指向下一個可寫位置；遇到要保留的值才寫入並前進。此合約不要求真的縮短 list，因此尾端的舊值不算答案。</p>
+<pre><code class="language-python">def remove_value(nums: list[int], unwanted: int) -&gt; int:
+    &quot;&quot;&quot;原地穩定壓縮；僅前 write 個元素是有效輸出。&quot;&quot;&quot;
+    write = 0
+    for read in range(len(nums)):
+        if nums[read] != unwanted:
+            nums[write] = nums[read]
+            write += 1
+    return write</code></pre>
+<p><strong>不變量：</strong>每輪開始時，nums[:write] 等於原輸入中 read 之前所有應保留的元素，且 write ≤ read。這個不等式保證寫入不會破壞尚未讀取的區域。例如 [5,2,5,8] 刪除 5，最後前兩格是 [2,8]，回傳 2，尾端可能仍有殘值。</p>
+<p>時間 O(n)，額外空間 O(1)。若題目要求縮短容器，可另做 del nums[write:]，但要把那一步的工作量算入。直接在 for 迴圈中 remove 元素會移位，也容易跳過相鄰重複值；兩個指標讓「已完成、待處理」的邊界清楚許多。</p>
+
+<h3 id="c02-window">4. 可變視窗：把單調性寫成前提</h3>
+<p>問題：每天消耗量都是非負整數，找總消耗不超過 budget 的最長連續時段。回傳半開區間，平手選最早；空輸入或沒有非空合法時段回傳 (0,0)。右端加入一天後若超過預算，左端持續移出，直到再次合法。非負性確保：往右加入不會降低總和，從左移出不會增加總和。</p>
+<pre><code class="language-python">def longest_budget_window(nums: list[int], budget: int) -&gt; tuple[int, int]:
+    &quot;&quot;&quot;回傳最長合法半開區間；同長時取最早者。僅接受非負整數。&quot;&quot;&quot;
+    if budget &lt; 0 or any(value &lt; 0 for value in nums):
+        raise ValueError(&quot;budget 與元素必須非負&quot;)
+    left = 0
+    total = 0
+    best = (0, 0)
+    for right, value in enumerate(nums):
+        total += value
+        while total &gt; budget:
+            total -= nums[left]
+            left += 1
+        if right + 1 - left &gt; best[1] - best[0]:
+            best = (left, right + 1)
+    return best</code></pre>
+<div class="diagram">
+<svg role="img" aria-labelledby="c02-window-title" viewBox="0 0 680 293" width="680" style="max-width:100%;background:#f8fafc;border-radius:12px;font-family:system-ui,sans-serif">
+<title id="c02-window-title">預算五的視窗先加入三超標，再移出二恢復合法，接著加入一形成長度三的視窗</title>
+<g fill="#0f172a" font-size="16"><text x="24" y="30" font-weight="700">budget = 5；保留共同元素，不重新加總</text><text x="25" y="80">加入 3</text><text x="25" y="152">移出 2</text><text x="25" y="224">再加入 1</text></g>
+<g fill="#fee2e2" stroke="#dc2626"><rect x="139" y="49" width="232" height="49" rx="6"/></g><g fill="#dcfce7" stroke="#16a34a"><rect x="216" y="121" width="155" height="49" rx="6"/><rect x="216" y="193" width="232" height="49" rx="6"/></g>
+<g fill="#0f172a" font-size="22" text-anchor="middle"><text x="177" y="81">2</text><text x="254" y="81">1</text><text x="331" y="81">3</text><text x="408" y="81">1</text><text x="485" y="81">1</text><text x="562" y="81">2</text><text x="177" y="153">2</text><text x="254" y="153">1</text><text x="331" y="153">3</text><text x="408" y="153">1</text><text x="485" y="153">1</text><text x="562" y="153">2</text><text x="177" y="225">2</text><text x="254" y="225">1</text><text x="331" y="225">3</text><text x="408" y="225">1</text><text x="485" y="225">1</text><text x="562" y="225">2</text></g>
+<g fill="#0f172a" font-size="15"><text x="601" y="79">和 6</text><text x="601" y="151">和 4</text><text x="601" y="223">和 5</text><text x="139" y="276">合法 [1,4)，長度 3；右端 4 不包含在區間內。</text></g></svg></div>
+<div class="example"><p><strong>逐步範例 B：</strong>nums = [2,1,3,1,1,2]，budget = 5。表格記錄縮完後的狀態；right 是本輪剛加入的元素索引。</p><table><thead><tr><th>right</th><th>加入後總和</th><th>移出</th><th>left、剩餘總和</th><th>目前最優區間</th></tr></thead><tbody><tr><td>0</td><td>2</td><td>無</td><td>0、2</td><td>[0,1)</td></tr><tr><td>1</td><td>3</td><td>無</td><td>0、3</td><td>[0,2)</td></tr><tr><td>2</td><td>6</td><td>2</td><td>1、4</td><td>[0,2)，平手不更新</td></tr><tr><td>3</td><td>5</td><td>無</td><td>1、5</td><td>[1,4)</td></tr><tr><td>4</td><td>6</td><td>1</td><td>2、5</td><td>[1,4)</td></tr><tr><td>5</td><td>7</td><td>3</td><td>3、4</td><td>[1,4)</td></tr></tbody></table></div>
+<p><strong>不變量：</strong>縮完後 total 等於 nums[left:right+1] 的總和且不超標；所有比 left 更早的起點對目前右端都已知不合法。當某個左端因超標被丟掉，未來再加非負數也無法使它復活。因此目前視窗是以這個右端結尾的最長合法候選，逐輪比較便得到全域最長。</p>
+<div class="complexity"><p>雖然 for 內有 while，left 與 right 都只前進、各最多 n 次，所以總時間 O(n)，空間 O(1)。前面的非負檢查另掃一次，也仍為 O(n)。只保存邊界，沒有複製最長區間；若最終要回傳內容，另計輸出長度。</p></div>
+<div class="warning"><p><strong>負數反例：</strong>[4,−3,2]，budget = 3。若套同一規則，讀到 4 就將它丟掉，最後只找到長度 2；但整段總和是 3，正解長度 3。負數讓已超標區間可能重新合法，破壞了永久排除的證明。本函式會拒絕負數；混合正負數的精確區間和可改看前綴和與第 03 章的雜湊。</p></div>
+<p>滑動視窗不一定依賴數值非負；例如「不重複字元」可以用集合或計數維護。但共同核心仍是：擴張造成的違規，能藉單向收縮修復，而且已丟棄的邊界不必回頭。請證明這件事，再套模板。</p>
+
+<h3 id="c02-prefix">5. 前綴和：把一段相加換成兩點相減</h3>
+<p>若資料固定卻有許多區間加總查詢，預先建 P，令 P[0] = 0，P[i+1] = P[i] + nums[i]。P[i] 表示前 i 個元素的總和，因此 nums[left:right] 的總和恰好是 P[right] − P[left]。負數不會破壞此等式；需要的是加法與減法，而不是單調性。</p>
+<pre><code class="language-python">def build_prefix(nums: list[int]) -&gt; list[int]:
+    prefix = [0]
+    for value in nums:
+        prefix.append(prefix[-1] + value)
+    return prefix
+
+
+def range_sum(prefix: list[int], left: int, right: int) -&gt; int:
+    if not 0 &lt;= left &lt;= right &lt; len(prefix):
+        raise ValueError(&quot;區間必須符合 0 &lt;= left &lt;= right &lt;= n&quot;)
+    return prefix[right] - prefix[left]</code></pre>
+<div class="diagram">
+<svg role="img" aria-labelledby="c02-prefix-title" viewBox="0 0 680 263" width="680" style="max-width:100%;background:#f8fafc;border-radius:12px;font-family:system-ui,sans-serif">
+<title id="c02-prefix-title">陣列三、負二、五、一的邊界前綴和為零、三、一、六、七，區間一到四的和是七減三</title>
+<g fill="#0f172a" font-size="16"><text x="24" y="30" font-weight="700">前綴值放在元素之間的「邊界」</text></g>
+<rect x="70" y="76" width="135" height="55" fill="#e2e8f0" stroke="#94a3b8"/><rect x="205" y="76" width="405" height="55" fill="#dbeafe" stroke="#2563eb"/>
+<g stroke="#2563eb"><path d="M340 76V131M475 76V131"/></g><g fill="#0f172a" font-size="22" text-anchor="middle"><text x="137" y="111">3</text><text x="272" y="111">−2</text><text x="407" y="111">5</text><text x="542" y="111">1</text></g>
+<g fill="#0f172a" font-size="15" text-anchor="middle"><text x="70" y="61">P[0]=0</text><text x="205" y="61">P[1]=3</text><text x="340" y="61">P[2]=1</text><text x="475" y="61">P[3]=6</text><text x="610" y="61">P[4]=7</text></g>
+<path d="M205 145V165H610V145" stroke="#2563eb" stroke-width="3" fill="none"/>
+<g fill="#0f172a" text-anchor="middle" font-size="17"><text x="406" y="198">[1,4) 的和 = P[4] − P[1] = 7 − 3 = 4</text><text x="340" y="239">左邊灰色前綴被扣掉，剩下藍色區間。</text></g></svg></div>
+<div class="example"><p><strong>逐步範例 C：</strong>輸入 [3,−2,5,1]。</p><table><thead><tr><th>讀入元素</th><th>目前前綴</th><th>新增意義</th></tr></thead><tbody><tr><td>尚未讀入</td><td>[0]</td><td>前 0 個元素總和</td></tr><tr><td>3</td><td>[0,3]</td><td>P[1] = 3</td></tr><tr><td>−2</td><td>[0,3,1]</td><td>P[2] = 1</td></tr><tr><td>5</td><td>[0,3,1,6]</td><td>P[3] = 6</td></tr><tr><td>1</td><td>[0,3,1,6,7]</td><td>P[4] = 7</td></tr></tbody></table><p>查 [1,4) 得 7 − 3 = 4；查整段 [0,4) 得 7；查空段 [2,2) 得 0。統一公式不需替 left = 0 寫特例。</p></div>
+<p><strong>不變量：</strong>建立到第 i 個邊界時，prefix[i] 正好是原陣列 [0,i) 的和。查詢時共同前綴相消，即得到目標區間。建表 O(n) 時間與空間，m 次查詢 O(m)，合計 O(n + m)。原資料若更新，舊前綴會失效；別把「靜態快速查詢」誤認成「動態更新也快速」。</p>
+<p>前綴最大值不能像總和一樣相減：左邊曾出現的最大值，並沒有一個減法可以從全段最大值中移除。選摘要前先確認它是否支援所需的還原操作。二維前綴和則再用容斥扣除重疊，但仍應先把一維的邊界模型練熟。</p>
+
+<h3 id="c02-exercises">6. 原創練習與解答</h3>
+<div class="exercise"><p><strong>練習 1：固定長度時段。</strong>給定可含負數的日收益，求長度恰好為 k 的最大連續總和。k 不合法時拋出 ValueError。為什麼這裡負數沒有問題？</p><details><summary>參考解答</summary><p>固定視窗每次移出一個、移入一個，不做「超標就永久排除起點」的推論，所以不需要非負性。初始 best 必須是第一個視窗的和，不能設為 0，否則全負數會出錯。時間 O(n)、額外空間 O(1)；用 generator 建第一個和，避免切片。</p><pre><code class="language-python">def max_fixed_window_sum(nums: list[int], k: int) -&gt; int:
+    if not 1 &lt;= k &lt;= len(nums):
+        raise ValueError(&quot;k 必須介於 1 與陣列長度之間&quot;)
+    current = sum(nums[i] for i in range(k))
+    best = current
+    for right in range(k, len(nums)):
+        current += nums[right] - nums[right - k]
+        best = max(best, current)
+    return best</code></pre><p>例如 [−5,−2,−4]，k = 2，兩段為 −7 與 −6，應回傳 −6。</p></details></div>
+<div class="exercise"><p><strong>練習 2：最短達標時段。</strong>元素非負、target &gt; 0，求總和至少 target 的最短非空連續長度；無解回傳 0。與最長不超標的更新時機有何不同？</p><details><summary>參考解答</summary><p>目前一旦達標，就先記錄候選，再縮左端，嘗試更短答案；縮到不達標才等待下一個元素。若等縮完才記錄，留下的反而是不合法視窗。每個右端的合法候選在收縮時被檢查；已經記錄並丟掉的左端，未來只會形成更長區間，不可能改進最短答案。</p><pre><code class="language-python">def min_length_at_least(nums: list[int], target: int) -&gt; int:
+    &quot;&quot;&quot;最短非空區間：元素非負、target &gt; 0；無解回傳 0。&quot;&quot;&quot;
+    if target &lt;= 0 or any(value &lt; 0 for value in nums):
+        raise ValueError(&quot;target 必須為正，元素必須非負&quot;)
+    left, total = 0, 0
+    best = len(nums) + 1
+    for right, value in enumerate(nums):
+        total += value
+        while total &gt;= target:
+            best = min(best, right - left + 1)
+            total -= nums[left]
+            left += 1
+    return 0 if best == len(nums) + 1 else best</code></pre><p>[2,1,3,1]、target = 4 的答案是 2。時間 O(n)、空間 O(1)。允許零，但 target 必須為正，避免空區間與收縮條件混淆。</p></details></div>
+<div class="exercise"><p><strong>練習 3：查詢索引轉換。</strong>原始陣列 [3,−2,5,1] 的查詢介面使用「包含左右端點」的 [1,3]。如何呼叫 range_sum？若 left = right 又如何？</p><details><summary>參考解答</summary><p>先建 prefix，再呼叫 range_sum(prefix, 1, 4)，答案 4。包含式 [i,i] 是單一元素，必須轉成半開 [i,i+1)，而不是 [i,i)。最好在介面邊界只轉換一次，內部統一使用同一區間約定。</p></details></div>
+<div class="exercise"><p><strong>練習 4：原地壓縮。</strong>對 [7,7,1,7,2] 刪除 7，請手算每一輪 read、write，並說明為什麼不用把被刪元素挪到尾端。</p><details><summary>參考解答</summary><p>處理各位置後的 write 依序是 0、0、1、1、2；前兩格最後為 [1,2]。合約只承諾前 write 格有效，尾端沒有規定。多做交換或尾端整理只會增加不必要工作，甚至破壞穩定性。</p></details></div>
+
+<h3 id="c02-checklist">7. 邊界測試與章末決策</h3>
+<p>本章可執行測試窮舉長度 0 至 5、元素取自 {0,1,3} 的 364 組陣列，將可變視窗、前綴查詢、最短達標與壓縮結果對照暴力答案；另用含負數的小陣列驗證已排序配對和固定視窗。負數視窗、負預算、k = 0 與越界查詢皆檢查會被拒絕。這些測試檢查輸出合約，而不只是程式有沒有拋錯。</p>
+<table><thead><tr><th>資料與問題特徵</th><th>優先考慮</th><th>必須能回答</th></tr></thead><tbody><tr><td>有序資料，找一對或排除端點</td><td>左右雙指標</td><td>排除某端點為何不漏解？</td></tr><tr><td>原地保序篩選</td><td>讀／寫指標</td><td>寫入是否會蓋掉未讀資料？</td></tr><tr><td>連續區間，可單向修復限制</td><td>滑動視窗</td><td>起點丟掉後為何不用回頭？</td></tr><tr><td>固定長度區間統計</td><td>固定視窗</td><td>資訊能否移出一項、加入一項？</td></tr><tr><td>靜態資料，多次區間加總</td><td>前綴和</td><td>摘要能否用相減還原區間？</td></tr></tbody></table>
+<p>官方補充：<a href="https://docs.python.org/3/library/stdtypes.html#common-sequence-operations" target="_blank" rel="noopener">Python 序列索引與切片</a>。下一章會把前綴值放進字典，讓「查一個已知區間」變成「找出所有符合條件的區間」。</p>
+</article>

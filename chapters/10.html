@@ -1,0 +1,239 @@
+<article id="chapter-10" data-title="回溯法：選擇、限制與撤銷">
+<h2>10．回溯法：選擇、限制與撤銷</h2>
+<p>你要替工作坊挑講題、安排順序，或在格子裡找一條符合字元的路徑。答案通常不是一個固定公式，而是一連串決策。回溯法（backtracking）把「試一個選擇，不行就退回」寫成可驗證的搜尋：維護目前的部分解，往下補一個決策，返回時恢復現場，接著試另一個決策。</p>
+<p>這章的目標不是背一個 dfs 模板，而是能回答：一個節點代表什麼？哪些選項仍合法？哪些分支確定不必探索？答案應該何時複製？若只能找到一個解，提早返回會不會破壞狀態？</p>
+<div class="callout"><strong>適用訊號：</strong>列舉所有組合／排列／配置、找出滿足多個限制的解、問題規模容許指數搜尋。若只求數量或最佳值，而且不同路徑常抵達同一個「未來完全相同」的狀態，下一章的動態規劃可能更合適。</div>
+
+<h3 id="c10-tree">10.1 把候選答案畫成決策樹</h3>
+<p>節點是部分解，邊是一個選擇，葉節點是完整決策。有些葉節點合法，有些不合法。子集合問題每件物品有選／不選兩條邊；排列問題每層從尚未使用的元素挑一個；格子搜尋則從鄰居挑下一格。回溯通常用深度優先走這棵隱含樹，不需要先把樹建成資料結構。</p>
+<figure class="diagram"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="兩個候選 A、B 的決策樹：每條根到葉路徑對應一個子集合" viewBox="0 0 760 300"><title>兩個候選 A、B 的決策樹：每條根到葉路徑對應一個子集合</title><rect x="0" y="0" width="760" height="300" rx="12" fill="#f8fafc"/><path d="M380,60 L195,120" stroke="#64748b" stroke-width="2" fill="none"/><text x="287.5" y="85.0" text-anchor="middle" font-size="14" fill="#334155">不選 A</text><path d="M380,60 L565,120" stroke="#64748b" stroke-width="2" fill="none"/><text x="472.5" y="85.0" text-anchor="middle" font-size="14" fill="#334155">選 A</text><path d="M195,160 L100,225" stroke="#64748b" stroke-width="2" fill="none"/><text x="147.5" y="187.5" text-anchor="middle" font-size="14" fill="#334155">不選 B</text><path d="M195,160 L290,225" stroke="#64748b" stroke-width="2" fill="none"/><text x="242.5" y="187.5" text-anchor="middle" font-size="14" fill="#334155">選 B</text><path d="M565,160 L475,225" stroke="#64748b" stroke-width="2" fill="none"/><text x="520.0" y="187.5" text-anchor="middle" font-size="14" fill="#334155">不選 B</text><path d="M565,160 L665,225" stroke="#64748b" stroke-width="2" fill="none"/><text x="615.0" y="187.5" text-anchor="middle" font-size="14" fill="#334155">選 B</text><rect x="305" y="20" width="150" height="40" rx="8" fill="#dbeafe" stroke="#334155"/><text x="380.0" y="45.0" text-anchor="middle" font-size="16" fill="#0f172a">i=0，path=[]</text><rect x="120" y="120" width="150" height="40" rx="8" fill="#dbeafe" stroke="#334155"/><text x="195.0" y="145.0" text-anchor="middle" font-size="16" fill="#0f172a">i=1，[]</text><rect x="490" y="120" width="150" height="40" rx="8" fill="#dbeafe" stroke="#334155"/><text x="565.0" y="145.0" text-anchor="middle" font-size="16" fill="#0f172a">i=1，[A]</text><rect x="40" y="225" width="120" height="40" rx="8" fill="#dcfce7" stroke="#334155"/><text x="100.0" y="250.0" text-anchor="middle" font-size="16" fill="#0f172a">[]</text><rect x="230" y="225" width="120" height="40" rx="8" fill="#dcfce7" stroke="#334155"/><text x="290.0" y="250.0" text-anchor="middle" font-size="16" fill="#0f172a">[B]</text><rect x="415" y="225" width="120" height="40" rx="8" fill="#dcfce7" stroke="#334155"/><text x="475.0" y="250.0" text-anchor="middle" font-size="16" fill="#0f172a">[A]</text><rect x="605" y="225" width="120" height="40" rx="8" fill="#dcfce7" stroke="#334155"/><text x="665.0" y="250.0" text-anchor="middle" font-size="16" fill="#0f172a">[A,B]</text></svg><figcaption>兩個候選 A、B 的決策樹：每條根到葉路徑對應一個子集合</figcaption></figure>
+<p>以兩張不同講題卡 A、B 為例，選與不選的位置固定，所以四個葉子各代表一種子集合。不變量是：進入 dfs(i) 時，前 i 個位置的決策已完成，path 恰好包含其中被選的元素，而且順序與原輸入一致。i 每次增加一，必然抵達終點。</p>
+<pre><code class="language-python">def subsets(items):
+    &quot;&quot;&quot;items 中的位置視為不同選項；若值相同，輸出可能值相同。&quot;&quot;&quot;
+    answer, path = [], []
+
+    def dfs(i):
+        if i == len(items):
+            answer.append(path.copy())
+            return
+        dfs(i + 1)                 # 不選第 i 個
+        path.append(items[i])      # 選擇
+        dfs(i + 1)                 # 探索
+        path.pop()                 # 撤銷
+
+    dfs(0)
+    return answer</code></pre>
+<div class="example"><h4>逐步例子一：從 [] 到 [A,B]，再回到 []</h4>
+<table><thead><tr><th>步驟</th><th>目前呼叫／動作</th><th>path</th><th>已儲存答案</th></tr></thead><tbody>
+<tr><td>1</td><td>不選 A，不選 B，到 i=2</td><td>[]</td><td>[[]]</td></tr>
+<tr><td>2</td><td>回到 i=1，選 B</td><td>[B]</td><td>[[],[B]]</td></tr>
+<tr><td>3</td><td>撤銷 B，回到 i=0，選 A</td><td>[A]</td><td>不變</td></tr>
+<tr><td>4</td><td>不選 B，到 i=2</td><td>[A]</td><td>再加入 [A]</td></tr>
+<tr><td>5</td><td>回到 i=1，選 B，到 i=2</td><td>[A,B]</td><td>再加入 [A,B]</td></tr>
+<tr><td>6</td><td>先撤銷 B，再撤銷 A</td><td>[]</td><td>四份獨立的答案保留下來</td></tr>
+</tbody></table></div>
+<p><strong>為何不漏、不重？</strong>任何子集合都能唯一寫成 n 個選／不選的決策。程式兩條分支都走，因此涵蓋全部；不同決策必有某個位置不同，因此索引集合不重複。注意這個論證區分的是「位置」：若輸入是 [A,A]，兩個位置各自選取會產生兩份值相同的 [A]。是否要視它們為同一答案，是題目定義，不能默默混用。</p>
+<div class="complexity">n 個相異位置產生 2ⁿ 個子集合。只走樹是 O(2ⁿ)，但複製並回傳所有答案要 O(n·2ⁿ) 時間和輸出空間；遞迴堆疊與 path 的輔助空間為 O(n)。空輸入回傳 [[]]，因為空集合也有一種選法。</div>
+
+<h3 id="c10-undo">10.2 撤銷是正確性條件，不是可選的清理</h3>
+<figure class="diagram"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="同一份 path 的生命週期：呼叫返回後，必須回到進入前的狀態" viewBox="0 0 760 260"><title>同一份 path 的生命週期：呼叫返回後，必須回到進入前的狀態</title><rect x="0" y="0" width="760" height="260" rx="12" fill="#f8fafc"/><rect x="25" y="65" width="155" height="60" rx="8" fill="#dbeafe" stroke="#334155"/><text x="102.5" y="100.0" text-anchor="middle" font-size="16" fill="#0f172a">path=[A]</text><rect x="210" y="65" width="155" height="60" rx="8" fill="#fef3c7" stroke="#334155"/><text x="287.5" y="100.0" text-anchor="middle" font-size="16" fill="#0f172a">append(B)</text><rect x="395" y="65" width="155" height="60" rx="8" fill="#dcfce7" stroke="#334155"/><text x="472.5" y="100.0" text-anchor="middle" font-size="16" fill="#0f172a">探索 [A,B]</text><rect x="580" y="65" width="155" height="60" rx="8" fill="#fce7f3" stroke="#334155"/><text x="657.5" y="100.0" text-anchor="middle" font-size="16" fill="#0f172a">pop() → [A]</text><path d="M180,95 L210,95" stroke="#64748b" stroke-width="2" fill="none"/><path d="M365,95 L395,95" stroke="#64748b" stroke-width="2" fill="none"/><path d="M550,95 L580,95" stroke="#64748b" stroke-width="2" fill="none"/><text x="35" y="180" font-size="16" fill="#0f172a">儲存答案：answer.append(path.copy())</text><text x="35" y="215" font-size="16" fill="#0f172a">錯誤共享：answer.append(path) 會指向持續變動的同一個串列</text></svg><figcaption>同一份 path 的生命週期：呼叫返回後，必須回到進入前的狀態</figcaption></figure>
+<p>共享可變狀態時，每條分支要遵守「進入與離開的現場一致」：append 對應 pop，集合 add 對應 remove，used=True 對應 used=False。撤銷順序通常與修改相反。這讓下一個兄弟分支從同樣起點出發，避免前一條路污染後一條路。</p>
+<p>path.copy() 是淺複製；本章 path 裝的是整數或字元，足以保存答案。若裡面放的是之後還會修改的巢狀串列，淺複製仍共享內層物件，要改存不可變值，或依資料結構複製必要層級。也能用 dfs(path + [x]) 避免手動撤銷，但每次連接都要 O(path 長度) 的複製，峰值記憶體也可能增加。</p>
+<div class="warning"><strong>提早返回陷阱：</strong>找到答案後直接 return，可能跳過 pop 或 remove。若只做存在性搜尋，先把結果存起來、撤銷後再 return；或如本章格子練習使用 try/finally，讓成功與失敗都恢復現場。還有遞迴深度限制：把遞迴限制調很大不會解決指數時間，也不保證不耗盡堆疊。</div>
+
+<h3 id="c10-generation">10.3 組合與排列：下一層可以選誰？</h3>
+<p><strong>組合</strong>不計順序，[2,5] 與 [5,2] 是同一答案；用 start 限制後續只選更右邊的位置，就把順序固定下來。若每個位置至多一次，遞迴傳 j+1；若題目允許同一正值重複使用，才可能傳 j。<strong>排列</strong>計順序，下一層必須從所有尚未用過的位置選，不能只往右，因此改用 used。</p>
+<p>輸入有重複值時，排序後能讓等值相鄰；我們只保留相同值的一種代表順序。下面的跳過條件不是「看見第二個 A 就禁止」，而是「前一個相同 A 還沒用時，禁止先用後面的 A」。若前面的 A 已經在目前 path，後面的 A 當然可以接上去。</p>
+<figure class="diagram"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="排列的去重規則：同值元素依索引先後使用，不刪掉合法的第二個 A" viewBox="0 0 760 300"><title>排列的去重規則：同值元素依索引先後使用，不刪掉合法的第二個 A</title><rect x="0" y="0" width="760" height="300" rx="12" fill="#f8fafc"/><rect x="280" y="20" width="200" height="42" rx="8" fill="#dbeafe" stroke="#334155"/><text x="380.0" y="46.0" text-anchor="middle" font-size="16" fill="#0f172a">A₀、A₁、B</text><path d="M380,62 L160,125" stroke="#64748b" stroke-width="2" fill="none"/><path d="M380,62 L600,125" stroke="#64748b" stroke-width="2" fill="none"/><rect x="45" y="125" width="230" height="48" rx="8" fill="#dcfce7" stroke="#334155"/><text x="160.0" y="154.0" text-anchor="middle" font-size="16" fill="#0f172a">根層先選 A₀：允許</text><rect x="485" y="125" width="230" height="48" rx="8" fill="#fee2e2" stroke="#334155"/><text x="600.0" y="154.0" text-anchor="middle" font-size="16" fill="#0f172a">根層先選 A₁：跳過</text><path d="M160,173 L160,225" stroke="#64748b" stroke-width="2" fill="none"/><rect x="45" y="225" width="310" height="48" rx="8" fill="#dcfce7" stroke="#334155"/><text x="200.0" y="254.0" text-anchor="middle" font-size="16" fill="#0f172a">已選 A₀，再選 A₁：允許</text><text x="395" y="227" font-size="15" fill="#0f172a">只有前一個 A 尚未使用時，</text><text x="395" y="251" font-size="15" fill="#0f172a">才跳過目前這個 A。</text></svg><figcaption>排列的去重規則：同值元素依索引先後使用，不刪掉合法的第二個 A</figcaption></figure>
+<pre><code class="language-python">def unique_permutations(items):
+    values = sorted(items)
+    used = [False] * len(values)
+    answer, path = [], []
+
+    def dfs():
+        if len(path) == len(values):
+            answer.append(path.copy())
+            return
+        for j, value in enumerate(values):
+            if used[j]:
+                continue
+            # 同層中，先使用前一個相同值，固定相同值的相對次序。
+            if j &gt; 0 and values[j] == values[j - 1] and not used[j - 1]:
+                continue
+            used[j] = True
+            path.append(value)
+            dfs()
+            path.pop()
+            used[j] = False
+
+    dfs()
+    return answer</code></pre>
+<div class="example"><h4>逐步例子二：三張卡 [A,A,B] 的不同排列</h4>
+<table><thead><tr><th>path</th><th>候選與檢查</th><th>結果</th></tr></thead><tbody>
+<tr><td>[]</td><td>A₀ 可選；A₁ 因 A₀ 未用而跳過</td><td>只開一次以 A 起頭的分支</td></tr>
+<tr><td>[A₀]</td><td>A₁ 的前一個 A₀ 已用</td><td>允許 [A₀,A₁,B] → AAB</td></tr>
+<tr><td>[A₀]</td><td>改選 B，最後選 A₁</td><td>得到 ABA</td></tr>
+<tr><td>[B]</td><td>先選 A₀，再選 A₁</td><td>得到 BAA</td></tr>
+<tr><td>[]</td><td>所有第一個候選已處理</td><td>恰有三個值不同的結果</td></tr>
+</tbody></table></div>
+<p>若相異值的重複次數為 c₁、c₂、…，不同排列數是 n!／(c₁!c₂!…)。列舉型演算法至少要付出把這些結果寫出來的成本。上述程式用全長 used 並掃描每一層候選，通用安全上界為 O(n·n!) 時間、O(n) 輔助空間，加上 O(n·R) 輸出空間；排序另需 O(n log n)。重複值通常大幅減少實際節點，但不能把 n! 硬換成 R 就宣稱每個內部操作都被精確計入。</p>
+
+<h3 id="c10-pruning">10.4 剪枝必須有證明：正值包裹挑選</h3>
+<p>有一批重量為正整數的樣品，挑恰好 k 件使總重等於 target；每個位置至多用一次，相同重量的值組合只列一次。狀態是 (start, need, remain)，path 則記錄已挑的重量。不變量：path 的索引遞增，need 是仍須挑的件數，remain 是仍須湊的重量。</p>
+<p>排序後可以安全使用三種界限：剩餘件數不足就失敗；剩餘 need 件的最小可能總和已大於 remain 就失敗；最大可能總和仍小於 remain 也失敗。前綴和讓這兩個加總檢查都是 O(1)。候選大於 remain 時，由於所有值都正且有序，後面的候選更不可能，因此可以 break。</p>
+<pre><code class="language-python">def choose_k_sum(numbers, k, target):
+    &quot;&quot;&quot;恰選 k 個位置、每個至多一次；回傳不重複的值組合。&quot;&quot;&quot;
+    if k &lt; 0 or any(x &lt;= 0 for x in numbers):
+        raise ValueError(&quot;k 必須非負，數值必須為正整數&quot;)
+    values = sorted(numbers)
+    n = len(values)
+    prefix = [0]
+    for x in values:
+        prefix.append(prefix[-1] + x)
+    answer, path = [], []
+
+    def dfs(start, need, remain):
+        if need == 0:
+            if remain == 0:
+                answer.append(path.copy())
+            return
+        if n - start &lt; need:
+            return
+        smallest = prefix[start + need] - prefix[start]
+        largest = prefix[n] - prefix[n - need]
+        if remain &lt; smallest or remain &gt; largest:
+            return
+        for j in range(start, n - need + 1):
+            if j &gt; start and values[j] == values[j - 1]:
+                continue
+            if values[j] &gt; remain:
+                break
+            path.append(values[j])
+            dfs(j + 1, need - 1, remain - values[j])
+            path.pop()
+
+    dfs(0, k, target)
+    return answer</code></pre>
+<div class="example"><h4>逐步例子三：[1,2,2,4,5]，挑 3 件，總重 8</h4>
+<table><thead><tr><th>狀態</th><th>推理</th><th>動作</th></tr></thead><tbody>
+<tr><td>(0,3,8)，path=[]</td><td>最小 1+2+2=5，最大 2+4+5=11</td><td>尚有可能</td></tr>
+<tr><td>(1,2,7)，path=[1]</td><td>先選第一個 2</td><td>剩下 1 件要湊 5</td></tr>
+<tr><td>path=[1,2,2] 或 [1,2,4]</td><td>件數用完，但剩餘重量不是 0</td><td>不記錄；撤銷</td></tr>
+<tr><td>path=[1,2,5]</td><td>need=0 且 remain=0</td><td>記錄第一個答案</td></tr>
+<tr><td>path=[1]，同層的第二個 2</td><td>會重做相同值組合</td><td>跳過</td></tr>
+<tr><td>path=[1,4]，剩 1 件湊 3</td><td>剩餘最小候選是 5</td><td>下界剪枝</td></tr>
+<tr><td>path=[2,2,4]</td><td>三件總重 8</td><td>記錄第二個答案</td></tr>
+</tbody></table></div>
+<div class="warning">把「超過目標就停止」套到含負數的輸入可能漏解。例如目標 3，先選 5 後還能選 −2。剪枝一定要依賴明確假設。本實作拒絕非正值，是為了維持問題模型；若要支援零或負數，重新檢查終止性、重用規則與所有界限，不能只刪掉檢查。</div>
+<p>剪枝改善實際工作量，不自動把指數問題變成多項式。以這個實作來說，一個保守時間上界是 O(n log n + n·2ⁿ + kR)，其中 R 是答案數；前兩項涵蓋排序與候選掃描，最後一項是輸出複製。實際可用「被探索的節點數、每節點掃過的候選數、輸出長度」更精準衡量。輔助空間 O(n+k)，含排序副本、前綴和與深度至多 k 的路徑。</p>
+
+<h3 id="c10-constraints">10.5 多重限制：一列一列放皇后</h3>
+<p>在 n×n 棋盤放 n 個皇后，任兩個不能同列、同欄或同對角線。我們把「每列一個」直接編進搜尋層數；下一層只處理 row+1，因此不用額外集合追蹤列。其餘限制各自用集合，在候選階段就排除衝突。</p>
+<figure class="diagram"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="四皇后一個合法解 [1,3,0,2]；欄與兩種對角線是三組獨立限制" viewBox="0 0 760 305"><title>四皇后一個合法解 [1,3,0,2]；欄與兩種對角線是三組獨立限制</title><rect x="0" y="0" width="760" height="305" rx="12" fill="#f8fafc"/><rect x="35" y="32" width="52" height="52" fill="#e2e8f0" stroke="#94a3b8"/><rect x="87" y="32" width="52" height="52" fill="#dbeafe" stroke="#94a3b8"/><circle cx="113" cy="58" r="16" fill="#2563eb"/><text x="113" y="64" text-anchor="middle" fill="white" font-size="17">Q</text><rect x="139" y="32" width="52" height="52" fill="#e2e8f0" stroke="#94a3b8"/><rect x="191" y="32" width="52" height="52" fill="#dbeafe" stroke="#94a3b8"/><rect x="35" y="84" width="52" height="52" fill="#dbeafe" stroke="#94a3b8"/><rect x="87" y="84" width="52" height="52" fill="#e2e8f0" stroke="#94a3b8"/><rect x="139" y="84" width="52" height="52" fill="#dbeafe" stroke="#94a3b8"/><rect x="191" y="84" width="52" height="52" fill="#e2e8f0" stroke="#94a3b8"/><circle cx="217" cy="110" r="16" fill="#2563eb"/><text x="217" y="116" text-anchor="middle" fill="white" font-size="17">Q</text><rect x="35" y="136" width="52" height="52" fill="#e2e8f0" stroke="#94a3b8"/><circle cx="61" cy="162" r="16" fill="#2563eb"/><text x="61" y="168" text-anchor="middle" fill="white" font-size="17">Q</text><rect x="87" y="136" width="52" height="52" fill="#dbeafe" stroke="#94a3b8"/><rect x="139" y="136" width="52" height="52" fill="#e2e8f0" stroke="#94a3b8"/><rect x="191" y="136" width="52" height="52" fill="#dbeafe" stroke="#94a3b8"/><rect x="35" y="188" width="52" height="52" fill="#dbeafe" stroke="#94a3b8"/><rect x="87" y="188" width="52" height="52" fill="#e2e8f0" stroke="#94a3b8"/><rect x="139" y="188" width="52" height="52" fill="#dbeafe" stroke="#94a3b8"/><circle cx="165" cy="214" r="16" fill="#2563eb"/><text x="165" y="220" text-anchor="middle" fill="white" font-size="17">Q</text><rect x="191" y="188" width="52" height="52" fill="#e2e8f0" stroke="#94a3b8"/><text x="280" y="65" font-size="16" fill="#0f172a">每列恰放一個，因此 row 隨深度增加。</text><text x="280" y="110" font-size="16" fill="#0f172a">同欄：col 相同</text><text x="280" y="155" font-size="16" fill="#0f172a">左上 ↔ 右下：row − col 相同</text><text x="280" y="200" font-size="16" fill="#0f172a">右上 ↔ 左下：row + col 相同</text><text x="35" y="275" font-size="15" fill="#0f172a">座標從 0 開始；集合只保留目前路徑已佔用的線。</text></svg><figcaption>四皇后一個合法解 [1,3,0,2]；欄與兩種對角線是三組獨立限制</figcaption></figure>
+<pre><code class="language-python">def queens_columns(n):
+    &quot;&quot;&quot;每個解是一串欄編號，第 r 個值表示第 r 列皇后的欄。&quot;&quot;&quot;
+    if n &lt; 0:
+        raise ValueError(&quot;n 必須非負&quot;)
+    columns, diagonal_down, diagonal_up = set(), set(), set()
+    path, answer = [], []
+
+    def dfs(row):
+        if row == n:
+            answer.append(path.copy())
+            return
+        for col in range(n):
+            if (col in columns or row - col in diagonal_down
+                    or row + col in diagonal_up):
+                continue
+            columns.add(col)
+            diagonal_down.add(row - col)
+            diagonal_up.add(row + col)
+            path.append(col)
+            dfs(row + 1)
+            path.pop()
+            columns.remove(col)
+            diagonal_down.remove(row - col)
+            diagonal_up.remove(row + col)
+
+    dfs(0)
+    return answer</code></pre>
+<p>進入 dfs(row) 時，前 row 列各有一個互不攻擊的皇后，三個集合恰好描述它們佔用的欄與對角線。只接受不在集合的候選，維持不變量；到 row=n 就得到合法配置。每個合法配置的第 row 欄值都會在該層被考慮，因此不漏解。撤銷會把集合回復成前 row 列的狀態。</p>
+<div class="complexity">只看「欄不得重複」，深度 r 最多有 P(n,r) 種狀態。此版本每個非葉節點仍掃 n 欄，安全上界為 O(n·n! + nQ)，Q 為輸出的解數；對角線剪枝通常讓實際搜尋小很多。使用集合的查找視為平均 O(1)。輔助空間 O(n)，輸出 O(nQ)。這不是 O(n²)，棋盤大小不能代表搜尋樹大小。</div>
+
+<h3 id="c10-cache">10.6 回溯、DFS 與記憶化的分界</h3>
+<p>DFS 描述走訪順序；回溯強調探索決策與撤銷；它們不是互斥概念。圖形 DFS 的全域 visited 用來保證一個節點處理一次。回溯中的 used 常常只代表目前路徑使用過的元素，離開路徑就必須清除。把兩者混用，會錯把其他合法路徑排除。</p>
+<p>想加 cache 之前，先問「相同 key 的所有呼叫，未來合法選擇真的相同嗎？」排列不能只記 len(path)，因為 [A] 與 [B] 尚可用的字元不同；格子找字也不能只記 (r,c,i)，因為已佔用的格子可能不同。把 used 的位元遮罩放進 key 可能正確，但狀態數隨格數指數成長。對列舉任務，僅快取布林或「看過狀態」也可能讓不同前綴應產生的答案消失。</p>
+
+<h3 id="c10-exercises">10.7 練習：從限制推導狀態</h3>
+<section class="exercise"><h4>練習一：不相鄰的展示時段</h4><p>編號 0 到 n−1 的時段中，可以挑任意多個，但不能挑相鄰時段。列出所有可行編號組合，包括空組合。先手算 n=3，再寫出不重複的生成器或回傳串列。</p>
+<details><summary>參考解答</summary><p>在位置 i 決定不選時往 i+1；選它時下一個可考慮位置是 i+2。每條路徑都有唯一的第一個決策差異。n=3 的答案為 []、[2]、[1]、[0]、[0,2]，順序不限。</p><pre><code class="language-python">def nonadjacent_slots(n):
+    if n &lt; 0:
+        raise ValueError(&quot;n 必須非負&quot;)
+    answer, path = [], []
+
+    def dfs(i):
+        if i &gt;= n:
+            answer.append(path.copy())
+            return
+        dfs(i + 1)
+        path.append(i)
+        dfs(i + 2)  # 下一格不能選
+        path.pop()
+
+    dfs(0)
+    return answer</code></pre><p>設答案數為 R，R 滿足費波那契型遞迴 R(n)=R(n−1)+R(n−2)，R(0)=1、R(1)=2，仍呈指數成長。包含答案複製的保守上界 O(nR)，輔助空間 O(n)。</p></details></section>
+<section class="exercise"><h4>練習二：合法的巢狀括號</h4><p>輸入 n，列出包含 n 對括號的所有合法字串。任何前綴裡，右括號都不能多於左括號。不要先生成所有長度 2n 的二元字串再過濾。</p>
+<details><summary>參考解答</summary><p>opened、closed 是已使用數量。只在 opened&lt;n 時放左括號，在 closed&lt;opened 時放右括號。這兩個條件直接維持前綴合法性；closed=n 時也必然 opened=n。</p><pre><code class="language-python">def balanced_parentheses(n):
+    if n &lt; 0:
+        raise ValueError(&quot;n 必須非負&quot;)
+    answer, path = [], []
+
+    def dfs(opened, closed):
+        if closed == n:
+            answer.append(&quot;&quot;.join(path))
+            return
+        if opened &lt; n:
+            path.append(&quot;(&quot;)
+            dfs(opened + 1, closed)
+            path.pop()
+        if closed &lt; opened:
+            path.append(&quot;)&quot;)
+            dfs(opened, closed + 1)
+            path.pop()
+
+    dfs(0, 0)
+    return answer</code></pre><p>解數為第 n 個 Catalan 數 Cₙ=(2n)!／(n!(n+1)!)，不是 2ⁿ。保守時間 O(nCₙ)，輸出空間 O(nCₙ)，輔助空間 O(n)。n=0 回傳 [""]。</p></details></section>
+<section class="exercise"><h4>練習三：字卡格子尋路</h4><p>矩形字卡板只能上下左右走，同一條路不得重複用格子。判斷能否拼出 word。board=["AB","CD"] 可以拼 ABDC，不能拼 ABA。成功時也要清理暫存狀態。</p>
+<details><summary>參考解答</summary><p>used 是路徑區域的集合；每個起點都要能從乾淨狀態搜尋。try/finally 保證 any 的短路成功與提早 return 都不會省略撤銷。此版本完全不修改輸入棋盤。</p><pre><code class="language-python">def word_exists(board, word):
+    &quot;&quot;&quot;矩形字元格；上下左右相鄰，同一次路徑不得重複使用格子。&quot;&quot;&quot;
+    if not word:
+        return True
+    if not board or not board[0]:
+        return False
+    rows, cols = len(board), len(board[0])
+    if any(len(row) != cols for row in board):
+        raise ValueError(&quot;board 必須為矩形&quot;)
+    if len(word) &gt; rows * cols:
+        return False
+    used = set()
+
+    def dfs(r, c, i):
+        if (r &lt; 0 or r &gt;= rows or c &lt; 0 or c &gt;= cols
+                or (r, c) in used or board[r][c] != word[i]):
+            return False
+        used.add((r, c))
+        try:
+            if i == len(word) - 1:
+                return True
+            return any(dfs(r + dr, c + dc, i + 1)
+                       for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+        finally:
+            used.remove((r, c))  # 成功提早回傳時也必定撤銷
+
+    return any(dfs(r, c, 0) for r in range(rows) for c in range(cols))</code></pre><p>令格子數為 RC、字長為 L≥1，安全上界 O(RC·4ᴸ)；排除立即走回上一格可分析出更緊的 O(RC·3ᴸ) 等級（常數首步分支另計）。實際最深只到 L，輔助空間 O(L)，且 L&gt;RC 時立即失敗。空字串定義為可拼出。</p></details></section>
+
+<h3 id="c10-checklist">10.8 邊界測試與選擇清單</h3>
+<p>不要只測「有一個漂亮答案」：空輸入、無解、單一元素、全重複元素、k=0、k&gt;n、目標小於可行下界、成功提早返回，都是能揭露狀態錯誤的測試。附檔 tests/examples_10.py 用 itertools 暴力枚舉比對小型輸入，並檢查皇后的欄與對角線互斥，以及找字後輸入未變。</p>
+<ul><li>要所有答案：先估答案量；若答案本身太大，換演算法也無法省掉輸出成本。</li><li>組合：固定索引遞增；排列：追蹤已使用位置；允許重用時，證明遞迴會終止。</li><li>每個剪枝寫一句「這裡不可能有答案，因為……」，說不出來就先別剪。</li><li>每個可變欄位都找出對應撤銷；記錄答案時檢查是否共用物件。</li><li>只求最佳值／數量：若不同前綴共享相同未來，考慮下一章 DP；完整狀態比 cache 裝飾器更重要。</li></ul>
+<p><a href="#c11-framework">下一章：把重複子問題整理成動態規劃狀態。</a></p>
+</article>

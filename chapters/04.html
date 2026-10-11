@@ -1,0 +1,176 @@
+<article id="chapter-04" data-title="鏈結串列：讓指標維持正確的關係">
+<h2>04　鏈結串列：讓指標維持正確的關係</h2>
+<p>陣列用位置找元素；鏈結串列用「下一個是誰」把節點串起來。這一章的重點不是背箭頭操作，而是在每次改線前說清楚：哪些節點已處理、哪些尚未處理，以及通往剩餘資料的入口有沒有保住。學會這個思考方式，反轉、刪除、合併與快慢指標就會成為同一套可檢查的推理。</p>
+<div class="callout"><strong>本章的預設條件：</strong>除環偵測外，輸入都是有限、無環的單向串列；head 可為 None。範例原地重接節點，會改變呼叫者持有的結構。n 表示節點數；節點值的比較視為 O(1)。若其他程式還持有中間節點的參照，必須先討論修改權限。</div>
+
+<h3 id="c04-model">1. 節點、參照與操作成本</h3>
+<p>節點包含 value 與 next。head 是指向第一個節點的參照，None 代表沒有節點。兩個節點可以剛好裝著相同的值，卻仍是不同物件。因此「是否走回同一節點」應用 is 比較身分，而不是比較 value。Python 變數賦值通常複製參照；寫 cur = cur.next 只移動游標，不會移動或複製節點。</p>
+<figure class="diagram">
+<svg role="img" aria-labelledby="c04-identity-title" viewBox="0 0 760 200" xmlns="http://www.w3.org/2000/svg">
+<title id="c04-identity-title">兩個值相同的節點仍有不同身分；head 沿 next 逐一走訪</title>
+<defs><marker id="c04-arrow-a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#66758c"/></marker></defs>
+<g font-family="system-ui,sans-serif" font-size="18" fill="#172033">
+<text x="20" y="95" fill="#66758c">head</text>
+<g fill="#e7efff" stroke="#5374ae" stroke-width="2"><rect x="120" y="55" width="130" height="70" rx="10"/><rect x="315" y="55" width="130" height="70" rx="10"/><rect x="510" y="55" width="130" height="70" rx="10"/></g>
+<text x="145" y="85">節點 A</text><text x="145" y="111">value = 6</text><text x="340" y="85">節點 B</text><text x="340" y="111">value = 6</text><text x="535" y="85">節點 C</text><text x="535" y="111">value = 9</text><text x="680" y="96" fill="#66758c">None</text>
+<g stroke="#66758c" stroke-width="3" marker-end="url(#c04-arrow-a)"><path d="M74 90 H111"/><path d="M250 90 H306"/><path d="M445 90 H501"/><path d="M640 90 H672"/></g>
+<text x="164" y="163" fill="#66758c">A.value == B.value，但 A is not B</text>
+</g></svg>
+<figcaption>每條 next 都保存一個參照。相同數值不代表同一節點，節點也不保證連續存放。</figcaption>
+</figure>
+<table><caption>單向串列與 Python list 的差異</caption><thead><tr><th>操作</th><th>單向串列</th><th>Python list</th></tr></thead><tbody>
+<tr><td>讀第 i 個元素</td><td>O(i)，最壞 O(n)</td><td>O(1)</td></tr>
+<tr><td>頭部插入</td><td>O(1)</td><td>O(n)，需搬動參照</td></tr>
+<tr><td>已知前驅後插入／刪除</td><td>O(1)</td><td>通常 O(n)</td></tr>
+<tr><td>尋找某個值</td><td>O(n)</td><td>O(n)</td></tr>
+<tr><td>尾部插入</td><td>有 tail 為 O(1)，否則 O(n)</td><td>攤銷 O(1)</td></tr>
+</tbody></table>
+<p>「鏈結串列刪除是 O(1)」少了一個重要前提：你已持有前驅節點。如果只有目標值，就仍要先 O(n) 尋找。Python 節點通常還有物件與參照的記憶體負擔，快取區域性也比連續陣列差；不能只看插入的大 O 就斷言它在真實程式更快。</p>
+<pre><code class="language-python">from dataclasses import dataclass
+from typing import Optional
+
+@dataclass(eq=False)
+class Node:
+    value: int
+    next: Optional[&quot;Node&quot;] = None
+
+def from_values(values):
+    dummy = Node(0)
+    tail = dummy
+    for value in values:
+        tail.next = Node(value)
+        tail = tail.next
+    return dummy.next
+
+def to_values(head):
+    &quot;&quot;&quot;僅用於有限、無環串列；測試工具不算進解法的額外空間。&quot;&quot;&quot;
+    result = []
+    while head is not None:
+        result.append(head.value)
+        head = head.next
+    return result</code></pre>
+<p>eq=False 讓 dataclass 保留物件身分語意，避免遞迴比較整條 next 鏈。from_values 與 to_values 是建構、觀察範例的工具；後者會配置 O(n) 輸出空間，而且不可用來列印未知是否有環的串列。</p>
+
+<h3 id="c04-reverse">2. 反轉：保住尚未處理的入口</h3>
+<p>每次迴圈開始，prev 指向已反轉的前段，cur 指向尚未處理的後段。兩段互不重疊，而且合起來恰好是全部原節點。下一步必須先保存 cur.next，再把 cur.next 指回 prev。若先改 next，原本的後段就可能再也找不到。</p>
+<pre><code class="language-python">def reverse(head):
+    prev, cur = None, head
+    while cur is not None:
+        following = cur.next
+        cur.next = prev
+        prev, cur = cur, following
+    return prev</code></pre>
+<figure class="diagram">
+<svg role="img" aria-labelledby="c04-reverse-title" viewBox="0 0 760 220" xmlns="http://www.w3.org/2000/svg">
+<title id="c04-reverse-title">反轉兩步後，prev 指向二再到六，cur 指向尚未處理的九</title>
+<defs><marker id="c04-arrow-b" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#66758c"/></marker></defs>
+<g font-family="system-ui,sans-serif" font-size="18" fill="#172033">
+<rect x="90" y="78" width="80" height="58" rx="10" fill="#d8f3e8" stroke="#387b64"/><rect x="260" y="78" width="80" height="58" rx="10" fill="#d8f3e8" stroke="#387b64"/><rect x="480" y="78" width="80" height="58" rx="10" fill="#ffecd1" stroke="#a06b29"/>
+<text x="122" y="114">6</text><text x="292" y="114">2</text><text x="512" y="114">9</text><text x="15" y="114" fill="#66758c">None</text><text x="645" y="114" fill="#66758c">None</text>
+<g stroke="#66758c" stroke-width="3" marker-end="url(#c04-arrow-b)"><path d="M260 108 H180"/><path d="M90 108 H73"/><path d="M560 108 H631"/></g>
+<text x="269" y="48" fill="#387b64">prev</text><text x="490" y="48" fill="#a06b29">cur</text><text x="125" y="182" fill="#66758c">已反轉前段</text><text x="488" y="182" fill="#66758c">未處理後段</text>
+<path d="M396 40 V194" stroke="#9aa7b8" stroke-dasharray="6 5"/>
+</g></svg><figcaption>示意為第二輪完成後。下一輪先保存 9 的 next，再令 9 指向 2。</figcaption>
+</figure>
+<div class="example"><h4>逐步例一：6 → 2 → 9</h4>
+<table><thead><tr><th>時刻</th><th>prev 指向的鏈</th><th>cur 指向的鏈</th><th>這輪保存的 following</th></tr></thead><tbody>
+<tr><td>開始</td><td>None</td><td>6 → 2 → 9</td><td>尚未保存</td></tr>
+<tr><td>處理 6 後</td><td>6 → None</td><td>2 → 9</td><td>2</td></tr>
+<tr><td>處理 2 後</td><td>2 → 6 → None</td><td>9</td><td>9</td></tr>
+<tr><td>處理 9 後</td><td>9 → 2 → 6 → None</td><td>None</td><td>None</td></tr>
+</tbody></table></div>
+<p>正確性分三段說：初始化時已反轉段為空，不變量成立；每輪把 cur 的首節點搬到 prev 前方，保留其餘後段，因此不變量繼續成立；終止時 cur 為 None，全部節點都在 prev 中，順序恰好與原本相反。每輪未處理節點數減一，所以有限無環串列必定終止。</p>
+<p class="complexity">時間 O(n)，演算法額外空間 O(1)。遞迴反轉也可行，但 Python 會消耗 O(n) 呼叫堆疊，且長串列可能超過遞迴深度限制。這裡的 O(1) 不包含既有 n 個節點。</p>
+<div class="warning">反轉回傳的是新 head。呼叫時要寫 head = reverse(head)；舊 head 已變成尾端。若串列有環，以上終止與兩段不重疊的推理失效，不能直接套用。</div>
+
+<h3 id="c04-fast-slow">3. 快慢指標：中點與環</h3>
+<p>找中點時，slow 每輪走一步，fast 每輪走兩步；走了 t 輪後，slow 在第 t 個索引，fast 已走 2t 步或離開串列。先檢查 fast，再檢查 fast.next，才能安全讀 fast.next.next。以下約定偶數長度回傳第二個中點：4 個節點的索引 0、1、2、3，回傳索引 2。</p>
+<pre><code class="language-python">def middle_second(head):
+    &quot;&quot;&quot;偶數長度時回傳第二個中點；空串列回傳 None。&quot;&quot;&quot;
+    slow = fast = head
+    while fast is not None and fast.next is not None:
+        slow = slow.next
+        fast = fast.next.next
+    return slow</code></pre>
+<p>找環不能只看「數值重複」：6 → 6 → None 沒有環。Floyd 方法讓兩個指標從 head 出發，先移動，再比較身分。無環時 fast 會碰到 None；有環時，兩者進入同一個環後，相對距離每輪縮短一格（模環長），因此最多再經一個環長便相遇。</p>
+<figure class="diagram">
+<svg role="img" aria-labelledby="c04-cycle-title" viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg">
+<title id="c04-cycle-title">四指向環入口七，環內七、九、二形成長度三的循環</title>
+<defs><marker id="c04-arrow-c" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#66758c"/></marker></defs>
+<g font-family="system-ui,sans-serif" font-size="18" fill="#172033">
+<g stroke="#5374ae" stroke-width="2"><rect x="70" y="65" width="80" height="60" rx="10" fill="#e7efff"/><rect x="245" y="65" width="80" height="60" rx="10" fill="#d8f3e8"/><rect x="420" y="65" width="80" height="60" rx="10" fill="#e7efff"/><rect x="595" y="65" width="80" height="60" rx="10" fill="#e7efff"/></g>
+<text x="102" y="103">4</text><text x="277" y="103">7</text><text x="452" y="103">9</text><text x="627" y="103">2</text>
+<g fill="none" stroke="#66758c" stroke-width="3" marker-end="url(#c04-arrow-c)"><path d="M150 95 H236"/><path d="M325 95 H411"/><path d="M500 95 H586"/><path d="M635 125 V187 H285 V135"/></g>
+<text x="72" y="40" fill="#66758c">head</text><text x="251" y="40" fill="#387b64">環入口</text><text x="74" y="222" fill="#66758c">入口距離 μ = 1；環長 L = 3</text>
+</g></svg><figcaption>環偵測使用節點身分。此圖第一階段在值為 2 的節點相遇，再從 head 與相遇點同步走一步即可到入口 7。</figcaption></figure>
+<pre><code class="language-python">def cycle_entry(head):
+    slow = fast = head
+    while fast is not None and fast.next is not None:
+        slow = slow.next
+        fast = fast.next.next
+        if slow is fast:
+            seeker = head
+            while seeker is not slow:
+                seeker = seeker.next
+                slow = slow.next
+            return seeker
+    return None</code></pre>
+<p>為什麼第二階段能找入口？設入口距離為 μ、環長為 L，第一次相遇時 slow 共走 t 步、fast 走 2t 步，所以 t 是 L 的倍數。相遇點相對入口的位置是 (t − μ) mod L。讓 seeker 從 head 出發，兩人再各走 μ 步：seeker 到入口，slow 的位置則是 t mod L，也正是入口。在 seeker 到入口之前，它仍在環外，兩者不可能提前相遇。</p>
+<p class="complexity">中點與環入口皆為 O(n) 時間、O(1) 額外空間；有環時 n 指可從 head 抵達的不同節點數。雜湊集合記錄節點也能找重訪點，但多用 O(n) 空間，優點是容易延伸記錄路徑。</p>
+
+<h3 id="c04-dummy-gap">4. Dummy 節點與固定間距：刪倒數第 k 個</h3>
+<p>刪除節點的真正操作是「讓前驅跨過它」。頭節點沒有前驅，所以在 head 前方放一個 dummy（虛擬前驅），就能把刪頭與刪中間統一。dummy.value 沒有資料意義，最後回傳 dummy.next。</p>
+<p>令 slow、fast 從 dummy 出發，先讓 fast 前進 k 步，再同步移動直到 fast 是尾節點。此時 fast 與 slow 恰好相距 k 條邊，因此 slow 是倒數第 k 個節點的前驅。注意停止條件是 fast.next 為 None；若改成 fast 為 None，slow 的位置也要跟著重新推導。</p>
+<pre><code class="language-python">def remove_from_end(head, k):
+    &quot;&quot;&quot;移除倒數第 k 個節點；k 無效時拋 ValueError 且不修改串列。&quot;&quot;&quot;
+    if k &lt;= 0:
+        raise ValueError(&quot;k 必須為正整數&quot;)
+    dummy = Node(0, head)
+    slow = fast = dummy
+    for _ in range(k):
+        fast = fast.next
+        if fast is None:
+            raise ValueError(&quot;k 大於串列長度&quot;)
+    while fast.next is not None:
+        slow = slow.next
+        fast = fast.next
+    slow.next = slow.next.next
+    return dummy.next</code></pre>
+<div class="example"><h4>逐步例二：6 → 2 → 9，刪倒數第 2 個</h4>
+<table><thead><tr><th>步驟</th><th>slow</th><th>fast</th><th>理由／結果</th></tr></thead><tbody>
+<tr><td>初始化</td><td>dummy</td><td>dummy</td><td>相距 0</td></tr>
+<tr><td>fast 先走第 1 步</td><td>dummy</td><td>6</td><td>相距 1</td></tr>
+<tr><td>fast 先走第 2 步</td><td>dummy</td><td>2</td><td>建立固定間距 2</td></tr>
+<tr><td>同步走一輪</td><td>6</td><td>9</td><td>fast 已是尾端</td></tr>
+<tr><td>slow.next 跨過 2</td><td>6</td><td>9</td><td>結果 6 → 9</td></tr>
+</tbody></table></div>
+<p>k = n 時，fast 的預走剛好到尾端，slow 仍在 dummy，因此自然刪除 head。k = 1 時，slow 最後停在倒數第二個位置。程式先完整驗證 k 的範圍，才改 next；空串列或 k 超界會拋 ValueError，保留原串列。</p>
+<p class="complexity">時間 O(n)、額外空間 O(1)。dummy 只有一個節點，屬常數空間；垃圾回收何時釋放被移除節點不屬於這段指標推理，其他參照仍可能讓該物件存活。</p>
+
+<h3 id="c04-merge">5. 合併已排序串列：維持輸出邊界</h3>
+<p>對兩條遞增串列，a 與 b 各是尚未輸出的最小元素。選較小者接到 tail 後方，再移動被選串列的入口。每輪完成後，dummy.next 到 tail 是已確定的排序前綴；a 與 b 是剩餘輸入。相等時先取 a，讓第一條串列的同值元素優先，形成穩定的合併規則。</p>
+<pre><code class="language-python">def merge_sorted(a, b):
+    &quot;&quot;&quot;兩串列必須無環、遞增（可重複），且不能共享任何節點。&quot;&quot;&quot;
+    dummy = Node(0)
+    tail = dummy
+    while a is not None and b is not None:
+        if a.value &lt;= b.value:
+            tail.next, a = a, a.next
+        else:
+            tail.next, b = b, b.next
+        tail = tail.next
+    tail.next = a if a is not None else b
+    return dummy.next</code></pre>
+<p>一側耗盡後，另一側已排序且都不小於既有輸出尾值，可直接接上整段。注意 tail 之後的暫時連線尚未必是最終答案，不變量只保證到 tail 為止。兩條輸入必須節點互不重疊：若它們共享尾段，重接時可能把節點接回自己而造成環。</p>
+<p class="complexity">兩串列長 m、n，時間 O(m + n)，額外空間 O(1)，沿用原節點。若要求不更改輸入，就必須建立新節點，輸出空間為 O(m + n)。</p>
+
+<h3 id="c04-practice">6. 原創練習與邊界檢查</h3>
+<section class="exercise"><h4>練習 A：偶數長度改回傳第一個中點</h4><p>目前 8 → 3 → 5 → 1 回傳 5。若規格改回傳 3，要如何初始化快慢指標？空串列仍回傳 None。</p><details><summary>參考解答</summary><p>先處理 head is None；其餘令 slow = head、fast = head.next，再保留原來的 while fast is not None and fast.next is not None。fast 少了最後一輪可走的空間：n = 2 時 slow 不動，n = 4 時走一輪，落在索引 (n − 1) // 2。奇數長度的中點不變。仍為 O(n) 時間、O(1) 空間。</p></details></section>
+<section class="exercise"><h4>練習 B：只有待刪節點，真的能 O(1) 刪除嗎？</h4><p>你只拿到串列中某個節點 target，沒有 head 或前驅。有人建議把下一個節點的值複製過來，再跳過下一個節點。這個方法在哪些規格下不成立？</p><details><summary>參考解答</summary><p>target 是尾節點時沒有下一個可複製；更重要的是，它實際移除的是下一個節點，改寫的是 target 的值。如果外界靠節點身分保存參照、節點包含不可任意複製的資源，或規格要求真的移除 target，方法就不符合需求。一般單向串列仍需前驅才能正常 O(1) 重接。</p></details></section>
+<section class="exercise"><h4>練習 C：回文串列，額外空間 O(1)</h4><p>判斷 3 → 8 → 8 → 3 是否左右對稱，並要求函式結束後輸入結構不變。請描述可行步驟與要特別處理的邊界。</p><details><summary>參考解答</summary><p>先用快慢指標找「前半段的尾端」，反轉它後面的後半段；從 head 與反轉後的入口比較，走到後半段耗盡即可。最後無論比較是否成功，都把後半段再反轉並接回。不要在第一個不相等時直接 return，否則沒有還原。空串列與單節點直接為真；奇數長度的中間值不用比較。時間 O(n)、額外空間 O(1)，前提仍是無環且允許暫時修改。</p></details></section>
+<div class="callout"><strong>把測試當成規格：</strong>本章可執行測試涵蓋空／單節點、偶數與奇數長度、反轉兩次還原節點身分、所有合法 k 與超界 k、每個可能環入口、自環、合併重複值。迴圈的分支應對應到一個測試，而不只是看正常輸入的結果。</div>
+
+<h3 id="c04-summary">7. 決策小結</h3>
+<ul><li>需要直接讀第 i 個元素：先考慮陣列，鏈結串列沒有隨機存取優勢。</li><li>要改 next：先畫改線前後，寫下還需要的入口並保存它。</li><li>頭節點常要特殊處理：先試 dummy，把邊界轉成一般前驅操作。</li><li>一趟找中點、尾端距離或環：考慮不同速度或固定間距的雙指標。</li><li>比較「是不是同一節點」用身分；比較排序或回文內容才用 value。</li><li>報告空間前，分清楚原節點、測試轉陣列、輸出新節點與遞迴堆疊。</li></ul>
+<p>本章所有程式與邊界測試保存在 tests/examples_04.py，可由教材根目錄執行 python3 tests/examples_04.py。程式無外部套件需求。</p>
+</article>

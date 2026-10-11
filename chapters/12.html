@@ -1,0 +1,105 @@
+<article id="chapter-12" data-title="面試工具箱：流程、模板、速查與原創模擬">
+<h2>12　面試工具箱：把懂的演算法變成可檢查的解答</h2>
+<p>會辨認演算法只是起點。面試時，你要把含糊的題意整理成明確介面，說明為什麼方法適用，寫出能維護的不變量，最後用測試與成本分析驗證。本章提供一份可調整的流程、Python 速查及兩個完整原創模擬題；題目與講解均獨立設計，不是任何課程面試影片的重製。</p>
+<div class="callout"><strong>練習方式：</strong>先遮住解答，給自己 35–45 分鐘完成其中一題。把口頭解釋寫成三句話：輸入保證什麼、每一步維護什麼、為什麼不漏掉答案。時間配置只是練習假設，實際以對方的安排為準。</div>
+<h3 id="c12-process">1. 面試六階段：每一階段交付一個可確認的東西</h3>
+<figure class="diagram"><svg role="img" aria-label="澄清、基準解、選方法、實作、驗證、延伸的練習流程" viewBox="0 0 780 280" xmlns="http://www.w3.org/2000/svg"><title>澄清、基準解、選方法、實作、驗證、延伸的練習流程</title><rect width="780" height="280" rx="16" fill="#f3f7fc"/><g font-family="system-ui, sans-serif" font-size="18" fill="#132b45"><text x="25" y="35" font-weight="bold">一份可調整的 40 分鐘練習節奏，不是面試硬規則</text><rect x="22" y="70" width="112" height="105" rx="8" fill="#256e61"/><text x="40" y="107" fill="white">澄清</text><text x="28" y="145" fill="white" font-size="16">0–5 分</text><rect x="148" y="70" width="112" height="105" rx="8" fill="#466d9b"/><text x="166" y="107" fill="white">基準解</text><text x="154" y="145" fill="white" font-size="16">5–9 分</text><rect x="274" y="70" width="112" height="105" rx="8" fill="#256e61"/><text x="292" y="107" fill="white">選方法</text><text x="280" y="145" fill="white" font-size="16">9–15 分</text><rect x="400" y="70" width="112" height="105" rx="8" fill="#466d9b"/><text x="418" y="107" fill="white">寫程式</text><text x="406" y="145" fill="white" font-size="16">15–28 分</text><rect x="526" y="70" width="112" height="105" rx="8" fill="#256e61"/><text x="544" y="107" fill="white">驗證</text><text x="532" y="145" fill="white" font-size="16">28–36 分</text><rect x="652" y="70" width="112" height="105" rx="8" fill="#466d9b"/><text x="670" y="107" fill="white">延伸</text><text x="658" y="145" fill="white" font-size="16">36–40 分</text><text x="30" y="222">卡住時：說出已確定的事，提出最小下一步。</text><text x="30" y="256">每一階段都要讓對方知道：假設、理由、目前狀態。</text></g></svg><figcaption>澄清、基準解、選方法、實作、驗證、延伸的練習流程</figcaption></figure>
+<ol><li><strong>澄清契約：</strong>輸入型別及範圍、空輸入、重複值、負值、是否有序、可否改動輸入、無解回傳值、平手規則。只問會改變演算法或輸出的問題。</li><li><strong>建立基準解：</strong>先說最直接的正確作法與成本。例如枚舉所有子陣列，再檢查條件。它可以當作小輸入的測試 oracle。</li><li><strong>找浪費：</strong>重算的和能否做前綴？重複查找能否 hashing？移動邊界是否有單調性？不是看見關鍵字就套模板。</li><li><strong>實作：</strong>先說不變量與資料結構，再寫主迴圈。變數名稱能反映意義；先完成清楚的解法，再考慮微調。</li><li><strong>驗證：</strong>手追一個一般案例、一個邊界、一個容易破壞直覺的反例；解釋每個索引的範圍。</li><li><strong>收尾與延伸：</strong>時間、輔助空間、輸出空間分開說；新限制若改變，再重新檢查原證明。</li></ol>
+<p>卡住時可說：「暴力法會重複檢查相同的區間，我正在找能增量更新的狀態。」這比長時間沉默更具體。如果優化還不確定，先保留可驗證的基準解。寫完程式但沒檢查空輸入，也不能算真正完成。</p>
+<h3 id="c12-selection">2. 方法選擇速查：從限制到候選</h3>
+<table><thead><tr><th>觀察</th><th>先考慮</th><th>必須確認</th></tr></thead><tbody>
+<tr><td>成員存在、次數、互補值</td><td>set / dict</td><td>鍵可雜湊，平均成本假設</td></tr><tr><td>連續區間、可增量更新</td><td>滑動視窗、前綴和</td><td>視窗合法性能否靠單向收縮維持</td></tr><tr><td>排序資料或單調可行性</td><td>二分搜尋</td><td>邊界定義、False→True、搜尋範圍</td></tr><tr><td>最近未配對元素、下一個更大值</td><td>stack、單調 stack</td><td>何時 pop，重複值用嚴格或非嚴格比較</td></tr><tr><td>無權最短步數</td><td>BFS</td><td>邊成本相同、visited 時機</td></tr><tr><td>階層、連通性、所有分支</td><td>DFS</td><td>圖是否有環、遞迴深度</td></tr><tr><td>持續取得最小值或前 k 大</td><td>heap</td><td>是否只需 k 個、過期狀態如何移除</td></tr><tr><td>最佳決策、重複子問題</td><td>DP</td><td>狀態是否足夠描述未來</td></tr><tr><td>列舉所有合法解</td><td>回溯</td><td>輸出量下界、剪枝是否安全、撤銷操作</td></tr><tr><td>每步選局部最佳</td><td>貪心候選</td><td>交換或領先性質的證明</td></tr></tbody></table>
+<p>例如「子陣列總和」不必然是滑動視窗。若存在負值，加入右端可能讓總和下降，移除左端也可能讓它上升；以大小來決定收縮的策略可能失效。反之，下題的「不同標籤數」在移除元素後不會增加，適合視窗。</p>
+<h3 id="c12-python-costs">3. Python 成本速查：把隱藏工作算進去</h3>
+<table><thead><tr><th>操作或演算法</th><th>常見時間</th><th>容易遺漏的成本</th></tr></thead><tbody>
+<tr><td>list 索引、len</td><td>O(1)</td><td>list 切片長度 k 為 O(k) 時間及空間</td></tr><tr><td>list.append / 尾端 pop</td><td>攤銷 O(1) / O(1)</td><td>pop(0)、中間插刪為 O(n)</td></tr><tr><td>deque 兩端加入、移除</td><td>O(1)</td><td>任意位置索引不保證 O(1)</td></tr><tr><td>dict / set 查找、更新</td><td>通常平均 O(1)</td><td>最壞碰撞可能退化；新長字串的雜湊也有字串長度成本</td></tr><tr><td>sorted、list.sort</td><td>最壞 O(n log n)</td><td>Python 排序可用 O(n) 額外工作空間；sorted 另建 list</td></tr><tr><td>heapify / heappush / heappop</td><td>O(n) / O(log n) / O(log n)</td><td>heap 只保證堆頂最小，不是完整排序</td></tr><tr><td>二分查位置</td><td>O(log n)</td><td>list 插入仍 O(n)；判斷器成本需乘進去</td></tr><tr><td>鄰接串列 BFS / DFS</td><td>O(V+E)</td><td>visited、父節點、佇列通常 O(V)；輸入圖另佔 O(V+E)</td></tr><tr><td>樹遞迴</td><td>常見 O(n)</td><td>呼叫堆疊 O(h)，退化鏈時 h=n</td></tr><tr><td>列舉長度 n 的所有排列</td><td>至少 Ω(n·n!) 輸出量</td><td>每份答案都必須複製，不能只算葉節點數</td></tr></tbody></table>
+<p>此表採一般 RAM 成本模型。Python 大整數加減與乘法的成本隨位元長度成長；字串比較也可能掃多個字元。面試通常可先用元素操作模型，但要說出假設。遞迴深度限制取決於執行環境，長鏈輸入優先考慮顯式 stack；提高 recursion limit 不是記憶體安全保證。</p>
+<h3 id="c12-mock-window">4. 原創模擬一：挑一段監測紀錄</h3>
+<div class="example"><p><strong>題目：</strong>感測系統依時間留下標籤序列 labels。分析畫面一次最多能顯示 k 種不同標籤。請找最長的一段連續紀錄，使其中標籤種類數至多為 k，回傳半開索引 (left, right)。同長選最早開始；空輸入或 k=0 回傳 (0,0)。本題假設 0≤n≤200,000，k 是非負整數，標籤為可雜湊字串，不可修改輸入。</p><p>範例 labels=[A,B,A,C,C,B,B]、k=2，答案 (3,7)，對應 C,C,B,B。這裡的 n 上限是本練習自訂的條件，不是外部題庫資料。</p></div>
+<figure class="diagram"><svg role="img" aria-label="最長合法標籤視窗的索引與內容" viewBox="0 0 780 280" xmlns="http://www.w3.org/2000/svg"><title>最長合法標籤視窗的索引與內容</title><rect width="780" height="280" rx="16" fill="#f3f7fc"/><g font-family="system-ui, sans-serif" font-size="18" fill="#132b45"><text x="25" y="35" font-weight="bold">至多 2 種標籤：加入第三種後，左端必須向右收縮</text><rect x="60" y="70" width="82" height="50" fill="#b7cbdc" rx="6"/><text x="91" y="103" fill="#132b45" font-size="24">A</text><text x="93" y="147">0</text><rect x="154" y="70" width="82" height="50" fill="#b7cbdc" rx="6"/><text x="185" y="103" fill="#132b45" font-size="24">B</text><text x="187" y="147">1</text><rect x="248" y="70" width="82" height="50" fill="#b7cbdc" rx="6"/><text x="279" y="103" fill="#132b45" font-size="24">A</text><text x="281" y="147">2</text><rect x="342" y="70" width="82" height="50" fill="#256e61" rx="6"/><text x="373" y="103" fill="white" font-size="24">C</text><text x="375" y="147">3</text><rect x="436" y="70" width="82" height="50" fill="#256e61" rx="6"/><text x="467" y="103" fill="white" font-size="24">C</text><text x="469" y="147">4</text><rect x="530" y="70" width="82" height="50" fill="#256e61" rx="6"/><text x="561" y="103" fill="white" font-size="24">B</text><text x="563" y="147">5</text><rect x="624" y="70" width="82" height="50" fill="#256e61" rx="6"/><text x="655" y="103" fill="white" font-size="24">B</text><text x="657" y="147">6</text><line x1="342" y1="165" x2="706" y2="165" stroke="#256e61" stroke-width="4"/><text x="353" y="200">最佳區間 [3,7)：C,C,B,B</text><text x="40" y="245">回傳索引，不必每次切片；同長時保留較早答案。</text></g></svg><figcaption>最長合法標籤視窗的索引與內容</figcaption></figure>
+<p><strong>基準解：</strong>枚舉 O(n²) 個區間，每次重建 set 最壞 O(n)，總 O(n³)。若每個左端固定後漸進擴張並更新 set，可降到 O(n²)，仍不適合本題設定。進一步觀察：右端每加入一個標籤，只需更新一次計數；若種類太多，左端一直移到合法為止。</p>
+<pre><code class="language-python">def longest_label_window(labels, k):
+    &quot;&quot;&quot;回傳至多 k 種標籤的最長半開區間；同長時選最早。&quot;&quot;&quot;
+    if k &lt; 0:
+        raise ValueError(&quot;k 不可為負&quot;)
+    counts = {}
+    left = 0
+    best = (0, 0)
+    for right, label in enumerate(labels):
+        counts[label] = counts.get(label, 0) + 1
+        while len(counts) &gt; k:
+            old = labels[left]
+            counts[old] -= 1
+            if counts[old] == 0:
+                del counts[old]
+            left += 1
+        if right + 1 - left &gt; best[1] - best[0]:
+            best = (left, right + 1)
+    return best</code></pre>
+<p><strong>正確性：</strong>while 結束後，counts 正好記錄 [left,right+1) 內的正次數標籤，種類數不超過 k。左端只在不合法時移動；較早被排除的左端，在增加更多右端元素後仍不可能重新合法。因此當前 left 是這個 right 下能保留的最早合法左端，所得視窗是以 right 結尾的最長合法視窗。遍歷所有 right，就覆蓋了全域最優解。同長不更新，保留最早找到的答案；同長區間依 right 增加，left 也增加，所以符合最早規則。</p>
+<div class="example"><h4>逐步追蹤</h4><table><thead><tr><th>right / 新標籤</th><th>收縮後 left</th><th>有效計數</th><th>本輪長度</th><th>最佳 [L,R)</th></tr></thead><tbody><tr><td>0 / A</td><td>0</td><td>A:1</td><td>1</td><td>[0,1)</td></tr><tr><td>1 / B</td><td>0</td><td>A:1,B:1</td><td>2</td><td>[0,2)</td></tr><tr><td>2 / A</td><td>0</td><td>A:2,B:1</td><td>3</td><td>[0,3)</td></tr><tr><td>3 / C</td><td>2</td><td>A:1,C:1</td><td>2</td><td>[0,3)</td></tr><tr><td>4 / C</td><td>2</td><td>A:1,C:2</td><td>3</td><td>[0,3)</td></tr><tr><td>5 / B</td><td>3</td><td>C:2,B:1</td><td>3</td><td>[0,3)</td></tr><tr><td>6 / B</td><td>3</td><td>C:2,B:2</td><td>4</td><td>[3,7)</td></tr></tbody></table><p>加入第一個 C 時，不是左端移一次就好：移除第一個 A 仍有 A、B、C 三種，必須再移除 B。因此這裡必須用 while，不能用 if。</p></div>
+<p class="complexity">兩個指標各最多移動 n 次，雜湊平均 O(1) 的假設下總時間 O(n)。計數表穩定時至多 k 種，加入新值瞬間至多 k+1 種，因此額外空間 O(min(n,k+1))；k=0 仍可能短暫存一個鍵。回傳索引為 O(1) 輸出；若回傳整段 labels[L:R]，還要 O(答案長度) 複製。</p>
+<p><strong>面試延伸：</strong>如果資料是無法回頭讀的串流，移除左端仍要知道舊標籤，就需保留視窗中的資料或其他足夠資訊。不能僅因原本用了兩指標就聲稱串流也只要 O(k) 記憶體。</p>
+<h3 id="c12-mock-route">5. 原創模擬二：園區接駁轉乘</h3>
+<div class="example"><p><strong>題目：</strong>園區站點用非空字串命名，graph[u] 是可直接從 u 前往的站點，路線有方向，每搭一段都算一次。給起點 start 與終點 goal，回傳搭乘段數最少的站點路徑；無法抵達回傳 []，起終點相同回傳 [start]。鄰接表沒出現的站點視為沒有出邊；可能有環與重複邊。同長路徑任取，這份實作按鄰接順序選。</p><p>本例：S→A、B；A→C；B→C、T；C→S、T；T 沒有出邊。求 S 到 T。</p></div>
+<figure class="diagram"><svg role="img" aria-label="BFS 分層與最短路徑的父節點鏈" viewBox="0 0 780 365" xmlns="http://www.w3.org/2000/svg"><title>BFS 分層與最短路徑的父節點鏈</title><rect width="780" height="365" rx="16" fill="#f3f7fc"/><g font-family="system-ui, sans-serif" font-size="18" fill="#132b45"><defs><marker id="c12-route-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#7d95b0"/></marker><marker id="c12-route-chosen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#256e61"/></marker></defs><text x="25" y="35" font-weight="bold">無權路網：BFS 一層一層發現最少邊數</text><g stroke="#7d95b0" stroke-width="3" marker-end="url(#c12-route-arrow)"><line x1="132" y1="146" x2="280" y2="100"/><line x1="132" y1="164" x2="278" y2="210"/><line x1="332" y1="91" x2="503" y2="91"/><line x1="329" y1="203" x2="507" y2="107"/><line x1="332" y1="219" x2="503" y2="219"/><line x1="530" y1="118" x2="530" y2="192"/></g><path d="M505 74 Q310 8 125 136" fill="none" stroke="#b58c70" stroke-width="2" marker-end="url(#c12-route-arrow)"/><g stroke="#256e61" stroke-width="4" marker-end="url(#c12-route-chosen)"><line x1="132" y1="164" x2="278" y2="210"/><line x1="332" y1="219" x2="503" y2="219"/></g><circle cx="105" cy="155" r="27" fill="#256e61"/><text x="97" y="162" fill="white" font-size="22">S</text><circle cx="305" cy="91" r="27" fill="#466d9b"/><text x="297" y="98" fill="white" font-size="22">A</text><circle cx="305" cy="219" r="27" fill="#256e61"/><text x="297" y="226" fill="white" font-size="22">B</text><circle cx="530" cy="91" r="27" fill="#466d9b"/><text x="522" y="98" fill="white" font-size="22">C</text><circle cx="530" cy="219" r="27" fill="#256e61"/><text x="522" y="226" fill="white" font-size="22">T</text><text x="77" y="295">距離 0</text><text x="276" y="295">距離 1</text><text x="503" y="295">距離 2</text><text x="595" y="101">箭頭代表可搭方向</text><text x="595" y="145">綠色父鏈：</text><text x="595" y="179">S → B → T</text><text x="30" y="338">回到已看過的 S 不再排隊；C 的另一個來源也不重複排隊。</text></g></svg><figcaption>BFS 分層與最短路徑的父節點鏈</figcaption></figure>
+<p>這是無權最短路徑，BFS 佇列按距離層次處理。使用 parent 同時扮演「已發現集合」與「路徑來源」：在節點入列時就記錄它，而非出列時才標記，可避免多個來源反覆加入同一節點。起點以 None 作父節點哨兵，因此此介面禁止節點本身為 None。</p>
+<pre><code class="language-python">from collections import deque
+
+def shortest_route(graph, start, goal):
+    &quot;&quot;&quot;無權有向圖；鄰接順序決定同長路徑的選擇。&quot;&quot;&quot;
+    parent = {start: None}
+    queue = deque([start])
+    while queue:
+        node = queue.popleft()
+        if node == goal:
+            path = []
+            while node is not None:
+                path.append(node)
+                node = parent[node]
+            return path[::-1]
+        for neighbor in graph.get(node, ()):
+            if neighbor not in parent:
+                parent[neighbor] = node
+                queue.append(neighbor)
+    return []</code></pre>
+<p><strong>正確性：</strong>佇列中節點按起點距離不減排列。從距離 d 的節點第一次發現鄰居時，距離為 d+1；若存在更短的路，該更短路的前一個節點應更早出列並先發現它，矛盾。因此第一次記錄的父節點鏈即為最短路徑，遇到終點後逆向追 parent 並反轉即可。</p>
+<div class="example"><h4>逐步追蹤</h4><table><thead><tr><th>本輪出列</th><th>新增 parent</th><th>處理後 queue</th><th>說明</th></tr></thead><tbody><tr><td>初始化</td><td>S:None</td><td>[S]</td><td>起點已發現</td></tr><tr><td>S</td><td>A:S、B:S</td><td>[A,B]</td><td>距離 1</td></tr><tr><td>A</td><td>C:A</td><td>[B,C]</td><td>C 距離 2</td></tr><tr><td>B</td><td>T:B</td><td>[C,T]</td><td>C 已發現，不再入列</td></tr><tr><td>C</td><td>無</td><td>[T]</td><td>S、T 都已發現</td></tr><tr><td>T</td><td>無</td><td>[]</td><td>反向 T→B→S，輸出 S→B→T</td></tr></tbody></table></div>
+<p class="complexity">設可達區域有 V 個節點、E 筆鄰接項，最壞時間 O(V+E)，額外空間 O(V)。重建長度 L 的路徑需 O(L) 時間與輸出空間；path[::-1] 也建立新串列，仍在 O(V) 總界內。若邊有不同非負耗時，BFS 最少段數不保證最短時間，應改考慮 Dijkstra。</p>
+<h3 id="c12-templates">6. 可攜模板：保留不變量，不盲目複製</h3>
+<p>上面兩個 mock 已提供視窗與 BFS 模板。下面補上兩個短模板，與前章連結成常用工具箱。每份模板都需要輸入契約；修改條件後，先重新讀一遍註解與不變量。</p>
+<h4>模板 A：有序序列中的第一個不小於目標的位置</h4>
+<pre><code class="language-python">def first_at_least(values, target):
+    lo, hi = 0, len(values)
+    while lo &lt; hi:
+        mid = (lo + hi) // 2
+        if values[mid] &lt; target:
+            lo = mid + 1
+        else:
+            hi = mid
+    return lo</code></pre>
+<p>前提是非遞減且支援隨機存取；[0,lo) 都小於 target，[hi,n) 都不小於 target，返回值可能為 n。O(log(n+1)) 時間，O(1) 額外空間。若題目允許標準庫，可用 bisect_left，但仍要能解釋回傳語意。</p>
+<h4>模板 B：含負數也能計數的前綴和</h4>
+<pre><code class="language-python">def count_target_sum(values, target):
+    &quot;&quot;&quot;連續非空子陣列總和；支援負值。&quot;&quot;&quot;
+    seen = {0: 1}
+    total = answer = 0
+    for value in values:
+        total += value
+        answer += seen.get(total - target, 0)
+        seen[total] = seen.get(total, 0) + 1
+    return answer</code></pre>
+<p>在目前前綴 total，若某個更早前綴等於 total−target，兩者之間的非空子陣列和就是 target。seen={0:1} 代表空前綴，讓從索引 0 開始的答案被計入；一定要先查再加入當前前綴，避免 target=0 時把長度零的區間算進去。在雜湊平均常數時間下，時間 O(n)、空間 O(n)。</p>
+<p>測 [2,−2,2]、target=2：三個答案是索引 [0,1)、[2,3)、[0,3)。這個模板數的是「有幾個」，不是回傳所有區間；若要列舉，需儲存前綴出現的索引，還要算輸出量。</p>
+<h3 id="c12-validation">7. 驗證清單：不用大量例子，也要命中風險</h3>
+<ul><li><strong>形狀：</strong>空、一個元素、全部相同、嚴格遞增或遞減、極端偏斜的樹、稠密或不連通的圖。</li><li><strong>邊界：</strong>k=0、k≥n、答案在第一格或最後一格、完全無解、起終點相同。</li><li><strong>狀態：</strong>計數降到零有沒有刪鍵？visited 是否在入列標記？回溯離開前是否撤銷？前綴和先查還是先記錄？</li><li><strong>回傳契約：</strong>半開還是閉區間？回傳值、索引、數量還是路徑？平手結果是否確定？</li><li><strong>成本：</strong>雙層迴圈是否真是平方，還是每個指標只移一次？是否在迴圈中反覆切片或排序？</li></ul>
+<p>把最佳化版與基準解放在同一份小規模測試裡，用窮舉或固定種子的亂數比較。若有多個合法答案，驗證條件與最優值，不要只比某一條路徑。這份教材為了穩定示範，已把同長視窗及 BFS 鄰接順序明訂。</p>
+<h3 id="c12-practice">8. 練習與面試追問</h3>
+<section class="exercise"><h4>練習一：忘記刪除零次數的鍵</h4><p>視窗程式把 counts[old] 減到零，但沒有 del。對 [A,B]、k=1，可能發生什麼事？</p><details><summary>參考解答</summary><p>加入 B 後字典有 A、B 兩鍵。移除 A 後 A:0 還在，len(counts) 仍是 2，所以 while 繼續收縮，甚至移到陣列範圍外。字典長度要代表種類數，就必須只保留正次數；另一種做法是另存 distinct 計數並正確維護。</p></details></section>
+<section class="exercise"><h4>練習二：BFS 能處理不同票價嗎？</h4><p>S→T 票價 20；S→A、A→T 各 3。想找最低總票價，原模板會錯在哪裡？</p><details><summary>參考解答</summary><p>BFS 會偏好一段的 S→T，但兩段 S→A→T 只要 6。模板的不變量是最少邊數，不是最低總成本。非負票價可用 Dijkstra；不能只把 queue 改名成 cost 就保留原證明。</p></details></section>
+<section class="exercise"><h4>練習三：前綴和加入順序</h4><p>對 values=[0,0]、target=0，正確有幾個非空子陣列？如果先增加 seen[total] 再查會多算什麼？</p><details><summary>參考解答</summary><p>正確三個：[0,1)、[1,2)、[0,2)。先更新會在每輪把當前前綴與自己配對，各多算一個空區間，兩輪後錯得 5。先查歷史、再登記現在，就只配對嚴格較早的前綴。</p></details></section>
+<section class="exercise"><h4>練習四：口頭複雜度修正</h4><p>「我用 sorted 找中位數，只保留一個答案，所以空間 O(1)。」如何修正？</p><details><summary>參考解答</summary><p>sorted 會建立 n 個元素的新串列，排序本身也有工作記憶體，總額外空間 O(n)；輸出雖只有一個值，不能忽略中間資料。時間最壞 O(n log n)。若討論其他選擇演算法，需另說實作、是否改動原陣列與最壞成本。</p></details></section>
+<h3 id="c12-review">9. 自評與下一輪練習</h3>
+<p>每題用五項各 0–2 分自評：契約是否明確、方法是否有理由、程式是否完整、測試是否命中邊界、成本是否包含隱藏工作。這是自訂練習量表，不是公司的評分標準。低分項目要變成下一次的具體動作，例如「寫迴圈前先口述不變量」，而不是籠統地多刷題。</p>
+<p>配套 tests/examples_12.py 會窮舉短標籤序列與 k，將視窗結果和暴力法對照；測試 BFS 的環、重複邊、無解、起終點相同；並枚舉含 −1、0、1 的短陣列驗證前綴和計數。完整答題順序是：規格清楚 → 理由成立 → 程式可跑 → 邊界通過 → 成本交代。</p>
+</article>

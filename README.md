@@ -1,2 +1,107 @@
-# data-structures-algorithms-notes
-繁體中文資料結構與演算法教材：13 章原創筆記、Python 範例、圖解與互動實驗。
+# 資料結構與演算法：把思路變成解法
+
+獨立編寫的繁體中文 DSA 教材。13 章完整閱讀路線、原創教學圖與逐步例子、Python 3 程式、練習與可展開答案，以及 6 個可自訂小輸入的分步演算法實驗。
+
+## 閱讀
+
+直接以近期版本的 Chrome、Edge、Firefox 或 Safari 開啟 `index.html`。教材、CSS、JavaScript 與 SVG 都已內嵌，不需要網路、帳號、套件或 CDN。也可將同一份 `index.html` 放到一般靜態網站或 GitHub Pages。
+
+- 首頁提供 13 章路線圖及 6 個實驗的入口。
+- 章節與小節使用穩定的 URL 錨點，支援上一頁／下一頁。
+- `/` 開啟搜尋，`Esc` 關閉；搜尋包含程式與參考解答，並支援常見英文模式名。
+- 「加入書籤」與「標記完成」只寫入本瀏覽器的 localStorage；不會上傳或跨裝置同步。檔案路徑、瀏覽器、安全設定與私人瀏覽模式可能影響保存。
+- 支援深色／淺色／跟隨系統、手機目錄與鍵盤操作。
+- 「列印全書與答案」會展開所有參考解答並輸出完整 13 章。列印後會還原原本的展開狀態。
+- 停用 JavaScript 時，所有章節、圖解、Python 與練習仍可閱讀；使用瀏覽器的搜尋與列印。互動實驗、全書索引搜尋、書籤及進度需要 JavaScript。
+
+## 六個可操作實驗
+
+每個實驗有「上一步／下一步／重新開始」、輸入檢查、變數狀態、不變量、逐步解釋與明確停止條件；不會自行播放。
+
+1. **雙指標**：有序陣列中的兩數總和，說明排除哪一端為什麼安全。
+2. **滑動視窗**：固定長度 k 的最大總和，支援負數。
+3. **二分搜尋**：半開區間的 lower_bound，支援重複值與空陣列。
+4. **BFS**：自訂 A–F 的無向邊與起點，呈現 FIFO、visited、最少邊數及不可達節點。
+5. **回溯**：從 1…n 選子集合，呈現選擇／撤銷／不選／正數剪枝與保存答案。
+6. **動態規劃**：不限次硬幣的最少硬幣數，逐格呈現依賴、比較、更新與無解。
+
+實驗故意限制輸入大小以利觀察。每一畫面都儲存一份 trace 快照；教材所述的演算法時間／空間複雜度不包含這些教學追蹤資料。BFS 的距離只適用無權或等權圖，回溯實驗的總和剪枝依賴候選數為正數。
+
+## 內容範圍
+
+01. 基礎、Big O、遞迴與 Python 成本
+02. 陣列與字串、雙指標、滑動視窗、前綴和
+03. 雜湊、存在性、計數與前綴狀態
+04. 鏈結串列、快慢指標、反轉與 dummy
+05. 堆疊、佇列、解析與單調結構
+06. 樹、圖、DFS、BFS、BST 與 visited
+07. heapq、Top K、串流與合併
+08. 貪婪選擇、交換論證、排序與反例
+09. 二分邊界、答案空間與單調判定
+10. 回溯、生成、剪枝與撤銷
+11. 動態規劃、1D／多維／狀態機／矩陣、記憶化與填表
+12. 面試流程、模板、複雜度速查與原創模擬題
+13. 差分、Trie、位元、區間、模數、Dijkstra 與限制停靠狀態
+
+## 原始檔與重建
+
+建置只使用 Python 標準函式庫，需求為 Python 3.10 以上。
+
+```sh
+python build.py
+```
+
+結構：
+
+```text
+chapters/01.html … 13.html   # 原創章節 HTML
+source/shell.html            # 共用閱讀介面
+source/styles.css           # CSS 設計系統
+source/labs.js              # 純演算法 trace + DOM 實驗介面
+source/app.js               # 導覽、搜尋、儲存、主題與列印
+build.py                    # 驗證並產生全內嵌 index.html
+index.html                  # 可離線開啟的最終教材
+tests/examples_01.py …      # 各章可執行 Python 範例與 assert
+tests/test_build.py         # 建置、缺章、錨點與重複 id 檢查
+tests/test_labs.js          # 暴力解對照與演算法不變量
+tests/test_dom.mjs          # 輕量模擬 DOM／狀態邏輯測試
+tests/test_browser.js       # 選用真 Chromium 回歸測試
+```
+
+`build.py` 缺任何一章就會失敗，不會用測試內容補齊。建置還會檢查重複 id、無效內部連結、缺少小節 id 與不允許的章節腳本。輸出是可重現的：相同來源產生相同 HTML。
+
+## 驗證方式
+
+Python 範例與標準函式庫建置測試：
+
+```sh
+python tests/test_build.py
+for f in tests/examples_*.py; do python "$f"; done
+```
+
+JavaScript 純邏輯與 DOM 測試需求為 Node.js 18+；沒有 npm 執行時依賴：
+
+```sh
+node --check source/app.js
+node --check source/labs.js
+node tests/test_labs.js
+node tests/test_dom.mjs
+```
+
+目前純演算法測試包含 140,061 個 assertions，使用小範圍窮舉／暴力基準驗證答案、不變量、邊界及停止；DOM harness 驗證互動的狀態與事件，不等同瀏覽器渲染或可及性稽核。
+
+真瀏覽器測試為可選開發工具，需要已安裝的 Playwright 與 Chromium（教材本身不需要）：
+
+```sh
+CHROMIUM_PATH=/usr/bin/chromium node tests/test_browser.js
+# 要保留桌面、手機、深色、各實驗截圖：
+DSA_SCREENSHOTS=/tmp/dsa-qa CHROMIUM_PATH=/usr/bin/chromium node tests/test_browser.js
+```
+
+這份原始碼產生時，受限容器不允許 Chromium 建立程序 socket，故上述本地真瀏覽器腳本尚不能在該容器執行完成。不得把輕量 DOM 測試當作真瀏覽器通過；應在有瀏覽器權限的環境補跑並檢視畫面。
+
+## 教材定位與來源
+
+依 LeetCode 公開 DSA 課綱的主題組織獨立編寫；未取得、翻譯或還原付費課文，也不是 LeetCode 官方授權教材。正文、範例、練習與互動為本教材的原創表達。各章附具體延伸來源，主要使用官方 Python 文件與相關公開資料；外部連結僅供讀者自行延伸閱讀，離線使用不會自動載入。
+
+介面延續同系列系統設計教材的閱讀設計系統；兩份教材的正文內容分開維護。本教材偏重可解釋的推理、邊界與實作習慣，不保證特定面試或平台評測結果。
