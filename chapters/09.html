@@ -1,14 +1,15 @@
 <article id="chapter-09" data-title="二分搜尋：邊界、不變量與答案空間">
 <h2>09　二分搜尋：找一個永遠不會被丟掉的邊界</h2>
-<p>二分搜尋不只是「有序陣列找數字」。更一般的想法是：有一個由 False 轉為 True 的分界，每次觀察中間一點，就排除不可能包含答案的一半。實作的核心不是背 lo、hi 的變動，而是清楚說出：這兩個變數各代表什麼，哪些位置已經被證明。</p>
+<p>二分搜尋可以處理「有序陣列找數字」，也能用來找由 False 轉為 True 的分界。每次觀察中間一點，就排除不可能包含答案的一半。實作時先說清楚 lo、hi 各代表什麼，以及哪些位置已經確定，才能決定如何更新這兩個變數。</p>
 <div class="callout"><strong>本章約定：</strong>陣列為非遞減排序，允許重複值。陣列索引搜尋採半開區間 [lo, hi)；整數容量的答案搜尋採閉區間 [lo, hi]。兩套寫法都正確，但初始化、更新及停止條件必須成套使用。</div>
 <h3 id="c09-boundary">1. 把找值改成找邊界</h3>
-<p>在 [2,4,4,4,9] 搜尋 4，任意一個 4 的索引都能回答「有沒有」。若題目問第一個、最後一個、出現幾次，找到任意一個後就停會丟失資訊。定義 lower_bound(x) 為第一個值 ≥ x 的位置；若不存在，回傳 n。upper_bound(x) 則找第一個值 &gt; x 的位置。</p>
+<p class="problem-source"><strong>相近題型：</strong>插入位置可對照 <a href="https://leetcode.com/problems/search-insert-position/">LeetCode 35：Search Insert Position</a>，重複值範圍可對照 <a href="https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/">LeetCode 34：Find First and Last Position of Element in Sorted Array</a>。第 35 題的輸入非空且沒有重複值；本章 lower_bound 另支援空陣列與重複值。第 34 題要回傳含首尾的 [first,last]，不存在時回傳 [-1,-1]；本章先求半開邊界，命中後才轉成 [lower,upper−1]。範例 [2,4,4,4,9] 的 target=4 對應第 34 題答案為 [1,3]。</p>
+<p>在 [2,4,4,4,9] 搜尋 4，任意一個 4 的索引都能回答「有沒有」。若題目問第一個、最後一個、出現幾次，找到任意一個後就停止，仍無法回答這些問題。定義 lower_bound(x) 為第一個值 ≥ x 的位置；若不存在，回傳 n。upper_bound(x) 則找第一個值 &gt; x 的位置。</p>
 <figure class="diagram"><svg role="img" aria-label="lower bound 將陣列切成小於與不小於兩部分" viewBox="0 0 780 280" xmlns="http://www.w3.org/2000/svg"><title>lower bound 將陣列切成小於與不小於兩部分</title><rect width="780" height="280" rx="16" fill="#f3f7fc"/><g font-family="system-ui, sans-serif" font-size="18" fill="#132b45"><text x="25" y="35" font-weight="bold">搜尋第一個 ≥ 4 的位置：答案是邊界，不一定是值</text><rect x="155" y="72" width="94" height="52" fill="#d98745" rx="6"/><text x="193" y="105" fill="white" font-size="24">2</text><text x="193" y="148">0</text><rect x="259" y="72" width="94" height="52" fill="#256e61" rx="6"/><text x="297" y="105" fill="white" font-size="24">4</text><text x="297" y="148">1</text><rect x="363" y="72" width="94" height="52" fill="#256e61" rx="6"/><text x="401" y="105" fill="white" font-size="24">4</text><text x="401" y="148">2</text><rect x="467" y="72" width="94" height="52" fill="#256e61" rx="6"/><text x="505" y="105" fill="white" font-size="24">4</text><text x="505" y="148">3</text><rect x="571" y="72" width="94" height="52" fill="#256e61" rx="6"/><text x="609" y="105" fill="white" font-size="24">9</text><text x="609" y="148">4</text><text x="700" y="148">5</text><text x="687" y="179">尾端</text><line x1="253" y1="58" x2="253" y2="170" stroke="#132b45" stroke-width="3"/><text x="140" y="206">[0, q) 都 &lt; 4</text><text x="352" y="206">[q, n) 都 ≥ 4</text><text x="220" y="247">q = 1；找不到時 q = n，禁止讀 values[n]</text></g></svg><figcaption>lower bound 將陣列切成小於與不小於兩部分</figcaption></figure>
-<p>邊界 q 可以是 0，也可以是 n。這是位置而非保證存在的元素，因此搜尋結束不能直接存取 values[q]。判斷目標存在的完整條件是 q &lt; len(values) 且 values[q] == target。先檢查範圍，再讀元素。</p>
+<p>邊界 q 可以是 0，也可以是 n。q 表示分界位置，該位置不一定有元素，因此搜尋結束後不能直接存取 values[q]。判斷目標存在的完整條件是 q &lt; len(values) 且 values[q] == target。先檢查範圍，再讀元素。</p>
 <h3 id="c09-invariant">2. 半開模板：未知的是索引，答案是分界</h3>
 <p>初始化 lo=0、hi=n。每次迴圈開始時保持：</p>
-<ul><li>0 ≤ lo ≤ hi ≤ n。</li><li>所有 i &lt; lo 都滿足 values[i] &lt; target。</li><li>所有 i ≥ hi 的合法索引都滿足 values[i] ≥ target。</li><li>待判斷的陣列索引是 [lo, hi)，而真正邊界 q 仍在閉範圍 [lo, hi]。</li></ul>
+<ul><li>0 ≤ lo ≤ hi ≤ n。</li><li>所有 i &lt; lo 都滿足 values[i] &lt; target。</li><li>所有 i ≥ hi 的合法索引都滿足 values[i] ≥ target。</li><li>待判斷的陣列索引是 [lo, hi)，而邊界 q 仍在閉範圍 [lo, hi]。</li></ul>
 <figure class="diagram"><svg role="img" aria-label="未知索引區間與已知左右區域" viewBox="0 0 780 300" xmlns="http://www.w3.org/2000/svg"><title>未知索引區間與已知左右區域</title><rect width="780" height="300" rx="16" fill="#f3f7fc"/><g font-family="system-ui, sans-serif" font-size="18" fill="#132b45"><text x="25" y="35" font-weight="bold">半開區間的不變量：只探查未知索引 [lo, hi)</text><rect x="45" y="76" width="175" height="56" fill="#d98745"/><rect x="220" y="76" width="310" height="56" fill="#ceddf0"/><rect x="530" y="76" width="205" height="56" fill="#256e61"/><text x="88" y="110" fill="white">一定 &lt; x</text><text x="308" y="110">仍未知</text><text x="570" y="110" fill="white">一定 ≥ x</text><text x="40" y="159">0</text><text x="205" y="159">lo</text><text x="515" y="159">hi</text><text x="724" y="159">n</text><text x="60" y="204">values[mid] &lt; x → lo = mid + 1</text><text x="60" y="237">values[mid] ≥ x → hi = mid</text><text x="60" y="273">未知區縮短至空時，lo = hi = 唯一分界。</text></g></svg><figcaption>未知索引區間與已知左右區域</figcaption></figure><pre><code class="language-python">def lower_bound(values, target):
     lo, hi = 0, len(values)
     while lo &lt; hi:
@@ -18,7 +19,7 @@
         else:
             hi = mid
     return lo</code></pre>
-<p>若 values[mid] &lt; target，因為已排序，mid 及更左側都不可能是第一個 ≥ target 的位置，所以 lo=mid+1。否則 mid 有可能就是第一個，不能跳過；設 hi=mid，讓 mid 成為已知右側的一部分。每次 hi−lo 都嚴格縮短，最後 lo=hi，左右性質恰好把這個唯一分界夾出來。</p>
+<p>若 values[mid] &lt; target，因為已排序，mid 及更左側都不可能是第一個 ≥ target 的位置，所以 lo=mid+1。否則 mid 有可能就是第一個，不能跳過；設 hi=mid，讓 mid 成為已知右側的一部分。每次 hi−lo 都嚴格縮短。當 lo=hi 時，這個位置同時符合左右區域的性質，就是唯一的分界。</p>
 <div class="warning"><strong>常見混搭：</strong>半開模板用了 while lo ≤ hi，可能碰到 values[n]；判斷小於後寫 lo=mid，可能在長度一或二時停不下來；判斷不小於後寫 hi=mid−1，則可能刪掉真正邊界。先寫不變量，再決定加減一。</div>
 <h3 id="c09-example-bounds">3. 逐步範例：同一份資料找兩個邊界</h3>
 <div class="example"><p>values=[2,4,4,4,9]，target=4。以下每列記錄本輪探查前的區間。</p><table><thead><tr><th>搜尋</th><th>lo</th><th>hi</th><th>mid / 值</th><th>更新</th></tr></thead><tbody><tr><td>lower</td><td>0</td><td>5</td><td>2 / 4</td><td>hi=2</td></tr><tr><td>lower</td><td>0</td><td>2</td><td>1 / 4</td><td>hi=1</td></tr><tr><td>lower</td><td>0</td><td>1</td><td>0 / 2</td><td>lo=1，停止</td></tr><tr><td>upper</td><td>0</td><td>5</td><td>2 / 4</td><td>lo=3</td></tr><tr><td>upper</td><td>3</td><td>5</td><td>4 / 9</td><td>hi=4</td></tr><tr><td>upper</td><td>3</td><td>4</td><td>3 / 4</td><td>lo=4，停止</td></tr></tbody></table><p>lower=1，upper=4，所以 4 佔據半開索引 [1,4)，共 4−1=3 次，最後一次在 upper−1=3。如果 lower==upper，代表沒有命中，此時不能把 upper−1 當成目標的最後位置。</p></div>
@@ -45,7 +46,8 @@ exists = left &lt; len(values) and values[left] == 4
 a, b = 4, 9
 inside = bisect_left(values, b) - bisect_left(values, a)  # 3</code></pre>
 <p>標準庫 bisect 不會替你檢查或重新排序。使用 insort 插入雖然找位置是 O(log n)，list 移動後續元素仍是 O(n)。迴圈中寫 values[:mid] 會複製子串列，破壞 O(1) 空間與簡單的成本分析；保留索引即可。Python 整數不會固定寬度溢位，但 lo+(hi−lo)//2 的形式更容易移植到固定寬度語言。</p>
-<h3 id="c09-predicate">5. 抽象成 first_true：排序的其實是答案</h3>
+<h3 id="c09-predicate">5. 用 first_true 搜尋單調判斷的分界</h3>
+<p class="problem-source"><strong>相近題型：</strong><a href="https://leetcode.com/problems/first-bad-version/">LeetCode 278：First Bad Version</a> 以 isBadVersion 查詢版本是否出錯，找第一個錯誤版本。原題版本從 1 到 n，並保證有錯誤版本；本章 first_true 使用 [0,n)，允許全 False 並回傳 n，也處理 n=0，呼叫範圍與不存在時的規格不同。</p>
 <p>如果 predicate(i) 在索引 [0,n) 呈現 False、False、…、True、True，就可以直接找第一個 True，不需要存出整個布林陣列。若全 False，回傳 n；若全 True，回傳 0；n=0 也回傳 0，且不呼叫 predicate。</p>
 <pre><code class="language-python">def first_true(n, predicate):
     &quot;&quot;&quot;predicate 在 [0, n) 先 False 後 True；全 False 回傳 n。&quot;&quot;&quot;
@@ -57,13 +59,14 @@ inside = bisect_left(values, b) - bisect_left(values, a)  # 3</code></pre>
         else:
             lo = mid + 1
     return lo</code></pre>
-<p>前提是 n ≥ 0，predicate 在搜尋期間保持一致且具單調性。如果輸出是 False、True、False，就不能使用這個模板。找最後 True 的問題若呈現 True→False，可以搜尋第一個 False 再減一，並處理全部為 False 時的 −1 哨兵。不要只換函式名稱而保留錯誤方向。</p>
-<p class="complexity">若一次 predicate 的成本是 T，二分成本是 O(T log(n+1))；不能把昂貴的判斷當成免費。空間包含 predicate 自己需要的記憶體。這裡的 first_true 不會呼叫 predicate(n)，所以即使 n 是「不存在」的哨兵也安全。</p>
+<p>前提是 n ≥ 0，predicate 在搜尋期間保持一致且具單調性。如果輸出是 False、True、False，就不能使用這個模板。找最後 True 的問題若呈現 True→False，可以搜尋第一個 False 再減一，並處理全部為 False 時的 −1 哨兵。改寫函式時，要一併確認判斷方向，不能只換名稱。</p>
+<p class="complexity">若一次 predicate 的成本是 T，二分成本是 O(T log(n+1))；分析時必須計入每次判斷的成本。空間包含 predicate 自己需要的記憶體。這裡的 first_true 不會呼叫 predicate(n)，所以即使 n 是「不存在」的哨兵也安全。</p>
 <h3 id="c09-answer-space">6. 答案二分：最低每日運送容量</h3>
+<p class="problem-source"><strong>對應原題：</strong><a href="https://leetcode.com/problems/capacity-to-ship-packages-within-d-days/">LeetCode 1011：Capacity To Ship Packages Within D Days</a>。貨箱必須按既有順序運送，每天裝載不超過容量，求期限內運完的最低容量。本章重量序列與逐步表為自編；原題保證貨箱非空，且天數不超過貨箱數，本章另處理空輸入與更多天數。例子 weights=[3,2,4,1,3]、D=3 的答案是 5。</p>
 <p>有依序到達的貨箱，重量為正整數。每天最多運送容量 C；不能拆箱、不能改順序，同一天運走一段連續貨箱。求在至多 D 天完成的最小整數 C。例子 weights=[3,2,4,1,3]，D=3。</p>
 <ol><li><strong>下界：</strong>最重貨箱不可拆，所以 C ≥ max(weights)。</li><li><strong>上界：</strong>sum(weights) 能一天運完，對 D ≥ 1 一定可行。</li><li><strong>判斷：</strong>給 C 後，每天依序放到下一箱會超重才換天，計算需要幾天。</li><li><strong>單調：</strong>如果 C 可行，更大的 C 可以直接沿用原分組，因此一定可行。搜尋第一個可行 C。</li></ol>
 <figure class="diagram"><svg role="img" aria-label="運送容量形成 False 到 True 的單調答案空間" viewBox="0 0 780 300" xmlns="http://www.w3.org/2000/svg"><title>運送容量形成 False 到 True 的單調答案空間</title><rect width="780" height="300" rx="16" fill="#f3f7fc"/><g font-family="system-ui, sans-serif" font-size="18" fill="#132b45"><text x="25" y="34" font-weight="bold">固定順序、最多 3 天：容量增加只會讓限制放寬</text><rect x="54" y="72" width="86" height="49" fill="#a44944" rx="6"/><text x="87" y="104" fill="white">4</text><text x="64" y="152">False</text><rect x="152" y="72" width="86" height="49" fill="#256e61" rx="6"/><text x="185" y="104" fill="white">5</text><text x="162" y="152">True</text><rect x="250" y="72" width="86" height="49" fill="#256e61" rx="6"/><text x="283" y="104" fill="white">6</text><text x="260" y="152">True</text><rect x="348" y="72" width="86" height="49" fill="#256e61" rx="6"/><text x="381" y="104" fill="white">7</text><text x="358" y="152">True</text><rect x="446" y="72" width="86" height="49" fill="#256e61" rx="6"/><text x="479" y="104" fill="white">8</text><text x="456" y="152">True</text><rect x="544" y="72" width="86" height="49" fill="#256e61" rx="6"/><text x="577" y="104" fill="white">9</text><text x="554" y="152">True</text><rect x="642" y="72" width="86" height="49" fill="#256e61" rx="6"/><text x="675" y="104" fill="white">10</text><text x="652" y="152">True</text><line x1="146" y1="59" x2="146" y2="170" stroke="#132b45" stroke-width="3"/><text x="35" y="207">容量 4： [3] [2] [4] [1,3]，需要 4 天</text><text x="35" y="240">容量 5： [3,2] [4,1] [3]，需要 3 天</text><text x="35" y="273">第一個 True 就是最低可行容量 5。</text></g></svg><figcaption>運送容量形成 False 到 True 的單調答案空間</figcaption></figure>
-<p><strong>判斷器為何正確？</strong>固定 C，每一天貪心放入最大的可行前綴。任何合法分組的第一天都不可能放得比這個前綴更多。以天數歸納：若貪心在 d−1 天後已不比另一分組落後，第 d 天若尚未到達對方當天終點，只需運送對方第 d 天貨箱的某個後綴，重量不會更多，因此貪心仍不落後。於是它用的天數最少，可用於可行性判斷。</p>
+<p><strong>判斷器為何正確？</strong>固定 C，每一天貪心放入最大的可行前綴。任何合法分組的第一天都不可能放得比這個前綴更多。以天數歸納：若貪心在 d−1 天後已不比另一分組落後，第 d 天若尚未到達對方當天終點，只需運送對方第 d 天貨箱的某個後綴，重量不會更多，因此貪心仍不落後。因此，貪心分組使用的天數最少，能正確判斷這個容量是否可行。</p>
 <pre><code class="language-python">def minimum_capacity(weights, days):
     &quot;&quot;&quot;依序運送正整數重量；每天裝入一段，可使用少於 days 天。&quot;&quot;&quot;
     if days &lt;= 0:
@@ -90,18 +93,22 @@ inside = bisect_left(values, b) - bisect_left(values, a)  # 3</code></pre>
         else:
             lo = mid + 1
     return lo</code></pre>
-<p>此處改用閉區間 [lo,hi]：真正最小答案一直落在其中，而且 hi 一定可行。mid 可行時保留它，令 hi=mid；不可行時排除它及更小值，令 lo=mid+1。lo=hi 時就是最小答案。feasible 只會收到至少 max(weights) 的容量，所以內部不用再處理單箱超重；若把它抽成公共函式，必須補上該檢查。</p>
+<p>此處改用閉區間 [lo,hi]：最小答案一直保留在區間內，而且 hi 一定可行。mid 可行時保留它，令 hi=mid；不可行時排除它及更小值，令 lo=mid+1。lo=hi 時就是最小答案。feasible 只會收到至少 max(weights) 的容量，所以內部不用再處理單箱超重；若把它抽成公共函式，必須補上該檢查。</p>
 <h3 id="c09-example-capacity">7. 逐步範例：用判斷器縮小整數答案</h3>
 <div class="example"><table><thead><tr><th>lo</th><th>hi</th><th>mid</th><th>按順序分組</th><th>結果與更新</th></tr></thead><tbody><tr><td>4</td><td>13</td><td>8</td><td>[3,2]｜[4,1,3]</td><td>2 天，可行，hi=8</td></tr><tr><td>4</td><td>8</td><td>6</td><td>[3,2]｜[4,1]｜[3]</td><td>3 天，可行，hi=6</td></tr><tr><td>4</td><td>6</td><td>5</td><td>[3,2]｜[4,1]｜[3]</td><td>3 天，可行，hi=5</td></tr><tr><td>4</td><td>5</td><td>4</td><td>[3]｜[2]｜[4]｜[1,3]</td><td>4 天，不可行，lo=5</td></tr></tbody></table><p>最後 lo=hi=5。確認 5 可行還不夠；4 不可行才證明它是最小值。若 D=1，答案是總重量 13；若 D≥貨箱數，每天最多一箱就好，答案是最重的 4。</p></div>
-<p class="complexity">令 n 為貨箱數，L=max(weights)、U=sum(weights)。初始化 O(n)，每次判斷 O(n)，總時間 O(n log(U−L+2))，額外空間 O(1)。這不是 O(n log n)，因為二分的是數值範圍。分析採整數加總與比較為常數成本的常見模型；極大 Python 整數仍有位元長度成本。</p>
+<p class="complexity">令 n 為貨箱數，L=max(weights)、U=sum(weights)。初始化 O(n)，每次判斷 O(n)，總時間 O(n log(U−L+2))，額外空間 O(1)。這不是 O(n log n)，因為二分的是數值範圍。這裡採常見的成本模型，將整數加總與比較視為常數成本；但 Python 整數極大時，仍須考慮位元長度造成的成本。</p>
 <h3 id="c09-pitfalls">8. 何時不要急著二分</h3>
-<ul><li><strong>單調性不成立：</strong>某個容量可行，下一個卻不可行，就必須重新定義判斷。證明寫的是原限制，不是幾個樣本。</li><li><strong>答案不在界內：</strong>hi 必須能覆蓋答案或代表合法的不存在哨兵，不能隨意填一個大數。</li><li><strong>「至多」變「恰好」：</strong>若允許空天、貨箱可再切成更多非空天，以及 D 是否大於 n，都會影響問題。本文只求至多 D 天。</li><li><strong>浮點答案：</strong>實數區間沒有 mid+1 這種操作，常需誤差門檻或固定次數；不能直接套整數停止條件。</li><li><strong>旋轉陣列：</strong>原始值並非整段排序，必須另外辨識有序半邊。重複值可能使單次無法排除一半，最壞情況也可能退化。</li></ul>
-<p><strong>一次好的手追蹤：</strong>先畫出所有可能的分界位置，而不是只畫元素。長度五的陣列有六個可能邊界，包含最前面與最尾端。每次更新後，重新檢查被排除的部分是否符合已知條件。若你說不出某個端點為什麼還需要保留，就先不要修改程式中的加減一。最後記錄停止當下 lo、hi 的值，再翻譯成「不存在」、「第一個位置」或「最小可行容量」等題目需要的語意。這個習慣比背多套模板更容易避免混用。</p>
+<ul><li><strong>單調性不成立：</strong>某個容量可行，下一個卻不可行，就必須重新定義判斷。單調性必須從原本的限制推得，不能只根據幾個樣本判斷。</li><li><strong>答案不在界內：</strong>hi 必須能覆蓋答案或代表合法的不存在哨兵，不能隨意填一個大數。</li><li><strong>「至多」變「恰好」：</strong>若允許空天、貨箱可再切成更多非空天，以及 D 是否大於 n，都會影響問題。本文只求至多 D 天。</li><li><strong>浮點答案：</strong>實數區間沒有 mid+1 這種操作，常需誤差門檻或固定次數；不能直接套整數停止條件。</li><li><strong>旋轉陣列：</strong>原始值並非整段排序，必須另外辨識有序半邊。重複值可能使單次無法排除一半，最壞情況也可能退化。</li></ul>
+<p><strong>手動追蹤時：</strong>先畫出所有可能的分界位置，而不是只畫元素。長度五的陣列有六個可能邊界，包含最前面與最尾端。每次更新後，重新檢查被排除的部分是否符合已知條件。若你說不出某個端點為什麼還需要保留，就先不要修改程式中的加減一。最後記錄停止當下 lo、hi 的值，再翻譯成「不存在」、「第一個位置」或「最小可行容量」等題目需要的語意。這樣能把區間定義、端點更新與回傳值一起核對，減少混用不同模板的機會。</p>
 <h3 id="c09-practice">9. 練習：把停止條件寫進答案</h3>
-<section class="exercise"><h4>練習一：重複值與空範圍</h4><p>對 [1,1,3,5,5]，求 target=1、2、5、8 的 lower、upper 及出現次數。</p><details><summary>參考解答</summary><p>1 → (0,2)，兩次；2 → (2,2)，零次；5 → (3,5)，兩次；8 → (5,5)，零次。回傳 n=5 合法，但不是可以讀取的索引。</p></details></section>
-<section class="exercise"><h4>練習二：第一個 True 根本不存在</h4><p>n=6，predicate 全為 False。追蹤 first_true，指出它有沒有讀到索引 6。</p><details><summary>參考解答</summary><p>(lo,hi)=(0,6)，mid=3 後 lo=4；mid=5 後 lo=6；停止並回傳 6。實際只探查 3、5，沒有呼叫 predicate(6)。這也是用 n 作哨兵的理由。</p></details></section>
-<section class="exercise"><h4>練習三：找最小生產時間</h4><p>機器分別每 3、5 單位時間完成一件產品，從時間 0 同時開始。要至少 7 件，最少整數時間是多少？給出單調判斷與安全上界。</p><details><summary>參考解答</summary><p>predicate(t) 為 t//3+t//5 ≥ 7，隨 t 不減。下界 0，上界 3×7=21，因最快的機器單獨就能完成。t=14 產出 4+2=6 件，t=15 產出 5+3=8 件，因此答案 15。產品數可能一次跳過 7，條件必須是「至少」，不能用相等。m 台機器的每次判斷 O(m)。</p></details></section>
-<section class="exercise"><h4>練習四：診斷無窮迴圈</h4><p>在閉區間 [4,5] 找第一個可行答案 5，使用 mid=(lo+hi)//2，mid 不可行後設 lo=mid。發生什麼事？</p><details><summary>參考解答</summary><p>mid 永遠為 4，lo 仍為 4，區間不變。mid 已證明不可行，應 lo=mid+1。每輪都檢查候選範圍是否嚴格縮小，是最快的人工檢查法。</p></details></section>
+<section class="exercise"><h4>練習一：重複值與空範圍</h4>
+<p class="problem-source"><strong>自編測例：</strong>本題用來練習 lower／upper 邊界與出現次數；若要轉成 <a href="https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/">LeetCode 34：Find First and Last Position of Element in Sorted Array</a> 的回傳格式，需再處理不存在與含尾索引。</p><p>對 [1,1,3,5,5]，求 target=1、2、5、8 的 lower、upper 及出現次數。</p><details><summary>參考解答</summary><p>1 → (0,2)，兩次；2 → (2,2)，零次；5 → (3,5)，兩次；8 → (5,5)，零次。回傳 n=5 合法，但不是可以讀取的索引。</p></details></section>
+<section class="exercise"><h4>練習二：第一個 True 不存在</h4>
+<p class="problem-source"><strong>自編邊界題：</strong>這裡刻意測試全 False，是本章 first_true 的擴充規格；<a href="https://leetcode.com/problems/first-bad-version/">LeetCode 278：First Bad Version</a> 保證錯誤版本存在，不包含這種測例。</p><p>n=6，predicate 全為 False。追蹤 first_true，指出它有沒有讀到索引 6。</p><details><summary>參考解答</summary><p>(lo,hi)=(0,6)，mid=3 後 lo=4；mid=5 後 lo=6；停止並回傳 6。實際只探查 3、5，沒有呼叫 predicate(6)。這也是用 n 作哨兵的理由。</p></details></section>
+<section class="exercise"><h4>練習三：找最小生產時間</h4>
+<p class="problem-source"><strong>自編情境／相近題型：</strong><a href="https://leetcode.com/problems/minimum-time-to-complete-trips/">LeetCode 2187：Minimum Time to Complete Trips</a> 問多輛巴士累計完成至少指定趟數的最少時間，每輛車完成一趟後可立刻再跑。本題改用機器製品情境，每台機器也連續獨立運作；判斷都是將各自可完成的整數次數相加。下方工時與目標數量為自編。</p><p>機器分別每 3、5 單位時間完成一件產品，從時間 0 同時開始。要至少 7 件，最少整數時間是多少？給出單調判斷與安全上界。</p><details><summary>參考解答</summary><p>predicate(t) 為 t//3+t//5 ≥ 7，隨 t 不減。下界 0，上界 3×7=21，因最快的機器單獨就能完成。t=14 產出 4+2=6 件，t=15 產出 5+3=8 件，因此答案 15。產品數可能一次跳過 7，條件必須是「至少」，不能用相等。m 台機器的每次判斷 O(m)。</p></details></section>
+<section class="exercise"><h4>練習四：診斷無窮迴圈</h4>
+<p class="problem-source"><strong>自編除錯題：</strong>這題刻意保留錯誤的端點更新，要求找出迴圈不前進的原因，沒有另附 LeetCode 原題。</p><p>在閉區間 [4,5] 找第一個可行答案 5，使用 mid=(lo+hi)//2，mid 不可行後設 lo=mid。發生什麼事？</p><details><summary>參考解答</summary><p>mid 永遠為 4，lo 仍為 4，區間不變。mid 已證明不可行，應 lo=mid+1。每輪都檢查候選範圍是否嚴格縮小，是最快的人工檢查法。</p></details></section>
 <h3 id="c09-checklist">10. 章末決策卡</h3>
 <p>先問：我找的是元素，還是邊界？邊界兩側的條件是什麼？為什麼單調？採閉區間還是半開區間？答案可不存在嗎？每步是否嚴格縮小？最後怎麼解讀哨兵？答案二分額外問：判斷器本身是否正確，成本多少？</p>
 <p>配套 tests/examples_09.py 以標準庫 bisect 對照含重複值的排序小陣列，測試所有 first_true 邊界；另枚舉小重量序列的切割位置，獨立驗證最低容量，避免拿同一個貪心判斷器測自己。測試檔亦涵蓋空輸入、一天、天數很多、零重量與無效天數。</p>

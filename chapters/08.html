@@ -1,19 +1,20 @@
 <article id="chapter-08" data-title="貪心：選擇、交換證明與反例">
 <h2>08　貪心：先證明，再相信直覺</h2>
-<p>貪心演算法每一步只做一個當下最好的選擇，之後不回頭。困難通常不在迴圈，而在「當下最好」為什麼不會犧牲未來。這章把選擇規則、正確性與程式放在一起：先說清楚目標，找出可交換的決策，再寫排序與掃描。</p>
+<p>貪心演算法每一步只做一個當下最好的選擇，之後不回頭。即使迴圈很簡單，仍要證明「當下最好」的選擇不會犧牲後續結果。本章會連同程式說明選擇規則與正確性：先確認目標，找出能夠交換的決策，再寫排序與掃描。</p>
 <div class="callout"><strong>學習目標：</strong>能用反例否定規則；用交換論證或領先性質支持規則；分辨「選最多個」、「總價值最大」、「總等待最少」是不同問題。看過幾個成功案例，只代表規則尚未被推翻。</div>
 <h3 id="c08-choice">1. 一個貪心主張，必須回答四件事</h3>
 <ol><li><strong>目標：</strong>最大化數量、最小化成本，還是只判斷可不可行？</li><li><strong>可行性：</strong>做完這個選擇後，是否仍符合容量、時間、先後順序等限制？</li><li><strong>安全選擇：</strong>是否至少存在一個最優解，包含這個當下選擇？</li><li><strong>剩餘問題：</strong>固定此選擇後，剩下的問題能否用同一種規則處理？</li></ol>
-<p>「最優子結構」本身不保證可以貪心；動態規劃也常有最優子結構，但需要比較多個第一步。真正額外要證明的是：某一個選擇可以安全地固定，不必探索其他分支。若只能說「我覺得最小的比較好」，先把它寫成猜想。</p>
+<p>「最優子結構」本身不保證可以貪心；動態規劃也常有最優子結構，但需要比較多個第一步。要採用貪心，還需證明某一個選擇可以安全地固定，不必探索其他分支。若只能說「我覺得最小的比較好」，先把它寫成猜想。</p>
 <h3 id="c08-intervals">2. 工作室排程：最多不重疊區間</h3>
+<p class="problem-source"><strong>自編排程情境／相近題型：</strong><a href="https://leetcode.com/problems/non-overlapping-intervals/">LeetCode 435：Non-overlapping Intervals</a> 問最少刪除幾個區間，才能讓剩餘區間互不重疊。本節改成回傳最多能留下的活動清單；若原有 n 場、最多留下 m 場，原題答案就是 n−m。兩者都允許端點相接，工作室與 A–F 範例為自編。</p>
 <p>有一間工作室，活動用半開區間 [start, end) 表示，且 start &lt; end。任兩場不能重疊，但 [1, 3) 與 [3, 5) 可以連排。所有活動價值相同，目標是選最多場。貪心規則：按結束時間由早到晚檢查，若活動開始不早於上一場結束，就接受。</p>
 <figure class="diagram"><svg role="img" aria-label="最早結束的選擇保留最多後續時間" viewBox="0 0 780 320" xmlns="http://www.w3.org/2000/svg"><title>最早結束的選擇保留最多後續時間</title><rect width="780" height="320" rx="16" fill="#f3f7fc"/><g font-family="system-ui, sans-serif" font-size="18" fill="#132b45"><text x="25" y="32" font-weight="bold">同一間工作室：選最多場，允許前一場結束即開始</text><line x1="75" y1="68" x2="715" y2="68" stroke="#5b6b80" stroke-width="2"/><text x="70" y="59">0</text><text x="140" y="59">1</text><text x="210" y="59">2</text><text x="280" y="59">3</text><text x="350" y="59">4</text><text x="420" y="59">5</text><text x="490" y="59">6</text><text x="560" y="59">7</text><text x="630" y="59">8</text><text x="700" y="59">9</text><text x="15" y="117">A</text><rect x="75" y="97" width="280" height="26" rx="5" fill="#bed1e4"/><text x="363" y="117">略過</text><text x="15" y="152">B</text><rect x="145" y="132" width="140" height="26" rx="5" fill="#256e61"/><text x="293" y="152">選</text><text x="15" y="187">C</text><rect x="285" y="167" width="140" height="26" rx="5" fill="#256e61"/><text x="433" y="187">選</text><text x="15" y="222">D</text><rect x="355" y="202" width="210" height="26" rx="5" fill="#bed1e4"/><text x="573" y="222">略過</text><text x="15" y="257">E</text><rect x="425" y="237" width="210" height="26" rx="5" fill="#256e61"/><text x="643" y="257">選</text><text x="15" y="292">F</text><rect x="565" y="272" width="140" height="26" rx="5" fill="#bed1e4"/><text x="713" y="292">略過</text></g></svg><figcaption>最早結束的選擇保留最多後續時間</figcaption></figure>
-<p>為什麼不是最早開始？[0, 10) 會擋住 [1, 2)、[2, 3)、[3, 4)。為什麼不是最短？在 [0, 3)、[2, 4)、[3, 6) 中，最短的 [2, 4) 與另外兩個都重疊，只能選一場；兩個長度 3 的區間卻可以一起選。最早結束針對的是「保留後綴的空間」，不是單場本身的大小。</p>
+<p>為什麼不是最早開始？[0, 10) 會擋住 [1, 2)、[2, 3)、[3, 4)。為什麼不是最短？在 [0, 3)、[2, 4)、[3, 6) 中，最短的 [2, 4) 與另外兩個都重疊，只能選一場；兩個長度 3 的區間卻可以一起選。按最早結束選取，是為了「保留後綴的空間」；單場活動的長短不足以決定這件事。</p>
 <h3 id="c08-proof">3. 交換論證：把某個最優解改成貪心開頭</h3>
 <p>令 g 為目前候選中結束最早的活動，O 為任意一個最多場的可行排程，o 為 O 的第一場。因為 g 結束不晚於 o，所以把 o 換成 g 後，原本排在 o 後面的所有場次仍能接在 g 後面，場數也沒變。於是，存在以 g 開頭的最優解。</p>
 <figure class="diagram"><svg role="img" aria-label="交換第一場，最優場數保持不變" viewBox="0 0 780 290" xmlns="http://www.w3.org/2000/svg"><title>交換第一場，最優場數保持不變</title><rect width="780" height="290" rx="16" fill="#f3f7fc"/><g font-family="system-ui, sans-serif" font-size="18" fill="#132b45"><text x="25" y="34" font-weight="bold">交換第一場：更早結束，後面的工作仍放得下</text><text x="25" y="85">某個最優解</text><rect x="165" y="62" width="240" height="38" fill="#d98745" rx="5"/><text x="184" y="88" fill="white">o：結束於 5</text><rect x="455" y="62" width="115" height="38" fill="#59799c" rx="5"/><rect x="610" y="62" width="120" height="38" fill="#59799c" rx="5"/><text x="25" y="168">交換後</text><rect x="165" y="145" width="140" height="38" fill="#256e61" rx="5"/><text x="178" y="171" fill="white">g：結束於 3</text><rect x="455" y="145" width="115" height="38" fill="#59799c" rx="5"/><rect x="610" y="145" width="120" height="38" fill="#59799c" rx="5"/><line x1="305" y1="195" x2="455" y2="195" stroke="#256e61" stroke-width="3"/><text x="287" y="224">空間增加；後綴不用改</text><text x="25" y="261">關鍵前提：只比較場數，每場價值相同。</text></g></svg><figcaption>交換第一場，最優場數保持不變</figcaption></figure>
 <p>固定 g 後，只留下 start ≥ g.end 的候選；這又是同樣的排程問題。對剩餘場次數做歸納：空集合顯然正確，而交換論證保證第一步安全，因此整個演算法正確。注意證明不是聲稱「每個最優解都一定選 g」，而是聲稱「至少有一個最優解可改成選 g」。</p>
-<div class="callout"><strong>掃描不變量：</strong>chosen 中的活動彼此不重疊；last_end 是最後一場結束時間；已跳過且與最後已選活動重疊的候選，之後也不可能接到目前排程。安全性仍由交換證明提供，不是只靠這個可行性不變量。</div>
+<div class="callout"><strong>掃描不變量：</strong>chosen 中的活動彼此不重疊；last_end 是最後一場結束時間；已跳過且與最後已選活動重疊的候選，之後也不可能接到目前排程。這個不變量只能保證排程可行；選擇是否安全，仍須由交換論證證明。</div>
 <pre><code class="language-python">def select_intervals(intervals):
     &quot;&quot;&quot;選最多個互不重疊半開區間 [start, end)；要求 start &lt; end。&quot;&quot;&quot;
     if any(start &gt;= end for start, end in intervals):
@@ -30,9 +31,10 @@
 <div class="example"><p>輸入 A=(0,4)、B=(1,3)、C=(3,5)、D=(4,7)、E=(5,8)、F=(7,9)。按結束時間得到 B、A、C、D、E、F。</p>
 <table><thead><tr><th>檢查活動</th><th>原 last_end</th><th>判斷</th><th>已選</th></tr></thead><tbody>
 <tr><td>B=(1,3)</td><td>None</td><td>第一場，接受</td><td>B</td></tr><tr><td>A=(0,4)</td><td>3</td><td>0 &lt; 3，略過</td><td>B</td></tr><tr><td>C=(3,5)</td><td>3</td><td>3 ≥ 3，接受</td><td>B、C</td></tr><tr><td>D=(4,7)</td><td>5</td><td>4 &lt; 5，略過</td><td>B、C</td></tr><tr><td>E=(5,8)</td><td>5</td><td>5 ≥ 5，接受</td><td>B、C、E</td></tr><tr><td>F=(7,9)</td><td>8</td><td>7 &lt; 8，略過</td><td>B、C、E</td></tr></tbody></table>
-<p>結果為三場。B、C、F 也是三場的最優解；測試若只要求最多數量，不應把另一組合法最優解判錯。本實作以 start 打破相同 end 的平手，讓輸出可預期，但平手方式不影響最大場數。</p></div>
+<p>結果為三場。B、C、F 也是三場的最優解；測試若只要求最多數量，不應把另一組合法最優解判錯。本實作在 end 相同時以 start 決定先後，讓輸出順序固定；如何處理平手不影響最大場數。</p></div>
 <h3 id="c08-waiting">5. 第二種貪心：短工作先做，總等待最少</h3>
-<p>一台機器，所有工作在時間 0 就緒，工作不可中途切換，每件工作的等待成本權重相同。若工時為 [6, 2, 4]，問所有工作開始前的等待時間總和如何最小。答案是工時由短到長，不是由截止期限排序，因為這個問題根本沒有截止期限。</p>
+<p class="problem-source"><strong>自編範例：</strong>這是所有工作同時就緒、等待權重相同的單機排程題，沒有指定的 LeetCode 原題。輸入為非負工時序列，輸出等待時間總和的最小值；空序列的總等待為 0。下方 [6,2,4] 的答案是 8。</p>
+<p>一台機器，所有工作在時間 0 就緒，工作不可中途切換，每件工作的等待成本權重相同。若工時為 [6, 2, 4]，要怎麼排序，才能讓所有工作開始前的等待時間總和最小？應按工時由短到長處理。本題沒有截止期限，因此無法依截止期限決定順序。</p>
 <figure class="diagram"><svg role="img" aria-label="相鄰逆序交換證明短工時優先" viewBox="0 0 780 285" xmlns="http://www.w3.org/2000/svg"><title>相鄰逆序交換證明短工時優先</title><rect width="780" height="285" rx="16" fill="#f3f7fc"/><g font-family="system-ui, sans-serif" font-size="18" fill="#132b45"><text x="25" y="34" font-weight="bold">相鄰逆序交換：長工時 a = 6，短工時 b = 2</text><text x="25" y="91">a → b</text><rect x="150" y="65" width="360" height="44" fill="#d98745"/><rect x="510" y="65" width="120" height="44" fill="#256e61"/><text x="290" y="94" fill="white">a = 6</text><text x="535" y="94" fill="white">b = 2</text><text x="25" y="169">b → a</text><rect x="150" y="143" width="120" height="44" fill="#256e61"/><rect x="270" y="143" width="360" height="44" fill="#d98745"/><text x="175" y="172" fill="white">b = 2</text><text x="410" y="172" fill="white">a = 6</text><text x="150" y="227">兩者等待總和：2t + 6 → 2t + 2，減少 4</text><text x="150" y="259">後續開始時間皆為 t + 8，因此不受影響。</text></g></svg><figcaption>相鄰逆序交換證明短工時優先</figcaption></figure>
 <p>設相鄰兩件工作 a &gt; b，在時間 t 開始處理這一對。a 在前時，兩件等待總和是 t + (t+a)；b 在前時是 t + (t+b)，後者少 a−b。兩件做完的時間相同，因此後續工作的等待不變。持續交換所有逆序對，得到升冪順序，且總等待只會減少或持平。這是「相鄰交換」證明。</p>
 <pre><code class="language-python">def schedule_shortest_first(durations):
@@ -45,10 +47,11 @@
         total_wait += elapsed
         elapsed += duration
     return order, total_wait</code></pre>
-<div class="example"><p><strong>逐步範例：</strong>工時 [6, 2, 4] 排成 [2, 4, 6]。</p><table><thead><tr><th>工時</th><th>開始前 elapsed</th><th>累加後 total_wait</th><th>完成後 elapsed</th></tr></thead><tbody><tr><td>2</td><td>0</td><td>0</td><td>2</td></tr><tr><td>4</td><td>2</td><td>2</td><td>6</td></tr><tr><td>6</td><td>6</td><td>8</td><td>12</td></tr></tbody></table><p>原順序的等待總和是 0+6+8=14；短工時優先是 0+2+6=8。全部完成時間都是 12，所以「越快做完全部工作」並不是此排序改善的目標。總完成時間之和等於總等待加固定的工時總和，也會被同一順序最小化。</p></div>
-<p class="complexity">排序 O(n log n)，掃描 O(n)，額外空間 O(n)。零工時合法且可排最前；負工時沒有本模型中的意義，程式拒絕。若工作有到達時間、切換成本或不同等待權重，上述交換式改變，不能直接沿用結論。</p>
-<h3 id="c08-frontier">6. 不只排序：維護可達範圍</h3>
-<p>給定非負整數 jumps[i]，可以從 i 往右跳任意 1 到 jumps[i] 格，問從 0 能否到最後一格。對可達索引 i，將最遠邊界更新成 max(farthest, i+jumps[i])。若遇到 i &gt; farthest，就連目前位置都無法到達，後面無從擴張。</p>
+<div class="example"><p><strong>逐步範例：</strong>工時 [6, 2, 4] 排成 [2, 4, 6]。</p><table><thead><tr><th>工時</th><th>開始前 elapsed</th><th>累加後 total_wait</th><th>完成後 elapsed</th></tr></thead><tbody><tr><td>2</td><td>0</td><td>0</td><td>2</td></tr><tr><td>4</td><td>2</td><td>2</td><td>6</td></tr><tr><td>6</td><td>6</td><td>8</td><td>12</td></tr></tbody></table><p>原順序的等待總和是 0+6+8=14；短工時優先是 0+2+6=8。全部完成時間都是 12，所以「越快做完全部工作」並不是此排序改善的目標。總完成時間之和等於總等待加上固定的工時總和，因此同一順序也能讓總完成時間之和最小。</p></div>
+<p class="complexity">排序 O(n log n)，掃描 O(n)，額外空間 O(n)。零工時合法且可排最前；負工時不符合本模型，程式會拒絕這類輸入。若工作有到達時間、切換成本或不同等待權重，上述交換式改變，不能直接沿用結論。</p>
+<h3 id="c08-frontier">6. 用可達範圍決定能否繼續前進</h3>
+<p class="problem-source"><strong>對應原題：</strong><a href="https://leetcode.com/problems/jump-game/">LeetCode 55：Jump Game</a>。輸入每個位置最多可往前跳幾格，輸出能否從開頭到最後一格；只問可不可達，不問最少跳幾次。原題不允許空陣列，本章另約定空序列回傳 True，章末兩組測試資料為自編。</p>
+<p>給定非負整數 jumps[i]，可以從 i 往右跳任意 1 到 jumps[i] 格，問從 0 能否到最後一格。對可達索引 i，將最遠邊界更新成 max(farthest, i+jumps[i])。若遇到 i &gt; farthest，表示目前位置已無法到達，也就無法再向後擴張可達範圍。</p>
 <pre><code class="language-python">def can_reach_end(jumps):
     &quot;&quot;&quot;jumps[i] 是由 i 往右最多前進的步數；空陣列視為可完成。&quot;&quot;&quot;
     if any(jump &lt; 0 for jump in jumps):
@@ -61,14 +64,19 @@
         if farthest &gt;= len(jumps) - 1:
             return True
     return True</code></pre>
-<p>不變量是：處理下一個索引之前，從 0 到 farthest 之間的索引都可達。這依賴「可以跳不超過上限的任意步數」；若必須剛好跳 jumps[i] 格，可達集合可能有洞，單一邊界就不夠。此法時間 O(n)，額外空間 O(1)，只判斷存在性，沒有求最少跳躍次數。空序列的 True 是我們明訂的介面慣例，面試時要先確認。</p>
+<p>不變量是：處理下一個索引之前，從 0 到 farthest 之間的索引都可達。這依賴「可以跳不超過上限的任意步數」；若必須剛好跳 jumps[i] 格，可達集合中間可能夾著不可達位置，不能只用單一邊界表示。此法時間 O(n)，額外空間 O(1)，只判斷存在性，沒有求最少跳躍次數。空序列的 True 是我們明訂的介面慣例，面試時要先確認。</p>
 <h3 id="c08-counterexamples">7. 反例實驗室：別把成功規則帶到不同目標</h3>
+<p class="problem-source"><strong>自編反例／延伸練習：</strong>以下反例用自編數字比較規則。加權區間可延伸到 <a href="https://leetcode.com/problems/maximum-profit-in-job-scheduling/">LeetCode 1235：Maximum Profit in Job Scheduling</a>：求不重疊工作的最大總報酬；原題開始時間為正數，本章反例從 0 起算。最少硬幣可延伸到 <a href="https://leetcode.com/problems/coin-change/">LeetCode 322：Coin Change</a>：各幣值可不限次使用，無法湊成目標時回傳 −1。前者不能直接套用「最早結束」，後者也不能保證「先拿最大硬幣」會得到最佳解。</p>
 <ul><li><strong>最大總價值：</strong>[0,2) 值 2、[2,4) 值 2、[0,4) 值 9。最早結束會拿 4，最佳是 9。交換第一場不再保值，通常要考慮加權區間 DP。</li><li><strong>任意幣值的最少硬幣：</strong>幣值 {1,4,6}、目標 8。先取最大會得到 6+1+1 三枚，而 4+4 只需兩枚。不能因某套貨幣系統可行就推廣到任意集合。</li><li><strong>0/1 背包：</strong>容量 4，物品 (重量3,價值5)、(重量2,價值3)、(重量2,價值3)。按價值密度先取第一件只能得 5，後兩件共得 6。可切分物品與不可切分物品是不同限制。</li><li><strong>只測正向案例：</strong>空輸入、重複活動、負時間座標、端點相等都該測。時間座標可負，區間長度不可負，不要混為一談。</li></ul>
 <h3 id="c08-practice">8. 練習：先寫理由，再寫程式</h3>
-<section class="exercise"><h4>練習一：最少刪幾場？</h4><p>活動為 [(0,2),(1,3),(2,4),(4,5)]，至少刪掉幾場才能互不重疊？說明與最多選取問題的關係。</p><details><summary>參考解答</summary><p>保留 [(0,2),(2,4),(4,5)]，刪 1 場。若 n 場中最多能留下 m 場，最少刪除就是 n−m；否則留下更多就會與 m 的最大性矛盾。可回傳 len(intervals)−len(select_intervals(intervals))，時間 O(n log n)。</p></details></section>
-<section class="exercise"><h4>練習二：帶權等待打破規則</h4><p>A 工時 1、每單位等待成本 1；B 工時 3、每單位等待成本 10。短工時先做是否最佳？</p><details><summary>參考解答</summary><p>A→B 的加權等待是 0×1+1×10=10；B→A 是 0×10+3×1=3，應先做 B。一般相鄰交換比較 a 的工時 pₐ 與權重 wₐ、b 的 pᵦ 與 wᵦ：a 在前安全的條件是 pₐwᵦ ≤ pᵦwₐ。這也指出原本證明的等權前提在哪裡被使用；正權重時等價於按 p/w 升冪。</p></details></section>
-<section class="exercise"><h4>練習三：可達邊界手算</h4><p>分別判斷 [2,1,0,1] 與 [2,2,0,1] 是否可達末端。為什麼不能只看最大的一個跳躍數？</p><details><summary>參考解答</summary><p>第一組在 i=0 後 farthest=2，i=1、2 都無法擴張；到 i=3 時失敗。第二組在 i=1 把 farthest 從 2 擴到 3，因此成功。跳躍數只在其索引可達時才有用，例如 [0,100] 仍失敗。</p></details></section>
-<section class="exercise"><h4>練習四：排序之後一定能貪心嗎？</h4><p>有人說「先排序，然後每次選最便宜的，就是最優」。你會先追問哪三件事？</p><details><summary>參考解答</summary><p>先問要最小化或最大化哪個量、選擇是否會排除其他可行選項、能否把任意最優解的第一個選擇換成最便宜者而不變差。沒有具體限制與目標，排序只是重排資料，不是正確性證明。</p></details></section>
+<section class="exercise"><h4>練習一：最少刪幾場？</h4>
+<p class="problem-source"><strong>對應原題：</strong><a href="https://leetcode.com/problems/non-overlapping-intervals/">LeetCode 435：Non-overlapping Intervals</a>。題目目標與端點規則相同；下方區間資料及從最大保留數推得最少刪除數的問法為自編。</p><p>活動為 [(0,2),(1,3),(2,4),(4,5)]，至少刪掉幾場才能互不重疊？說明與最多選取問題的關係。</p><details><summary>參考解答</summary><p>保留 [(0,2),(2,4),(4,5)]，刪 1 場。若 n 場中最多能留下 m 場，最少刪除就是 n−m；否則留下更多就會與 m 的最大性矛盾。可回傳 len(intervals)−len(select_intervals(intervals))，時間 O(n log n)。</p></details></section>
+<section class="exercise"><h4>練習二：帶權等待打破規則</h4>
+<p class="problem-source"><strong>自編推理題：</strong>這題改變了前面單機排程的等權假設，以具體權重檢查短工時優先是否仍然成立。沒有指定的 LeetCode 原題。</p><p>A 工時 1、每單位等待成本 1；B 工時 3、每單位等待成本 10。短工時先做是否最佳？</p><details><summary>參考解答</summary><p>A→B 的加權等待是 0×1+1×10=10；B→A 是 0×10+3×1=3，應先做 B。一般相鄰交換比較 a 的工時 pₐ 與權重 wₐ、b 的 pᵦ 與 wᵦ：a 在前安全的條件是 pₐwᵦ ≤ pᵦwₐ。從這個條件可以看出，原本的證明在哪裡用到等權前提；正權重時等價於按 p/w 升冪。</p></details></section>
+<section class="exercise"><h4>練習三：可達邊界手算</h4>
+<p class="problem-source"><strong>自編測例：</strong>沿用 <a href="https://leetcode.com/problems/jump-game/">LeetCode 55：Jump Game</a> 的非空輸入規則，以下兩組陣列用來手動檢查可達邊界，並非原題頁面的範例。</p><p>分別判斷 [2,1,0,1] 與 [2,2,0,1] 是否可達末端。為什麼不能只看最大的一個跳躍數？</p><details><summary>參考解答</summary><p>第一組在 i=0 後 farthest=2，i=1、2 都無法擴張；到 i=3 時失敗。第二組在 i=1 把 farthest 從 2 擴到 3，因此成功。跳躍數只在其索引可達時才有用，例如 [0,100] 仍失敗。</p></details></section>
+<section class="exercise"><h4>練習四：排序之後一定能貪心嗎？</h4>
+<p class="problem-source"><strong>自編推理題：</strong>這是檢查貪心論證是否完整的問答，沒有指定的 LeetCode 原題或唯一程式介面。</p><p>有人說「先排序，然後每次選最便宜的，就是最優」。你會先追問哪三件事？</p><details><summary>參考解答</summary><p>先問要最小化或最大化哪個量、選擇是否會排除其他可行選項、能否把任意最優解的第一個選擇換成最便宜者而不變差。沒有具體限制與目標，單靠排序只能改變資料順序，無法證明選擇一定最優。</p></details></section>
 <h3 id="c08-checklist">9. 章末決策卡</h3>
 <p>看到「每一步挑一個」時：先列可行性與目標 → 嘗試小反例 → 指出交換後哪個量不變、哪個量改善 → 固定選擇並縮小問題 → 最後處理排序成本及平手。若交換會破壞價值、容量或後續順序，就停下來考慮 DP、回溯或其他資料結構。</p>
 <p>本章配套 tests/examples_08.py 包含範例、無效輸入、端點相接與重複區間；另外枚舉小集合的所有子集合驗證最大場數，枚舉工作排列驗證等待時間。這些測試能找程式錯誤，但不能取代對任意 n 的證明。</p>

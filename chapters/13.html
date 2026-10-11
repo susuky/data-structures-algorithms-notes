@@ -1,9 +1,10 @@
 <article id="chapter-13" data-title="進階補充：差分、Trie、位元與最短路">
 <h2>13｜進階補充：差分、Trie、位元與最短路</h2>
-<p>這一章收集六個常見、卻容易因為少一個條件而用錯的工具。它們不必一起背；先學會看見問題訊號：大量區間加法、共同字首、小集合、區間交疊、取餘數，以及有成本的路徑。最後會看到一個更重要的原則：<strong>演算法可能沒選錯，但狀態少了一個維度，答案依然會錯。</strong></p>
+<p>本章整理六個常見工具，使用時都要注意前提，少檢查一個條件就可能用錯。不必一次背完，先看題目需要處理什麼：大量區間加法、共同字首、小集合、區間交疊、取餘數，以及有成本的路徑。限制轉乘的例子也會說明：<strong>演算法可能沒選錯，但狀態少了一個維度，答案依然會錯。</strong></p>
 <div class="callout"><strong>先備：</strong>陣列與前綴和、雜湊表、排序、heapq、圖的 BFS。若還不熟，先回到第 02、03、06、07 章。本章所有圖最短路範例使用非負整數權重；頂點以 0 到 V−1 編號，輸入的鄰居編號都有效。</div>
 
 <h3 id="c13-difference">一、差分陣列：記錄「從哪裡開始改變」</h3>
+<p class="problem-link"><strong>自編延伸例題：</strong>相近題型是 <a href="https://leetcode.com/problems/corporate-flight-bookings/">LeetCode 1109．Corporate Flight Bookings</a>，把每筆訂位數加到一段連續航班，最後回傳各班總數。原題航班從 1 編號、增加量為正；本節改成從 0 編號的陣列，也接受負增量。若用本節函式解原題，要先把每筆更新的兩個端點都減 1。</p>
 <p>假設有長度 n 的零陣列，收到 q 個指令「索引 left 到 right，每格加 delta」，最後才需要完整陣列。逐格修改最壞 O(nq)。若只記錄變化的起點與終點，每次更新只要兩個位置。</p>
 <p>差分 d 的意思是相鄰值之差：d[0]=a[0]，d[i]=a[i]−a[i−1]。反過來把 d 做前綴和，就能還原 a。因此閉區間 [left,right] 增加 delta 時，只需 d[left]+=delta、d[right+1]−=delta。第一個位置讓之後的累積多 delta，第二個位置讓效果停止。</p>
 <pre><code class="language-python">def range_add(n: int, updates: list[tuple[int, int, int]]) -&gt; list[int]:
@@ -36,6 +37,7 @@
 <div class="warning">最容易漏的是 right+1。若寫成 difference[right]−=delta，右端點就少更新了一格。請先寫清楚區間是閉區間還是半開區間，再安排終止位置。</div>
 
 <h3 id="c13-trie">二、Trie：讓共同字首只走同一段路</h3>
+<p class="problem-link"><strong>題目對照：</strong><a href="https://leetcode.com/problems/implement-trie-prefix-tree/">LeetCode 208．Implement Trie (Prefix Tree)</a> 要實作插入單字、查詢完整單字與查詢字首。本頁的方法 starts_with 對應原題 startsWith；原題只用非空小寫英文字串，本頁另支援 Unicode 與空字串，相關回傳規則在本節明訂。</p>
 <p>Trie（字首樹）把每條邊標記成一個字元。從根走過 c、a、r，就代表字首 car。節點還需要 end 標記，區分「這條路存在」與「有一個完整單字在這裡結束」。沒有 end 時，插入 cart 會讓查找 car 被誤判為完整單字。</p>
 <figure class="diagram"><svg role="img" aria-labelledby="c13-trie-title" viewBox="0 0 780 285" width="780" height="285">
 <title id="c13-trie-title">Trie 儲存 car、cart、cat；c 和 a 共用路徑，r 是 car 終點且仍有 t 孩子，a 的另一個 t 是 cat 終點</title>
@@ -79,11 +81,12 @@ class Trie:
     def starts_with(self, prefix: str) -&gt; bool:
         return self._walk(prefix) is not None</code></pre><p><strong>插入的逐步狀態：</strong>先插入 car，建立 c→a→r 並將 r 標記 end；再插入 cart，重用前三條邊，只新增 t，保留 r 的 end；最後插入 cat，重用 c→a，再新增另一條 t 邊。此時 search("ca") 為 False，starts_with("ca") 為 True，search("car") 為 True。</p>
 <p><strong>不變量：</strong>處理完字串前 i 個字元後，node 恰好代表長度 i 的字首。下一條匹配字元的邊存在，就延長一個字元；不存在，整個字首也不可能存在。走完全部字元後，再查 end 才能決定完整單字是否存在。</p>
-<div class="complexity">長度 L 的插入、完整查找、字首查找，平均時間 O(L)，假設字典單次操作平均 O(1)。總儲存量 O(S)，S 是所有插入字串長度總和的上界；共用字首會減少實際節點數。Python 每個節點與字典本身都有額外記憶體成本，若只有完整單字存在查詢，set 往往更簡單。這個實作支援 Unicode 字元，但不自動做大小寫、重音、字形正規化。</div>
+<div class="complexity">長度 L 的插入、完整查找、字首查找，平均時間 O(L)，假設字典單次操作平均 O(1)。總儲存量 O(S)，S 是所有插入字串長度總和的上界；共用字首會減少實際節點數。Python 每個節點與字典本身都有額外記憶體成本，若只需要查詢完整單字是否存在，set 往往更簡單。這個實作支援 Unicode 字元，但不自動做大小寫、重音、字形正規化。</div>
 <p>本版採集合語意，重複插入同一字不增加計數。空字首永遠有根這條零步路徑，所以 starts_with("") 為 True；search("") 只有在 insert("") 後才為 True。刪除、出現次數與自動補全排序都需要另外設計，不能從 end 一個布林值直接推得。</p>
 
 <h3 id="c13-bits">三、位元：把一小群布林值放進一個整數</h3>
-<p>若候選元素編號為 0 到 b−1，可用整數 mask 的第 i 位代表元素 i 是否在集合中。這很適合小集合、狀態壓縮和子集合枚舉；但它只是換一種表示法，不會消除 2ᵇ 個子集合的數量。</p>
+<p class="problem-link"><strong>延伸實作：</strong><a href="https://leetcode.com/problems/number-of-1-bits/">LeetCode 191．Number of 1 Bits</a> 要回傳整數二進位表示中 1 的個數，原題輸入範圍為 1 到 2³¹−1。本節的 popcount 接受任意非負 Python 整數，因此也處理 0 與超過固定字寬的數；例如 44 的輸出是 3。</p>
+<p>若候選元素編號為 0 到 b−1，可用整數 mask 的第 i 位代表元素 i 是否在集合中。這很適合小集合、狀態壓縮和子集合枚舉。這樣只是改變集合的表示法，子集合的數量仍是 2ᵇ 個。</p>
 <table><thead><tr><th>操作</th><th>Python 表達式</th><th>意思</th></tr></thead><tbody><tr><td>建立第 i 位</td><td>1 &lt;&lt; i</td><td>只有第 i 位是 1</td></tr><tr><td>檢查成員</td><td>(mask &amp; (1 &lt;&lt; i)) != 0</td><td>交集是否非空</td></tr><tr><td>加入</td><td>mask | (1 &lt;&lt; i)</td><td>把第 i 位設成 1</td></tr><tr><td>移除</td><td>mask &amp; ~(1 &lt;&lt; i)</td><td>把第 i 位設成 0</td></tr><tr><td>切換</td><td>mask ^ (1 &lt;&lt; i)</td><td>0、1 互換</td></tr><tr><td>集合交集／聯集</td><td>a &amp; b ／ a | b</td><td>每一位各自運算</td></tr></tbody></table>
 <p>一個常用技巧是 x &amp; (x−1)：它會移除最右邊的一個 1。因為減一把最右邊的 1 變成 0、它右邊的 0 變成 1；再與原數 AND，剛剛那個 1 就消失，其餘較高位保留。</p>
 <pre><code class="language-python">def popcount(value: int) -&gt; int:
@@ -98,7 +101,8 @@ class Trie:
 <div class="warning">Python 整數不是固定 32 位。~x 等於 −x−1，若要 b 位補數，寫 (~x) &amp; ((1 &lt;&lt; b)−1)。本版 popcount 拒絕負數；不能拿「負數一直清除 1」當成會結束的迴圈。對大整數，位元運算需要處理多個內部數位：設其內部數位數為 L，上面保守分析是 O(kL) 時間、O(L) 暫存空間，不能一律宣稱 O(1) 成本。</div>
 
 <h3 id="c13-intervals">四、區間：先定義端點，再排序合併</h3>
-<p>合併區間的核心不是看到兩個重疊就隨便連起來，而是先依左端點排序，讓後來的區間不會突然回到更左邊。維護一個目前尚可延伸的區間，後面的區間若與它重疊就擴大右界；否則它可以正式結算。</p>
+<p class="problem-link"><strong>題目對照：</strong><a href="https://leetcode.com/problems/merge-intervals/">LeetCode 56．Merge Intervals</a>。輸入閉區間清單，回傳合併後彼此不重疊的區間；共用端點也算重疊。例如 [(1,4),(3,6),(8,9)] 回傳 [[1,6],[8,9]]。本頁另外接受負端點與空輸入，空輸入回傳 []；後面的半開會議區間則是另一套端點規則。</p>
+<p>合併區間前，要先依左端點排序，確保後來區間的左界不會比前面更小；不能只看到重疊就任意合併。維護一個目前尚可延伸的區間，後面的區間若與它重疊就擴大右界；否則目前區間的範圍就能確定下來。</p>
 <pre><code class="language-python">def merge_closed(intervals: list[tuple[int, int]]) -&gt; list[list[int]]:
     if any(left &gt; right for left, right in intervals):
         raise ValueError(&#x27;left endpoint exceeds right endpoint&#x27;)
@@ -122,6 +126,7 @@ class Trie:
 <ul><li>閉區間 [1,3] 與 [3,4] 在 3 重疊，上面的函式會合併。</li><li>半開會議 [1,3) 與 [3,4) 不重疊，可以使用同一間會議室；釋放條件是 end≤next_start。</li><li>表示連續覆蓋範圍時，相接的半開區間也可合成 [1,4)，但這不表示兩場會議時間衝突。</li><li>[1,2] 與 [3,4] 在實數線上有間隙；若題目只在乎整數點且允許相鄰合併，則是另一種規則，不能偷換定義。</li></ul>
 
 <h3 id="c13-mod">五、模運算：加減乘可逐步取餘數，除法要另問</h3>
+<p class="problem-link"><strong>自編例題。</strong>輸入整數 base、非負整數 exponent 與正整數 modulus，回傳 base 的 exponent 次方除以 modulus 的餘數。以下範例 pow_mod(7,13,11) 回傳 2；目標是直接算出餘數，無須先建立整個次方值。</p>
 <p>當答案只需要除以正整數 m 的餘數，計算可以保持在 0 到 m−1。加法、減法、乘法都與「最後才取模」相容，例如 (a×b)%m 等於 ((a%m)×(b%m))%m。這能限制中間數字的成長，但不會自動保留原數的大小順序。</p>
 <p><strong>除法不能直接搬進來：</strong>模 6 時，2×1 與 2×4 都得到 2，知道乘積餘數是 2 並不能唯一倒推出另一個因數。a 的模反元素存在，當且僅當 a 與 m 互質；若 m 是質數，也仍要求 a 不被 m 整除。這些前提沒有確認，就不應使用「除以 a」的捷徑。</p>
 <p>要算 base 的 exponent 次方，可利用 exponent 的二進位表示，把底數不斷平方。指數最低位為 1 時，把目前底數乘入 result；接著把指數右移一位。</p>
@@ -138,10 +143,11 @@ class Trie:
     return result</code></pre><div class="example"><strong>逐步例子 B：7¹³ mod 11</strong>
 <table><thead><tr><th>回合開始的 exponent</th><th>base</th><th>result</th><th>本輪動作</th></tr></thead><tbody><tr><td>13（奇數）</td><td>7</td><td>1</td><td>result=7；base=5；exponent=6</td></tr><tr><td>6（偶數）</td><td>5</td><td>7</td><td>不乘入；base=3；exponent=3</td></tr><tr><td>3（奇數）</td><td>3</td><td>7</td><td>result=10；base=9；exponent=1</td></tr><tr><td>1（奇數）</td><td>9</td><td>10</td><td>result=2；base=4；exponent=0</td></tr></tbody></table></div>
 <p><strong>不變量：</strong>result×baseᵉ 模 m 始終等於原問題的答案，其中 e 是目前 exponent。若 e=2t，baseᵉ=(base²)ᵗ；若 e=2t+1，先把一份 base 乘入 result，剩下同樣變成平方底數的 t 次方。到 e=0 時，答案全部留在 result。</p>
-<div class="complexity">指數 e≥1 時只做 O(log e) 次模乘；e=0 是常數次工作。這是運算次數，並不表示任意大整數的乘除都 O(1)。本版保留常數個整數，底數與結果需要 O(log m) 位、指數需要 O(log e) 位。實務直接使用 Python 的 pow(base, exponent, modulus)，不需要先算出巨大次方。</div>
+<div class="complexity">指數 e≥1 時只做 O(log e) 次模乘；e=0 是常數次工作。這是運算次數，並不表示任意大整數的乘除都 O(1)。本版保留常數個整數，底數與結果需要 O(log m) 位、指數需要 O(log e) 位。實務上可以直接使用 Python 的 pow(base, exponent, modulus)，不需要先算出巨大次方。</div>
 <p>本函式只接受非負指數與正模數。modulus=1 時任何結果都是 0，因此 result 用 1%modulus 初始化；exponent=0 按乘法單位元計算。Python 對正模數的 % 會給非負餘數，其他語言的負數餘數規則可能不同，移植時要再確認。</p>
 
 <h3 id="c13-dijkstra">六、Dijkstra：最便宜的未完成狀態先擴展</h3>
+<p class="problem-link"><strong>自編例題，相近題型：</strong><a href="https://leetcode.com/problems/network-delay-time/">LeetCode 743．Network Delay Time</a>。原題頂點從 1 編號，回傳所有頂點都收到訊號所需的最短時間；有頂點不可達就回傳 −1。本節頂點從 0 編號，直接回傳起點到每個頂點的最短距離，不可達位置保留 inf。圖中從 S 出發的輸出是 [0,5,2,6,inf]；兩者都要求非負邊權重。</p>
 <p>第 06 章 BFS 最小化邊數。若每條邊是不同但非負的票價，便要把先進先出的佇列換成最小堆積。distance[v] 記錄目前發現的最便宜路線，heap 每次彈出最小暫定成本。沿邊試算更便宜的新路線，叫做「鬆弛」。</p>
 <pre><code class="language-python">from heapq import heappop, heappush
 from math import inf
@@ -174,11 +180,12 @@ def dijkstra(graph: list[list[tuple[int, int]]], start: int) -&gt; list[float | 
 <div class="example"><strong>逐步例子 C：同一個頂點可以有舊的堆積項目</strong>
 <table><thead><tr><th>彈出項目</th><th>更新</th><th>distance[S,A,B,T]</th></tr></thead><tbody><tr><td>(0,S)</td><td>A=8，B=2 入堆</td><td>[0,8,2,∞]</td></tr><tr><td>(2,B)</td><td>A 降至 5，T=11</td><td>[0,5,2,11]</td></tr><tr><td>(5,A)</td><td>T 降至 6</td><td>[0,5,2,6]</td></tr><tr><td>(6,T)</td><td>沒有出邊</td><td>[0,5,2,6]</td></tr><tr><td>(8,A)</td><td>8≠distance[A]，略過舊項目</td><td>不變</td></tr><tr><td>(11,T)</td><td>11≠distance[T]，略過舊項目</td><td>不變</td></tr></tbody></table></div>
 <p><strong>為什麼非負很重要？</strong>當一個未過期的最小成本項目 (d,u) 彈出，若還有更便宜的路到 u，沿那條路看第一個尚未確定的頂點；它之前的部分應已完成鬆弛。因為剩下所有邊都非負，它的暫定成本不會大於那條更便宜路的總成本，理應先於 u 彈出，矛盾。因此 u 的成本此時已是最優值。</p>
-<p>不能在「第一次加入 heap」就把頂點鎖死；上例 A 先以 8 入堆，之後才降成 5。Python heapq 沒有這段程式所需的原地 decrease-key 操作，因此放入新項目、等舊項目彈出時跳過即可。以嚴格小於才更新，也能避免零成本環不斷加入相同成本項目。</p>
+<p>不能在「第一次加入 heap」就把頂點鎖死；上例 A 先以 8 入堆，之後才降成 5。Python heapq 沒有這段程式所需的原地 decrease-key 操作，因此放入新項目、等舊項目彈出時跳過即可。只有成本嚴格小於目前值時才更新，也能避免零成本環不斷加入相同成本項目。</p>
 <div class="complexity">本版先掃描所有 E 條邊檢查負權重。每次成功鬆弛至多新增一個堆項目，懶刪除堆積可能有 O(E) 項，所以一般鄰接清單含重邊時，時間可寫 O(V+E log(E+2))，額外空間 O(V+E)。簡單圖有 E≤V²，常見寫法因此是 O((V+E) log V)，但不能忘記堆中的過期項目會占空間。這些分析把成本加法與比較視為固定成本；巨大 Python 整數另有位元長度成本。</div>
 <div class="warning">含負邊時，以上「一旦彈出便最優」的證明失效，不能靠換一個 visited 時機修好。程式明確拒絕負邊，包含不可達部分的負邊。若題目允許負權重，應改選符合條件的演算法，例如限制邊數的分層動態規劃，或另學 Bellman–Ford。</div>
 
 <h3 id="c13-limited-stops">七、限制轉乘：同一個城市，也可能是不同狀態</h3>
+<p class="problem-link"><strong>延伸實作：</strong><a href="https://leetcode.com/problems/cheapest-flights-within-k-stops/">LeetCode 787．Cheapest Flights Within K Stops</a> 要求最多 K 個中途停靠點下的最低總票價。原題以航班清單輸入、無解回傳 −1；本頁用鄰接表、無解回傳 None，並額外測試零票價、起終點相同及 K=−1。以下範例仍依本頁介面作答，不能把停靠點數直接當成可走的邊數。</p>
 <p>假設票價非負，但最多允許 K 個中途停靠點。若起點與終點不同，這表示最多 B=K+1 條邊。容易出錯的寫法是只保留 distance[city]，以為到某城市越便宜就越好；但較便宜的路可能已用完額度，無法繼續飛。</p>
 <figure class="diagram"><svg role="img" aria-labelledby="c13-stops-title" viewBox="0 0 810 330" width="810" height="330">
 <title id="c13-stops-title">限制最多三條邊的反例：S 經 a、b 到 v 費用三但已用三邊，不能再去 T；S 直達 v 費用五且只用一邊，還能花一到 T，答案六</title>
@@ -217,13 +224,15 @@ def dijkstra(graph: list[list[tuple[int, int]]], start: int) -&gt; list[float | 
     return None</code></pre><p>上圖編號 S=0、a=1、b=2、v=3、T=4。K=2 時，演算法先到 (v,3) 費用 3，但它不能擴展；之後仍保留 (v,1) 費用 5，走到 (T,2) 費用 6。若把 K 改成 3，可用四條邊，答案才變成 4。每次彈出的項目按費用排序，因此第一個未過期的目標狀態，就是所有合法用邊數中的最便宜答案。</p>
 <p><strong>不變量：</strong>每個距離項目只與相同城市、相同已用邊數的路徑比較。只有一個狀態同時「費用不更高、使用邊數不更多」，才可能支配另一個狀態；單獨費用較低並不足以刪除它。本版保留所有維度，沒有做這種額外剪枝。</p>
 <div class="complexity">當 B≥1，擴展圖有 (B+1)V 個狀態與最多 BE 條轉移。此懶刪除實作時間 O(BV+BE log(BE+2))、額外空間 O(BV+BE)，最壞堆積也要計入。B=0 時不能走邊，起終點相同才可用零成本完成；本實作仍會配置距離與檢查輸入，花 O(V+E) 時間。K=−1 是程式特別允許的「最多零條邊」測試值，普通航班題通常從 K=0 開始。</div>
-<div class="callout"><strong>另一條思路：</strong>固定用邊數逐層做 DP，每一輪只從上一輪狀態計算下一輪，即可在 O(B(V+E)) 時間求限制邊數最短路，也能處理負邊。一定要使用新的下一層陣列；若在同一輪讀到剛寫入的距離，就可能偷偷走了多條邊。本章測試使用這個獨立版本做交叉驗證。</div>
+<div class="callout"><strong>另一條思路：</strong>固定用邊數逐層做 DP，每一輪只從上一輪狀態計算下一輪，即可在 O(B(V+E)) 時間求限制邊數最短路，也能處理負邊。一定要使用新的下一層陣列；若在同一輪讀到剛寫入的距離，就可能在一輪內走了多條邊。本章測試使用這個獨立版本做交叉驗證。</div>
 
 <h3 id="c13-exercises">八、練習：替工具補上它需要的前提</h3>
-<section class="exercise"><h4>練習 1｜同時處理中的工作有多少？</h4><p>共有 n 個離散時間格，每個工作覆蓋閉區間 [left,right]，每格負載增加 1。回傳最高負載。n=7、工作 [(0,2),(2,5),(4,6)] 的答案是 2。沒有時間格也沒有工作時回傳 0。</p><details><summary>參考解答</summary><p>這是批次區間加法，直接把 delta 設為 1，再取最大值。差分的前綴和就是該時間仍在執行的工作數，不會把結束之後也算進去。時間 O(n+q)，額外空間 O(n)。若時間戳範圍巨大而工作很少，不應配置巨大陣列；可以另學排序事件或座標壓縮。</p><pre><code class="language-python">def peak_load(n: int, intervals: list[tuple[int, int]]) -&gt; int:
+<section class="exercise"><h4>練習 1｜同時處理中的工作有多少？</h4>
+<p class="problem-link"><strong>自編延伸練習。</strong>沿用本章差分的閉區間加法模型，但輸出改成最高負載這一個數字，不是每一格的完整負載陣列。下方例子的答案 2 表示最多有兩個工作同時占用同一時間格。</p><p>共有 n 個離散時間格，每個工作覆蓋閉區間 [left,right]，每格負載增加 1。回傳最高負載。n=7、工作 [(0,2),(2,5),(4,6)] 的答案是 2。沒有時間格也沒有工作時回傳 0。</p><details><summary>參考解答</summary><p>這是批次區間加法，直接把 delta 設為 1，再取最大值。差分的前綴和就是該時間仍在執行的工作數，不會把結束之後也算進去。時間 O(n+q)，額外空間 O(n)。若時間戳範圍巨大而工作很少，不應配置巨大陣列；可以另學排序事件或座標壓縮。</p><pre><code class="language-python">def peak_load(n: int, intervals: list[tuple[int, int]]) -&gt; int:
     counts = range_add(n, [(left, right, 1) for left, right in intervals])
     return max(counts, default=0)</code></pre></details></section>
-<section class="exercise"><h4>練習 2｜最少會議室</h4><p>每場會議使用正長度半開區間 [start,end)。回傳足夠容納全部會議的最少房間數。[(1,4),(4,6),(2,3)] 應回傳 2；第二場可以接手第一場的房間。</p><details><summary>參考解答</summary><p>依開始時間排序，用最小堆積保留目前仍在進行的會議結束時間。在新會議開始前，先把所有 end≤start 的會議釋放。堆積大小就是這一刻同時進行的會議數；其最大值是必要的房間數，也可用回收空房的方式達到，因此充分。時間 O(n log n)，空間 O(n)。</p><pre><code class="language-python">def min_rooms(intervals: list[tuple[int, int]]) -&gt; int:
+<section class="exercise"><h4>練習 2｜最少會議室</h4>
+<p class="problem-link"><strong>自編練習。</strong>以下面的半開區間規格作答，輸出房間數，不回傳每場會議的房號。結束時間等於另一場的開始時間時可以共用房間；空會議清單的答案是 0。</p><p>每場會議使用正長度半開區間 [start,end)。回傳足夠容納全部會議的最少房間數。[(1,4),(4,6),(2,3)] 應回傳 2；第二場可以接手第一場的房間。</p><details><summary>參考解答</summary><p>依開始時間排序，用最小堆積保留目前仍在進行的會議結束時間。在新會議開始前，先把所有 end≤start 的會議釋放。堆積大小就是這一刻同時進行的會議數；其最大值是必要的房間數，也可用回收空房的方式達到，因此充分。時間 O(n log n)，空間 O(n)。</p><pre><code class="language-python">def min_rooms(intervals: list[tuple[int, int]]) -&gt; int:
     # Positive-length, half-open intervals [start, end).
     if any(start &gt;= end for start, end in intervals):
         raise ValueError(&#x27;meetings must have positive duration&#x27;)
@@ -235,13 +244,15 @@ def dijkstra(graph: list[list[tuple[int, int]]], start: int) -&gt; list[float | 
         heappush(ends, end)
         answer = max(answer, len(ends))
     return answer</code></pre></details></section>
-<section class="exercise"><h4>練習 3｜成對資料中多出哪個值？</h4><p>給整數陣列，保證恰有一個值出現一次，其餘每個不同值都恰好出現兩次。不排序、不用頻率表，找出單獨值。[13,8,13,−4,8] 應得到 −4。</p><details><summary>參考解答</summary><p>XOR 滿足 x^x=0、x^0=x，且可交換與結合，所以成對值全部抵消。累積值是不斷加入前綴元素後的 XOR，處理完便只剩單獨值。固定字寬下時間 O(n)、額外空間 O(1)；Python 大整數仍需計入字長。這個方法依賴次數保證，不能拿它偵測輸入是否真的符合保證。</p><pre><code class="language-python">def xor_unique(values: list[int]) -&gt; int:
+<section class="exercise"><h4>練習 3｜成對資料中多出哪個值？</h4>
+<p class="problem-link"><strong>題目對照：</strong><a href="https://leetcode.com/problems/single-number/">LeetCode 136．Single Number</a>。輸入保證只有一個值出現一次，其餘各出現兩次；回傳那個值，並要求線性時間與常數額外空間。這個次數保證是題目條件，不能靠相同程式順便驗證。</p><p>給整數陣列，保證恰有一個值出現一次，其餘每個不同值都恰好出現兩次。不排序、不用頻率表，找出單獨值。[13,8,13,−4,8] 應得到 −4。</p><details><summary>參考解答</summary><p>XOR 滿足 x^x=0、x^0=x，且可交換與結合，所以成對值全部抵消。累積值是不斷加入前綴元素後的 XOR，處理完便只剩單獨值。固定字寬下時間 O(n)、額外空間 O(1)；Python 大整數仍需計入字長。這個方法依賴次數保證，不能拿它偵測輸入是否真的符合保證。</p><pre><code class="language-python">def xor_unique(values: list[int]) -&gt; int:
     # Exactly one value occurs once; every other value occurs twice.
     result = 0
     for value in values:
         result ^= value
     return result</code></pre></details></section>
-<section class="exercise"><h4>練習 4｜排除自己後的乘積，模數可能不是質數</h4><p>回傳每個位置之外所有元素乘積對正整數 m 的餘數。允許零與負數，m 也可能是合數；不能使用除法。values=[2,3,4]、m=6 時得到 [0,2,0]。單元素陣列的空乘積是 1%m。</p><details><summary>參考解答</summary><p>第一輪把「左側乘積」存入結果，第二輪由右向左累乘「右側乘積」，把兩者相乘。每個位置的左、右集合互不重疊且正好排除自己。全程只用乘法與取模，因此零與沒有模反元素都不成問題。使用 O(n) 次模乘，結果 O(n)；不計結果只保留常數個整數，位元空間仍由 m 決定。</p><pre><code class="language-python">def products_except_self_mod(values: list[int], modulus: int) -&gt; list[int]:
+<section class="exercise"><h4>練習 4｜排除自己後的乘積，模數可能不是質數</h4>
+<p class="problem-link"><strong>自編延伸練習：</strong>相近題型是 <a href="https://leetcode.com/problems/product-of-array-except-self/">LeetCode 238．Product of Array Except Self</a>，原題要求每格以外元素的完整乘積，且不能用除法。本題多了正整數模數 m，回傳乘積的餘數，並額外處理單元素與空陣列；不能直接用模除法代替前後綴乘積。</p><p>回傳每個位置之外所有元素乘積對正整數 m 的餘數。允許零與負數，m 也可能是合數；不能使用除法。values=[2,3,4]、m=6 時得到 [0,2,0]。單元素陣列的空乘積是 1%m。</p><details><summary>參考解答</summary><p>第一輪把「左側乘積」存入結果，第二輪由右向左累乘「右側乘積」，把兩者相乘。每個位置的左、右集合互不重疊且正好排除自己。全程只用乘法與取模，因此零與沒有模反元素都不成問題。使用 O(n) 次模乘，結果 O(n)；不計結果只保留常數個整數，位元空間仍由 m 決定。</p><pre><code class="language-python">def products_except_self_mod(values: list[int], modulus: int) -&gt; list[int]:
     if modulus &lt;= 0:
         raise ValueError(&#x27;modulus must be positive&#x27;)
     result = [1 % modulus] * len(values)
@@ -254,10 +265,11 @@ def dijkstra(graph: list[list[tuple[int, int]]], start: int) -&gt; list[float | 
         result[i] = result[i] * suffix % modulus
         suffix = suffix * values[i] % modulus
     return result</code></pre></details></section>
-<section class="exercise"><h4>練習 5｜為什麼不能只記「抵達城市時剩幾站」？</h4><p>另一位同學想只保留每個城市「剩餘邊數最多」的那條路，忽略費用。這樣能解限制轉乘的最低票價嗎？</p><details><summary>參考解答</summary><p>也不行。例如允許三條邊，S→v 票價 100，S→a→v 每段票價 1，v→T 票價 1。兩條抵達 v 的路都有足夠額度去 T，但只保留剩餘額度最多的直達路會得到 101，正確答案是 3。費用與已用邊數都影響答案，不能只按任一軸保留一條；上一節的二維狀態會保留兩者並找到 3。</p></details></section>
+<section class="exercise"><h4>練習 5｜為什麼不能只記「抵達城市時剩幾站」？</h4>
+<p class="problem-link"><strong>自編反例題。</strong>沿用上節限制轉乘問題，可對照 <a href="https://leetcode.com/problems/cheapest-flights-within-k-stops/">LeetCode 787．Cheapest Flights Within K Stops</a>。這題要判斷刪除狀態的規則是否安全，回答理由或反例，不需要再寫一份完整求最短路的程式。</p><p>另一位同學想只保留每個城市「剩餘邊數最多」的那條路，忽略費用。這樣能解限制轉乘的最低票價嗎？</p><details><summary>參考解答</summary><p>也不行。例如允許三條邊，S→v 票價 100，S→a→v 每段票價 1，v→T 票價 1。兩條抵達 v 的路都有足夠額度去 T，但只保留剩餘額度最多的直達路會得到 101，正確答案是 3。費用與已用邊數都影響答案，不能只按任一軸保留一條；上一節的二維狀態會保留兩者並找到 3。</p></details></section>
 
 <h3 id="c13-checklist">九、怎麼選，以及接下來練什麼</h3>
 <ul><li>大量區間加法，最後才看結果：差分；更新與查詢交錯：再學樹狀陣列或線段樹。</li><li>字首是否存在：Trie；只有完整鍵存在：先考慮 set。選工具時把 Python 物件成本算進去。</li><li>元素種類很少的集合：位元遮罩；不要忘記列舉所有子集合仍是指數級。</li><li>區間合併：排序後維護最右一段；排程衝突：先確定端點語意。</li><li>巨大指數取模：平方快速冪；需要模除法：先確認互質，或改用不含除法的方法。</li><li>相同步長：BFS；非負不同權重：Dijkstra；有限制步數或資源：先擴充狀態，再選求解方法。</li></ul>
-<p>tests/examples_13.py 包含差分邊界、空字串、重複插字、130 位整數、相接區間、模數為 1、合數與零元素、不可達目標、零成本環和負邊拒絕。快速冪與 Python 內建 pow 在數千組輸入上比對；另用固定亂數種子產生 120 張小圖，拿「恰好用 e 條邊」的獨立 DP 交叉檢查普通 Dijkstra 與限制停靠版本。這些測試建立回歸保護，不宣稱取代完整證明。</p>
-<div class="callout"><strong>最後的練習方式：</strong>每學一個工具，寫下它最重要的一個前提，再自己造一個違反前提的反例。把「我會套模板」推進到「我知道模板何時不成立」，才真的能把這些工具帶到陌生題目。</div>
+<p>tests/examples_13.py 包含差分邊界、空字串、重複插字、130 位整數、相接區間、模數為 1、合數與零元素、不可達目標、零成本環和負邊拒絕。快速冪與 Python 內建 pow 在數千組輸入上比對；另用固定亂數種子產生 120 張小圖，拿「恰好用 e 條邊」的獨立 DP 交叉檢查普通 Dijkstra 與限制停靠版本。這些測試用來檢查修改後有沒有出錯，仍不代表已完成完整證明。</p>
+<div class="callout"><strong>最後的練習方式：</strong>每學一個工具，寫下它最重要的一個前提，再自己造一個違反前提的反例。練習的目標是從「我會套模板」做到「我知道模板何時不成立」，這樣遇到陌生題目時，才能判斷工具是否適用。</div>
 </article>
