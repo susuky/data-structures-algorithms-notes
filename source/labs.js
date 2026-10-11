@@ -244,7 +244,7 @@
       const found = frame.distances[node] !== null, current = frame.current === node;
       svg += `<g class="graph-node${found ? ' discovered' : ''}${current ? ' current' : ''}"><circle cx="${x}" cy="${y}" r="28"/><text x="${x}" y="${y - 2}" text-anchor="middle">${node}</text><text class="graph-distance" x="${x}" y="${y + 16}" text-anchor="middle">d=${display(frame.distances[node])}</text></g>`;
     }
-    svg += '</svg></div><div class="queue-view"><strong>佇列</strong><span class="queue-start">先出 →</span>' + (frame.queue.length ? frame.queue.map(n => `<span class="queue-node">${n}</span>`).join('') : '<span class="queue-empty">空</span>') + '</div><p class="visual-legend">雙圈 = 目前處理；深色 = 已發現；深色邊 = 首次發現時的父節點邊。距離另列於下方。</p><div class="distance-list">';
+    svg += '</svg></div><div class="queue-view"><strong>佇列</strong><span class="queue-start">先出 →</span>' + (frame.queue.length ? frame.queue.map(n => `<span class="queue-node">${n}</span>`).join('') : '<span class="queue-empty">空</span>') + '</div><p class="visual-legend">粗虛線圈 = 目前處理；深色 = 已發現；深色邊 = 首次發現時的父節點邊。距離另列於下方。</p><div class="distance-list">';
     svg += frame.nodes.map(n => `<span><strong>${n}</strong> ${display(frame.distances[n])}</span>`).join('') + '</div>';
     return svg;
   }

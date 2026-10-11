@@ -93,7 +93,11 @@ class ChapterParser(HTMLParser):
 def lab_markup():
     blocks = []
     for i, (key, title, question, chapter, fields, invariant, cost) in enumerate(LABS, 1):
-        form = ''.join(f'<label for="{key}-{name}">{html.escape(label)}<input id="{key}-{name}" name="{name}" type="{typ}" value="{html.escape(value)}" autocomplete="off" {'step=1' if typ == 'number' else ''}></label>' for name, label, value, typ in fields)
+        controls = []
+        for name, label, value, typ in fields:
+            step = 'step="1"' if typ == 'number' else ''
+            controls.append(f'<label for="{key}-{name}">{html.escape(label)}<input id="{key}-{name}" name="{name}" type="{typ}" value="{html.escape(value)}" autocomplete="off" {step}></label>')
+        form = ''.join(controls)
         blocks.append(f'''<section class="algorithm-lab" id="lab-{key}" data-lab="{key}" aria-labelledby="{key}-title">
 <div class="lab-heading"><span class="lab-number">{i:02}</span><div><h3 id="{key}-title">{title}</h3><p>{question}</p></div><a href="#{chapter}" class="lab-chapter-link">讀相關章節</a></div>
 <form class="lab-inputs js-only" novalidate>{form}<button type="submit" class="button secondary">套用輸入</button><p class="lab-error" role="alert" hidden></p></form>

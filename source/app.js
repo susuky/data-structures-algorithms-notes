@@ -16,7 +16,7 @@
     }
   } catch (_) { storageAvailable = false; }
   function save() {
-    try { localStorage.setItem(storageKey, JSON.stringify(state)); }
+    try { localStorage.setItem(storageKey, JSON.stringify(state)); storageAvailable = true; }
     catch (_) { storageAvailable = false; }
     if (!storageAvailable) $('storage-note').textContent = '瀏覽器無法保存資料；目前操作仍有效，但關閉後可能遺失。';
   }
