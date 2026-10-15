@@ -99,7 +99,7 @@ inside = bisect_left(values, b) - bisect_left(values, a)  # 3</code></pre>
 <p class="complexity">令 n 為貨箱數，L=max(weights)、U=sum(weights)。初始化 O(n)，每次判斷 O(n)，總時間 O(n log(U−L+2))，額外空間 O(1)。這不是 O(n log n)，因為二分的是數值範圍。這裡採常見的成本模型，將整數加總與比較視為常數成本；但 Python 整數極大時，仍須考慮位元長度造成的成本。</p>
 <h3 id="c09-pitfalls">8. 何時不要急著二分</h3>
 <ul><li><strong>單調性不成立：</strong>某個容量可行，下一個卻不可行，就必須重新定義判斷。單調性必須從原本的限制推得，不能只根據幾個樣本判斷。</li><li><strong>答案不在界內：</strong>hi 必須能覆蓋答案或代表合法的不存在哨兵，不能隨意填一個大數。</li><li><strong>「至多」變「恰好」：</strong>若允許空天、貨箱可再切成更多非空天，以及 D 是否大於 n，都會影響問題。本文只求至多 D 天。</li><li><strong>浮點答案：</strong>實數區間沒有 mid+1 這種操作，常需誤差門檻或固定次數；不能直接套整數停止條件。</li><li><strong>旋轉陣列：</strong>原始值並非整段排序，必須另外辨識有序半邊。重複值可能使單次無法排除一半，最壞情況也可能退化。</li></ul>
-<p><strong>手動追蹤時：</strong>先畫出所有可能的分界位置，而不是只畫元素。長度五的陣列有六個可能邊界，包含最前面與最尾端。每次更新後，重新檢查被排除的部分是否符合已知條件。若你說不出某個端點為什麼還需要保留，就先不要修改程式中的加減一。最後記錄停止當下 lo、hi 的值，再翻譯成「不存在」、「第一個位置」或「最小可行容量」等題目需要的語意。這樣能把區間定義、端點更新與回傳值一起核對，減少混用不同模板的機會。</p>
+<p><strong>手動追蹤時：</strong>先畫出所有可能的分界位置，而不是只畫元素。長度五的陣列有六個可能邊界，包含最前面與最尾端。每次更新後，重新檢查被排除的部分是否符合已知條件。修改端點前，先寫出保留與排除該端點的理由。最後記錄停止當下 lo、hi 的值，再翻譯成「不存在」、「第一個位置」或「最小可行容量」等題目需要的語意。這樣能把區間定義、端點更新與回傳值一起核對，減少混用不同模板的機會。</p>
 <h3 id="c09-practice">9. 練習：把停止條件寫進答案</h3>
 <section class="exercise"><h4>練習一：重複值與空範圍</h4>
 <p class="problem-source"><strong>自編測例：</strong>本題用來練習 lower／upper 邊界與出現次數；若要轉成 <a href="https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/">LeetCode 34：Find First and Last Position of Element in Sorted Array</a> 的回傳格式，需再處理不存在與含尾索引。</p><p>對 [1,1,3,5,5]，求 target=1、2、5、8 的 lower、upper 及出現次數。</p><details><summary>參考解答</summary><p>1 → (0,2)，兩次；2 → (2,2)，零次；5 → (3,5)，兩次；8 → (5,5)，零次。回傳 n=5 合法，但不是可以讀取的索引。</p></details></section>
