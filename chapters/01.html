@@ -11,7 +11,7 @@
 
 <h3 id="c01-big-o">2. Big O 描述成長，不是秒數</h3>
 <p>令 T(n) 是某種明確操作的次數。T(n) = O(f(n)) 表示當 n 夠大時，存在固定常數 C，使 T(n) ≤ C × f(n)。它是漸近上界；Θ(f(n)) 表示上下界同階，Ω(f(n)) 是下界。面試常把「O(n)」當作緊的量級描述，但嚴格說 O(n²) 也能包含線性函式，所以分析時應盡量給出有資訊量的界。</p>
-<p>3n + 20 是 Θ(n)，n² + 5n 是 Θ(n²)。去掉低階項不表示它們在實際機器上不存在，而是我們關注輸入放大後的趨勢。O(1) 也不代表只做一次；做固定 10,000 次仍是常數。兩個 O(n) 程式可能有不同執行時間，實測則還受到 Python 版本、資料分布與硬體影響。</p>
+<p>3n + 20 是 Θ(n)，n² + 5n 是 Θ(n²)。去掉低階項是為了聚焦輸入放大後的趨勢，實際執行仍包含那些操作。O(1) 表示操作次數不隨輸入規模增加；做固定 10,000 次仍是常數。兩個 O(n) 程式可能有不同執行時間，實測則還受到 Python 版本、資料分布與硬體影響。</p>
 <div class="diagram">
 <svg role="img" aria-labelledby="c01-growth-title" viewBox="0 0 680 270" width="680" style="max-width:100%;background:#f8fafc;border-radius:12px;font-family:system-ui,sans-serif">
 <title id="c01-growth-title">輸入從三十二倍增到六十四，不同成長模型的操作次數比較</title>
