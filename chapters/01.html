@@ -111,7 +111,7 @@ def recursive_total(nums: list[int]) -&gt; int:
 
 <h3 id="c01-workflow">7. 練習流程與驗證方法</h3>
 <p>建議每題走一次完整循環：用自己的話重述合約 → 畫三到五個元素 → 寫暴力解 → 找重複工作 → 定義狀態與不變量 → 推導優化 → 用反例嘗試推翻 → 寫程式與測試 → 隔天不用筆記重做。理解「為什麼左邊能丟掉」，才能把推理用在其他題目；變數叫 l 還是 left 並不影響這件事。</p>
-<p>至少測空輸入、單一元素、全部相同、已排序、反序、負數與答案不存在。適合窮舉的小規模問題，讓優化解和暴力解自動比較，通常比只跑幾個範例更容易找到錯誤。本章測試對 1,093 組小陣列比較線性、遞迴與內建加總，另驗證計數公式、零與負數合約；這不等於形式化證明，但提供了可重跑的證據。</p>
+<p>至少測空輸入、單一元素、全部相同、已排序、反序、負數與答案不存在。適合窮舉的小規模問題，讓優化解和暴力解自動比較，通常比只跑幾個範例更容易找到錯誤。本章測試對 1,093 組小陣列比較線性、遞迴與內建加總，另驗證計數公式、零與負數合約，並提供可重跑的測試案例。</p>
 <div class="callout"><p><strong>章末決策：</strong>先選輸入規模變數，再數實際工作；遇到隱藏切片、比較或輸出就展開成本；寫遞迴先確認基本情況與嚴格縮小；說空間時區分輸入、輸出與額外工作區。下一章分析雙指標與滑動視窗時，會用「每個元素最多處理幾次」來計算工作量。</p></div>
-<p>官方補充：<a href="https://docs.python.org/3/library/stdtypes.html#sequence-types-list-tuple-range" target="_blank" rel="noopener">Python 序列型別</a>、<a href="https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str" target="_blank" rel="noopener">文字序列與字串</a>。文件用來查語言行為；本章的分析、圖例與練習為獨立編寫。</p>
+<p>官方補充：<a href="https://docs.python.org/3/library/stdtypes.html#sequence-types-list-tuple-range" target="_blank" rel="noopener">Python 序列型別</a>、<a href="https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str" target="_blank" rel="noopener">文字序列與字串</a>。文件說明相關 Python 語言行為，可與本章分析、圖例與練習搭配閱讀。</p>
 </article>

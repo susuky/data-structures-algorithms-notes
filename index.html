@@ -124,7 +124,7 @@ article .chapter-lead{font-size:1.05rem;color:var(--muted);line-height:1.95}
 <div class="lab-principle"><strong>不變量</strong><p>dp[s] 是湊出總額 s 的最少硬幣數；每個依賴 dp[s−coin] 都是已經完成的更小狀態。</p><small>O(amount × 面額數) 時間、O(amount) 空間；∞ 表示目前無法湊出。 以上不含教學追蹤紀錄。</small></div>
 <noscript><p class="lab-noscript">啟用 JavaScript 即可逐步操作本實驗。先<a href="#chapter-11">閱讀章節中的完整步驟、圖解與 Python 範例</a>。</p></noscript>
 </section></section>
-  <section class="home-section editorial-note" aria-labelledby="editorial-title"><h2 id="editorial-title">關於這份教材</h2><p>這是一份依 LeetCode 公開 DSA 課綱主題獨立編寫的繁體中文教材。正文、例子、圖解與解說獨立編寫；練習題旁會標明與公開原題的關係。這份教材不是付費課文的翻譯、逐字還原或官方授權教材。外部延伸來源由各章提供，點擊連結時才需連線。</p><p class="problem-source"><strong>題目連結怎麼看：</strong>「對應原題」表示解題目標相同，例子與解說由本教材編寫；「改編題型」會列出介面或條件的調整；「相近題型／延伸練習」會說明差異，不能直接當成同一題；「自編題／自編範例」依教材列出的條件作答。題意、輸入輸出與例子都保留在教材內，只有開啟外部題目連結時需要網路。</p><p>Python 範例以 Python 3 撰寫。互動實驗刻意限制小輸入，方便逐步觀察；實驗的視覺化追蹤會儲存每一步，不能拿它的記憶體成本代替原演算法的空間複雜度。</p><p>全書、圖解與功能皆包含在這個 HTML，不需要帳號、CDN 或追蹤服務。進度只在本瀏覽器保存，私人瀏覽或清除網站資料可能使紀錄消失。</p></section>
+  <section class="home-section editorial-note" aria-labelledby="editorial-title"><h2 id="editorial-title">關於這份教材</h2><p>這份繁體中文教材依 LeetCode 公開 DSA 課綱安排主題，搭配範例、圖解與練習。題目旁會標明與公開原題的關係；各章提供延伸閱讀來源，點擊外部連結時才需連線。</p><p class="problem-source"><strong>題目連結怎麼看：</strong>「對應原題」表示解題目標相同，例子與解說由本教材編寫；「改編題型」會列出介面或條件的調整；「相近題型／延伸練習」會說明差異，不能直接當成同一題；「自編題／自編範例」依教材列出的條件作答。題意、輸入輸出與例子都保留在教材內，只有開啟外部題目連結時需要網路。</p><p>Python 範例以 Python 3 撰寫。互動實驗刻意限制小輸入，方便逐步觀察；實驗的視覺化追蹤會儲存每一步，不能拿它的記憶體成本代替原演算法的空間複雜度。</p><p>全書、圖解與功能皆包含在這個 HTML，不需要帳號、CDN 或追蹤服務。進度只在本瀏覽器保存，私人瀏覽或清除網站資料可能使紀錄消失。</p></section>
 </section>
 <div class="reader" id="reader"><div class="reader-tools js-only"><a href="#course-home" class="back-to-map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m6-6-6 6 6 6"/></svg>學習路線圖</a><span class="reader-position" id="reader-position"></span><div class="reader-tool-buttons"><button class="small-button" id="bookmark-button" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span>加入書籤</span></button><button class="small-button" id="complete-button" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><span>標記完成</span></button></div></div><details class="topic-toc js-only" id="topic-toc"><summary>本章小節 <span id="topic-count"></span></summary><nav aria-label="本章小節"><ol id="topic-list"></ol></nav></details><div id="chapters"><article id="chapter-01" data-title="基礎：成本、遞迴與學習方法">
 <h2>01｜基礎：先說清楚，再把程式寫對</h2>
@@ -239,9 +239,9 @@ def recursive_total(nums: list[int]) -&gt; int:
 
 <h3 id="c01-workflow">7. 練習流程與驗證方法</h3>
 <p>建議每題走一次完整循環：用自己的話重述合約 → 畫三到五個元素 → 寫暴力解 → 找重複工作 → 定義狀態與不變量 → 推導優化 → 用反例嘗試推翻 → 寫程式與測試 → 隔天不用筆記重做。理解「為什麼左邊能丟掉」，才能把推理用在其他題目；變數叫 l 還是 left 並不影響這件事。</p>
-<p>至少測空輸入、單一元素、全部相同、已排序、反序、負數與答案不存在。適合窮舉的小規模問題，讓優化解和暴力解自動比較，通常比只跑幾個範例更容易找到錯誤。本章測試對 1,093 組小陣列比較線性、遞迴與內建加總，另驗證計數公式、零與負數合約；這不等於形式化證明，但提供了可重跑的證據。</p>
+<p>至少測空輸入、單一元素、全部相同、已排序、反序、負數與答案不存在。適合窮舉的小規模問題，讓優化解和暴力解自動比較，通常比只跑幾個範例更容易找到錯誤。本章測試對 1,093 組小陣列比較線性、遞迴與內建加總，另驗證計數公式、零與負數合約，並提供可重跑的測試案例。</p>
 <div class="callout"><p><strong>章末決策：</strong>先選輸入規模變數，再數實際工作；遇到隱藏切片、比較或輸出就展開成本；寫遞迴先確認基本情況與嚴格縮小；說空間時區分輸入、輸出與額外工作區。下一章分析雙指標與滑動視窗時，會用「每個元素最多處理幾次」來計算工作量。</p></div>
-<p>官方補充：<a href="https://docs.python.org/3/library/stdtypes.html#sequence-types-list-tuple-range" target="_blank" rel="noopener">Python 序列型別</a>、<a href="https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str" target="_blank" rel="noopener">文字序列與字串</a>。文件用來查語言行為；本章的分析、圖例與練習為獨立編寫。</p>
+<p>官方補充：<a href="https://docs.python.org/3/library/stdtypes.html#sequence-types-list-tuple-range" target="_blank" rel="noopener">Python 序列型別</a>、<a href="https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str" target="_blank" rel="noopener">文字序列與字串</a>。文件說明相關 Python 語言行為，可與本章分析、圖例與練習搭配閱讀。</p>
 </article>
 <article id="chapter-02" data-title="陣列與字串：雙指標、視窗、前綴和">
 <h2>02｜陣列與字串：用邊界減少重複掃描</h2>
@@ -2072,8 +2072,8 @@ def minimum_coins_memo(coins, amount):
 </article>
 <article id="chapter-12" data-title="面試工具箱：流程、模板、速查與原創模擬">
 <h2>12　面試工具箱：把懂的演算法變成可檢查的解答</h2>
-<p>辨認出演算法後，還要能說清楚解法。面試時，你要把含糊的題意整理成明確介面，說明為什麼方法適用，寫出能維護的不變量，最後用測試與成本分析驗證。本章提供一份可調整的流程、Python 速查及兩個完整原創模擬題；題目與講解均獨立設計，不是任何課程面試影片的重製。</p>
-<div class="callout"><strong>練習方式：</strong>先遮住解答，給自己 35–45 分鐘完成其中一題。把口頭解釋寫成三句話：輸入保證什麼、每一步維護什麼、為什麼不漏掉答案。時間配置只是練習假設，實際以對方的安排為準。</div>
+<p>辨認出演算法後，還要能說清楚解法。面試時，你要把含糊的題意整理成明確介面，說明為什麼方法適用，寫出能維護的不變量，最後用測試與成本分析驗證。本章提供一份可調整的流程、Python 速查及兩個完整原創模擬題，可直接用於計時練習與解題檢討。</p>
+<div class="callout"><strong>練習方式：</strong>先遮住解答，給自己 35–45 分鐘完成其中一題。把口頭解釋寫成三句話：輸入保證什麼、每一步維護什麼、為什麼不漏掉答案。可依自己的練習進度調整計時長度。</div>
 <h3 id="c12-process">1. 面試六階段：每一階段都要有可確認的結果</h3>
 <figure class="diagram"><svg role="img" aria-label="澄清、基準解、選方法、實作、驗證、延伸的練習流程" viewBox="0 0 780 280" xmlns="http://www.w3.org/2000/svg"><title>澄清、基準解、選方法、實作、驗證、延伸的練習流程</title><rect width="780" height="280" rx="16" fill="#f3f7fc"/><g font-family="system-ui, sans-serif" font-size="18" fill="#132b45"><text x="25" y="35" font-weight="bold">一份可調整的 40 分鐘練習節奏，不是面試硬規則</text><rect x="22" y="70" width="112" height="105" rx="8" fill="#256e61"/><text x="40" y="107" fill="white">澄清</text><text x="28" y="145" fill="white" font-size="16">0–5 分</text><rect x="148" y="70" width="112" height="105" rx="8" fill="#466d9b"/><text x="166" y="107" fill="white">基準解</text><text x="154" y="145" fill="white" font-size="16">5–9 分</text><rect x="274" y="70" width="112" height="105" rx="8" fill="#256e61"/><text x="292" y="107" fill="white">選方法</text><text x="280" y="145" fill="white" font-size="16">9–15 分</text><rect x="400" y="70" width="112" height="105" rx="8" fill="#466d9b"/><text x="418" y="107" fill="white">寫程式</text><text x="406" y="145" fill="white" font-size="16">15–28 分</text><rect x="526" y="70" width="112" height="105" rx="8" fill="#256e61"/><text x="544" y="107" fill="white">驗證</text><text x="532" y="145" fill="white" font-size="16">28–36 分</text><rect x="652" y="70" width="112" height="105" rx="8" fill="#466d9b"/><text x="670" y="107" fill="white">延伸</text><text x="658" y="145" fill="white" font-size="16">36–40 分</text><text x="30" y="222">卡住時：說出已確定的事，提出最小下一步。</text><text x="30" y="256">每一階段都要讓對方知道：假設、理由、目前狀態。</text></g></svg><figcaption>澄清、基準解、選方法、實作、驗證、延伸的練習流程</figcaption></figure>
 <ol><li><strong>澄清契約：</strong>輸入型別及範圍、空輸入、重複值、負值、是否有序、可否改動輸入、無解回傳值、平手規則。只問會改變演算法或輸出的問題。</li><li><strong>建立基準解：</strong>先說最直接的正確作法與成本。例如枚舉所有子陣列，再檢查條件。它可以當作小輸入的測試 oracle。</li><li><strong>找可改進的地方：</strong>重複計算的總和能否用前綴和處理？重複查找能否用 hashing？移動邊界是否有單調性？套用模板前，先確認這些條件是否成立。</li><li><strong>實作：</strong>先說不變量與資料結構，再寫主迴圈。變數名稱能反映意義；先完成清楚的解法，再考慮微調。</li><li><strong>驗證：</strong>手追一個一般案例、一個邊界、一個容易破壞直覺的反例；解釋每個索引的範圍。</li><li><strong>收尾與延伸：</strong>時間、輔助空間、輸出空間分開說；限制改變時，要重新檢查原本的證明。</li></ol>
@@ -2177,7 +2177,7 @@ def shortest_route(graph, start, goal):
 <section class="exercise"><h4>練習三：前綴和加入順序</h4><p>對 values=[0,0]、target=0，正確有幾個非空子陣列？如果先增加 seen[total] 再查會多算什麼？</p><details><summary>參考解答</summary><p>正確三個：[0,1)、[1,2)、[0,2)。先更新會在每輪把當前前綴與自己配對，各多算一個空區間，兩輪後錯得 5。先查歷史、再登記現在，就只配對嚴格較早的前綴。</p></details></section>
 <section class="exercise"><h4>練習四：口頭複雜度修正</h4><p>「我用 sorted 找中位數，只保留一個答案，所以空間 O(1)。」如何修正？</p><details><summary>參考解答</summary><p>sorted 會建立 n 個元素的新串列，排序本身也有工作記憶體，總額外空間 O(n)；輸出雖只有一個值，不能忽略中間資料。時間最壞 O(n log n)。若討論其他選擇演算法，需另說實作、是否改動原陣列與最壞成本。</p></details></section>
 <h3 id="c12-review">9. 自評與下一輪練習</h3>
-<p>每題用五項各 0–2 分自評：契約是否明確、方法是否有理由、程式是否完整、測試是否命中邊界、成本是否包含隱藏工作。這是自訂練習量表，不是公司的評分標準。依照低分項目安排下一次練習，例如「寫迴圈前先口述不變量」，才知道要改進哪裡；只多刷題還不夠。</p>
+<p>每題用五項各 0–2 分自評：契約是否明確、方法是否有理由、程式是否完整、測試是否命中邊界、成本是否包含隱藏工作。用這份練習量表追蹤不同面向的進步。依照低分項目安排下一次練習，例如「寫迴圈前先口述不變量」，才知道要改進哪裡；只多刷題還不夠。</p>
 <p>配套 tests/examples_12.py 會窮舉短標籤序列與 k，將視窗結果和暴力法對照；測試 BFS 的環、重複邊、無解、起終點相同；並枚舉含 −1、0、1 的短陣列驗證前綴和計數。完整答題順序是：規格清楚 → 理由成立 → 程式可跑 → 邊界通過 → 成本交代。</p>
 </article>
 <article id="chapter-13" data-title="進階補充：差分、Trie、位元與最短路">
@@ -2452,10 +2452,10 @@ def dijkstra(graph: list[list[tuple[int, int]]], start: int) -&gt; list[float | 
 
 <h3 id="c13-checklist">九、怎麼選，以及接下來練什麼</h3>
 <ul><li>大量區間加法，最後才看結果：差分；更新與查詢交錯：再學樹狀陣列或線段樹。</li><li>字首是否存在：Trie；只有完整鍵存在：先考慮 set。選工具時把 Python 物件成本算進去。</li><li>元素種類很少的集合：位元遮罩；不要忘記列舉所有子集合仍是指數級。</li><li>區間合併：排序後維護最右一段；排程衝突：先確定端點語意。</li><li>巨大指數取模：平方快速冪；需要模除法：先確認互質，或改用不含除法的方法。</li><li>相同步長：BFS；非負不同權重：Dijkstra；有限制步數或資源：先擴充狀態，再選求解方法。</li></ul>
-<p>tests/examples_13.py 包含差分邊界、空字串、重複插字、130 位整數、相接區間、模數為 1、合數與零元素、不可達目標、零成本環和負邊拒絕。快速冪與 Python 內建 pow 在數千組輸入上比對；另用固定亂數種子產生 120 張小圖，拿「恰好用 e 條邊」的獨立 DP 交叉檢查普通 Dijkstra 與限制停靠版本。這些測試用來檢查修改後有沒有出錯，仍不代表已完成完整證明。</p>
+<p>tests/examples_13.py 包含差分邊界、空字串、重複插字、130 位整數、相接區間、模數為 1、合數與零元素、不可達目標、零成本環和負邊拒絕。快速冪與 Python 內建 pow 在數千組輸入上比對；另用固定亂數種子產生 120 張小圖，拿「恰好用 e 條邊」的獨立 DP 交叉檢查普通 Dijkstra 與限制停靠版本。這些測試涵蓋數值邊界、隨機小圖與不同演算法版本的交叉比對。</p>
 <div class="callout"><strong>最後的練習方式：</strong>每學一個工具，寫下它最重要的一個前提，再自己造一個違反前提的反例。練習的目標是從「我會套模板」做到「我知道模板何時不成立」，這樣遇到陌生題目時，才能判斷工具是否適用。</div>
 </article></div><nav class="chapter-pagination js-only" aria-label="章節導覽"><a id="prev-chapter" href="#course-home"><span>上一站</span><strong>學習路線圖</strong></a><a id="next-chapter" href="#chapter-02"><span>下一章</span><strong>繼續閱讀</strong></a></nav></div>
-<footer class="site-footer"><span>資料結構與演算法：把思路變成解法</span><span>獨立編寫 · 繁體中文 · 離線教材</span><a href="#course-home">回到學習路線圖</a></footer>
+<footer class="site-footer"><span>資料結構與演算法：把思路變成解法</span><span>繁體中文 · 圖解與實作 · 離線教材</span><a href="#course-home">回到學習路線圖</a></footer>
 </main>
 <dialog class="search-dialog" id="search-dialog" aria-labelledby="search-title"><div class="search-header"><h2 id="search-title">搜尋全書</h2><button class="icon-button" id="close-search" type="button" aria-label="關閉搜尋"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div class="search-field"><label class="sr-only" for="search-input">輸入關鍵字</label><input id="search-input" type="search" placeholder="搜尋概念、例子或英文名詞…" autocomplete="off"><kbd>Esc</kbd></div><p class="search-status" id="search-status" role="status" aria-live="polite">輸入關鍵字，從全書找出相關小節。</p><ol class="search-results" id="search-results"></ol></dialog>
 <dialog class="bookmark-dialog" id="bookmark-dialog" aria-labelledby="bookmark-title"><div class="search-header"><h2 id="bookmark-title">我的書籤</h2><button class="icon-button" id="close-bookmarks" type="button" aria-label="關閉書籤"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><p class="empty-bookmarks" id="empty-bookmarks">還沒有書籤。閱讀章節時，按「加入書籤」。</p><ol class="bookmark-list" id="bookmark-list"></ol></dialog>
