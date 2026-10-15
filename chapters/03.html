@@ -60,7 +60,7 @@
         first_index.setdefault(value, index)
     return None</code></pre>
 <p>輸入 [9,2,9]、target = 18：第一個 9 還沒有搭檔，記 {9:0}；讀到 2 也無搭檔，記 {9:0,2:1}；最後的 9 查到先前的 9，回傳 (0,2)。輸入 [9] 則不會用自己配自己，因為查詢發生在加入目前位置之前。</p>
-<p><strong>不變量：</strong>每次查詢時，first_index 僅含目前位置之前出現的值；setdefault 保留最早索引。演算法回傳掃描中最先找到的那組，亦即最早可完成的右端點，並不保證所有答案中字典序最小的索引對。若合約要求別種平手規則，需要額外設計。時間平均 O(n)，空間 O(n)。</p>
+<p><strong>不變量：</strong>每次查詢時，first_index 僅含目前位置之前出現的值；setdefault 保留最早索引。演算法回傳掃描中最先找到的那組，亦即最早可完成的右端點，其平手規則是最早完成的右端點；若需要字典序最小的索引對，則要調整搜尋與比較方式。時間平均 O(n)，空間 O(n)。</p>
 
 <h3 id="c03-prefix-hash">5. 前綴雜湊：把區間條件改寫成歷史查詢</h3>
 <p class="problem-link"><strong>延伸練習：</strong><a href="https://leetcode.com/problems/subarray-sum-equals-k/" target="_blank" rel="noopener">LeetCode 560 · Subarray Sum Equals K</a>。原題的 k 就是本章的 target，要求回傳符合總和的非空連續區間個數。下方保留自編範例與完整追蹤，不必開原題也能推導。</p>
