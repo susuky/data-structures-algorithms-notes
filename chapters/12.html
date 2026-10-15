@@ -67,7 +67,7 @@ def shortest_route(graph, start, goal):
     return []</code></pre>
 <p><strong>正確性：</strong>佇列中節點按起點距離不減排列。從距離 d 的節點第一次發現鄰居時，距離為 d+1；若存在更短的路，該更短路的前一個節點應更早出列並先發現它，矛盾。因此第一次記錄的父節點鏈即為最短路徑，遇到終點後逆向追 parent 並反轉即可。</p>
 <div class="example"><h4>逐步追蹤</h4><table><thead><tr><th>本輪出列</th><th>新增 parent</th><th>處理後 queue</th><th>說明</th></tr></thead><tbody><tr><td>初始化</td><td>S:None</td><td>[S]</td><td>起點已發現</td></tr><tr><td>S</td><td>A:S、B:S</td><td>[A,B]</td><td>距離 1</td></tr><tr><td>A</td><td>C:A</td><td>[B,C]</td><td>C 距離 2</td></tr><tr><td>B</td><td>T:B</td><td>[C,T]</td><td>C 已發現，不再入列</td></tr><tr><td>C</td><td>無</td><td>[T]</td><td>S、T 都已發現</td></tr><tr><td>T</td><td>無</td><td>[]</td><td>反向 T→B→S，輸出 S→B→T</td></tr></tbody></table></div>
-<p class="complexity">設可達區域有 V 個節點、E 筆鄰接項，最壞時間 O(V+E)，額外空間 O(V)。重建長度 L 的路徑需 O(L) 時間與輸出空間；path[::-1] 也建立新串列，仍在 O(V) 總界內。若邊有不同非負耗時，BFS 最少段數不保證最短時間，應改考慮 Dijkstra。</p>
+<p class="complexity">設可達區域有 V 個節點、E 筆鄰接項，最壞時間 O(V+E)，額外空間 O(V)。重建長度 L 的路徑需 O(L) 時間與輸出空間；path[::-1] 也建立新串列，仍在 O(V) 總界內。若邊有不同非負耗時，改用 Dijkstra 求最短時間；BFS 求的是最少邊數。</p>
 <h3 id="c12-templates">6. 可攜模板：保留不變量，不盲目複製</h3>
 <p>上面兩個 mock 已提供視窗與 BFS 模板。這裡再補上兩個短模板，方便搭配前章的方法使用。使用每份模板前，都要確認輸入契約；修改條件後，先重新讀一遍註解與不變量。</p>
 <h4>模板 A：有序序列中的第一個不小於目標的位置</h4>
