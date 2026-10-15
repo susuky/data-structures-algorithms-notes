@@ -1,0 +1,66 @@
+name: Verify and package DSA notes
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'README.md'
+      - 'chapters/**'
+      - 'source/**'
+      - 'build.py'
+      - 'tests/**'
+      - '.github/workflows/verify-and-package.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  verify-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build offline textbook
+        run: python build.py
+      - name: Run Python tests
+        run: |
+          python tests/test_build.py
+          for f in tests/examples_*.py; do python "$f"; done
+      - name: Run JavaScript tests
+        run: |
+          node --check source/app.js
+          node --check source/labs.js
+          node tests/test_labs.js
+          node tests/test_dom.mjs
+      - name: Pack current source files
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
+          root = Path('.')
+          paths = [Path('README.md'), Path('build.py')]
+          for name in ('chapters', 'source', 'tests'):
+              paths += sorted(Path(name).rglob('*'))
+          paths = [p for p in paths if p.is_file() and not p.name.startswith('.') and '__pycache__' not in p.parts]
+          with ZipFile('data-structures-algorithms-source.zip', 'w') as z:
+              for path in paths:
+                  info = ZipInfo(path.as_posix(), date_time=(2020, 1, 1, 0, 0, 0))
+                  info.compress_type = ZIP_DEFLATED
+                  info.external_attr = 0o644 << 16
+                  z.writestr(info, path.read_bytes())
+          print(f'Packed {len(paths)} source files')
+          PY
+      - name: Commit rebuilt outputs
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html data-structures-algorithms-source.zip
+          if ! git diff --cached --quiet; then
+            git commit -m 'build: refresh generated textbook and source archive [skip ci]'
+            git push
+          fi
