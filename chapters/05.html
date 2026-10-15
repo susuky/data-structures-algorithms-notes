@@ -163,7 +163,7 @@ def sliding_maximum(values, k):
 
 <h3 id="c05-practice">6. 自編練習與解答</h3>
 <p class="problem-link"><strong>延伸練習：</strong><a href="https://leetcode.com/problems/valid-parentheses/" target="_blank" rel="noopener">LeetCode 20 · Valid Parentheses</a>。下方是錯誤定位的自編延伸，回傳位置或 None；原題只回傳布林值。</p>
-<section class="exercise"><h4>練習 A：讓括號檢查器指出位置</h4><p>對 ([)] 回傳第一個失配閉括號的索引 2。若沒有失配閉括號但仍有未關閉括號，回傳最早未關閉位置；完全合法則回傳 None。假設輸入只含括號。</p><details><summary>參考解答</summary><p>stack 改存 (括號, 索引)。關閉時只檢查頂端種類，失配就回傳目前位置；掃完若 stack 非空，回傳 stack[0] 的索引。這是錯誤定位的另一套規格，不等於找「最少修正字元」。</p><pre><code class="language-python">def first_bracket_error(text):
+<section class="exercise"><h4>練習 A：讓括號檢查器指出位置</h4><p>對 ([)] 回傳第一個失配閉括號的索引 2。若沒有失配閉括號但仍有未關閉括號，回傳最早未關閉位置；完全合法則回傳 None。假設輸入只含括號。</p><details><summary>參考解答</summary><p>stack 改存 (括號, 索引)。關閉時只檢查頂端種類，失配就回傳目前位置；掃完若 stack 非空，回傳 stack[0] 的索引。這套規格負責定位錯誤位置，與找「最少修正字元」。</p><pre><code class="language-python">def first_bracket_error(text):
     &quot;&quot;&quot;只接受括號；回傳第一個無法配對的關閉位置，否則最早未關閉位置。&quot;&quot;&quot;
     partner = {&quot;)&quot;: &quot;(&quot;, &quot;]&quot;: &quot;[&quot;, &quot;}&quot;: &quot;{&quot;}
     stack = []
