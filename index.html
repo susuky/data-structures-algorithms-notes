@@ -139,7 +139,7 @@ article .chapter-lead{font-size:1.05rem;color:var(--muted);line-height:1.95}
 
 <h3 id="c01-big-o">2. Big O 描述成長，不是秒數</h3>
 <p>令 T(n) 是某種明確操作的次數。T(n) = O(f(n)) 表示當 n 夠大時，存在固定常數 C，使 T(n) ≤ C × f(n)。它是漸近上界；Θ(f(n)) 表示上下界同階，Ω(f(n)) 是下界。面試常把「O(n)」當作緊的量級描述，但嚴格說 O(n²) 也能包含線性函式，所以分析時應盡量給出有資訊量的界。</p>
-<p>3n + 20 是 Θ(n)，n² + 5n 是 Θ(n²)。去掉低階項不表示它們在實際機器上不存在，而是我們關注輸入放大後的趨勢。O(1) 也不代表只做一次；做固定 10,000 次仍是常數。兩個 O(n) 程式可能有不同執行時間，實測則還受到 Python 版本、資料分布與硬體影響。</p>
+<p>3n + 20 是 Θ(n)，n² + 5n 是 Θ(n²)。去掉低階項是為了聚焦輸入放大後的趨勢，實際執行仍包含那些操作。O(1) 表示操作次數不隨輸入規模增加；做固定 10,000 次仍是常數。兩個 O(n) 程式可能有不同執行時間，實測則還受到 Python 版本、資料分布與硬體影響。</p>
 <div class="diagram">
 <svg role="img" aria-labelledby="c01-growth-title" viewBox="0 0 680 270" width="680" style="max-width:100%;background:#f8fafc;border-radius:12px;font-family:system-ui,sans-serif">
 <title id="c01-growth-title">輸入從三十二倍增到六十四，不同成長模型的操作次數比較</title>
@@ -246,7 +246,7 @@ def recursive_total(nums: list[int]) -&gt; int:
 <article id="chapter-02" data-title="陣列與字串：雙指標、視窗、前綴和">
 <h2>02｜陣列與字串：用邊界減少重複掃描</h2>
 <p class="problem-context">本章的範例數據與練習敘述為自編。相關 LeetCode 題目列在對應段落旁，標為「相近題型」或「延伸練習」；規格不同處會另行說明。可先依本章題意完成，再開連結練習。</p>
-<p>陣列題最常見的浪費，是對重疊區間重複掃描。雙指標把可排除的候選丟掉，滑動視窗把相鄰區間的共同資訊留住，前綴和則先算好各個前綴的總和，再以相減回答區間查詢。這三種方法各有適用前提，不能只因題目提到「連續」就套同一個模板。</p>
+<p>陣列題最常見的浪費，是對重疊區間重複掃描。雙指標把可排除的候選丟掉，滑動視窗把相鄰區間的共同資訊留住，前綴和則先算好各個前綴的總和，再以相減回答區間查詢。選擇方法時，先確認資料是否排序、視窗能否單向收縮，以及查詢是否需要重複回答。</p>
 <div class="callout"><p><strong>本章目標：</strong>能證明指標為什麼可以前進、辨認負數何時破壞視窗條件，並用半開區間避免索引錯位。範例的加減、索引與整數比較採固定成本模型。所有「區間」預設連續；子序列可以跳過元素，兩者不同。</p></div>
 
 <h3 id="c02-model">1. 先約定索引與區間</h3>
@@ -451,7 +451,7 @@ def range_sum(prefix: list[int], left: int, right: int) -&gt; int:
         first_index.setdefault(value, index)
     return None</code></pre>
 <p>輸入 [9,2,9]、target = 18：第一個 9 還沒有搭檔，記 {9:0}；讀到 2 也無搭檔，記 {9:0,2:1}；最後的 9 查到先前的 9，回傳 (0,2)。輸入 [9] 則不會用自己配自己，因為查詢發生在加入目前位置之前。</p>
-<p><strong>不變量：</strong>每次查詢時，first_index 僅含目前位置之前出現的值；setdefault 保留最早索引。演算法回傳掃描中最先找到的那組，亦即最早可完成的右端點，並不保證所有答案中字典序最小的索引對。若合約要求別種平手規則，需要額外設計。時間平均 O(n)，空間 O(n)。</p>
+<p><strong>不變量：</strong>每次查詢時，first_index 僅含目前位置之前出現的值；setdefault 保留最早索引。演算法回傳掃描中最先找到的那組，亦即最早可完成的右端點，其平手規則是最早完成的右端點；若需要字典序最小的索引對，則要調整搜尋與比較方式。時間平均 O(n)，空間 O(n)。</p>
 
 <h3 id="c03-prefix-hash">5. 前綴雜湊：把區間條件改寫成歷史查詢</h3>
 <p class="problem-link"><strong>延伸練習：</strong><a href="https://leetcode.com/problems/subarray-sum-equals-k/" target="_blank" rel="noopener">LeetCode 560 · Subarray Sum Equals K</a>。原題的 k 就是本章的 target，要求回傳符合總和的非空連續區間個數。下方保留自編範例與完整追蹤，不必開原題也能推導。</p>
@@ -565,7 +565,7 @@ def range_sum(prefix: list[int], left: int, right: int) -&gt; int:
 <g stroke="#66758c" stroke-width="3" marker-end="url(#c04-arrow-a)"><path d="M74 90 H111"/><path d="M250 90 H306"/><path d="M445 90 H501"/><path d="M640 90 H672"/></g>
 <text x="164" y="163" fill="#66758c">A.value == B.value，但 A is not B</text>
 </g></svg>
-<figcaption>每條 next 都保存一個參照。相同數值不代表同一節點，節點也不保證連續存放。</figcaption>
+<figcaption>每條 next 都保存一個參照。相同數值不代表同一節點，節點可以分散在記憶體中。</figcaption>
 </figure>
 <table><caption>單向串列與 Python list 的差異</caption><thead><tr><th>操作</th><th>單向串列</th><th>Python list</th></tr></thead><tbody>
 <tr><td>讀第 i 個元素</td><td>O(i)，最壞 O(n)</td><td>O(1)</td></tr>
@@ -900,7 +900,7 @@ def sliding_maximum(values, k):
 
 <h3 id="c05-practice">6. 自編練習與解答</h3>
 <p class="problem-link"><strong>延伸練習：</strong><a href="https://leetcode.com/problems/valid-parentheses/" target="_blank" rel="noopener">LeetCode 20 · Valid Parentheses</a>。下方是錯誤定位的自編延伸，回傳位置或 None；原題只回傳布林值。</p>
-<section class="exercise"><h4>練習 A：讓括號檢查器指出位置</h4><p>對 ([)] 回傳第一個失配閉括號的索引 2。若沒有失配閉括號但仍有未關閉括號，回傳最早未關閉位置；完全合法則回傳 None。假設輸入只含括號。</p><details><summary>參考解答</summary><p>stack 改存 (括號, 索引)。關閉時只檢查頂端種類，失配就回傳目前位置；掃完若 stack 非空，回傳 stack[0] 的索引。這是錯誤定位的另一套規格，不等於找「最少修正字元」。</p><pre><code class="language-python">def first_bracket_error(text):
+<section class="exercise"><h4>練習 A：讓括號檢查器指出位置</h4><p>對 ([)] 回傳第一個失配閉括號的索引 2。若沒有失配閉括號但仍有未關閉括號，回傳最早未關閉位置；完全合法則回傳 None。假設輸入只含括號。</p><details><summary>參考解答</summary><p>stack 改存 (括號, 索引)。關閉時只檢查頂端種類，失配就回傳目前位置；掃完若 stack 非空，回傳 stack[0] 的索引。這套規格負責定位錯誤位置，與找「最少修正字元」。</p><pre><code class="language-python">def first_bracket_error(text):
     &quot;&quot;&quot;只接受括號；回傳第一個無法配對的關閉位置，否則最早未關閉位置。&quot;&quot;&quot;
     partner = {&quot;)&quot;: &quot;(&quot;, &quot;]&quot;: &quot;[&quot;, &quot;}&quot;: &quot;{&quot;}
     stack = []
@@ -1057,7 +1057,7 @@ def is_valid_bst(root: Node | None) -&gt; bool:
             if neighbor not in seen:
                 seen.add(neighbor)  # Mark before pushing.
                 stack.append(neighbor)
-    return seen</code></pre><p><strong>在推入堆疊時就標記。</strong>這使每個頂點最多進入待處理集合一次。若等彈出才標記，多個鄰居可能在它還沒處理之前把它重複推入；若沒有進一步跳過已訪問節點，甚至會重做大量工作。本函式只保證可達集合，不保證與遞迴 DFS 完全相同的訪問順序，也不能直接把它的彈出順序當成 DFS 完成時間。</p>
+    return seen</code></pre><p><strong>在推入堆疊時就標記。</strong>這使每個頂點最多進入待處理集合一次。若等彈出才標記，多個鄰居可能在它還沒處理之前把它重複推入；若沒有進一步跳過已訪問節點，甚至會重做大量工作。本函式回傳可達集合；若需要與遞迴 DFS 相同的訪問順序或完成時間，須另外維護堆疊狀態與進出節點的時機。</p>
 <p>從起點出發只能得到該起點可達的部分。無向圖若想數連通分量，要再用一個外層迴圈掃過所有頂點，遇到未見過的起點才啟動走訪。<strong>有向圖不能把這個外層技巧直接稱為強連通分量演算法</strong>；沿有向邊到得了對方，不代表對方也到得了自己。</p>
 <div class="complexity">單次走訪的時間為 O(Vᵣ+Eᵣ)，其中 Vᵣ、Eᵣ 是可達部分的頂點與相鄰邊數；整張圖完整掃描為 O(V+E)。seen 與堆疊至多 O(V)。以上使用 Python set/dict 平均 O(1) 的查找假設；這個平均分析不保證極端碰撞時仍有相同成本。</div>
 
@@ -1212,7 +1212,7 @@ def is_valid_bst(root: Node | None) -&gt; bool:
 <rect x="80" y="292" width="600" height="55" rx="10" fill="#d8f3e8" stroke="#387b64"/>
 <text x="103" y="326">陣列：[3, 7, 5, 12, 9, 8, 6]　根最小，兄弟無序</text>
 </g></svg><figcaption>7 可以排在 5 前面，9 也可以排在 8 前面。堆積只保證父子關係，不能對內部陣列直接做二分搜尋。</figcaption></figure>
-<p>沿根出發的每條路徑，值都不會變小，因此根是全域最小值；次小值可能在左子或右子，更深處也沒有跨子樹排序保證。讀 heap[0] 是 O(1)，找任意值則仍可能 O(n)。如果需求是大量查第 i 小、區間搜尋或完整有序走訪，堆積未必適合。</p>
+<p>沿根出發的每條路徑，值都不會變小，因此根是全域最小值；次小值可能在左子或右子，不同子樹之間沒有完整的大小順序。讀 heap[0] 是 O(1)，找任意值則仍可能 O(n)。如果需求是大量查第 i 小、區間搜尋或完整有序走訪，堆積未必適合。</p>
 
 <h3 id="c07-repair">2. 上浮、下沉與 O(n) 建堆</h3>
 <p>加入新值時，把它放在陣列末端以保留完全樹形，再與父節點比較，必要時往上交換，稱為上浮。刪除根時，先把最後一個值補到根，然後反覆與較小的子節點交換，稱為下沉。每次只沿一條根到葉的路徑，所以比較與交換步數都是 O(log n)。</p>
@@ -1375,7 +1375,7 @@ def merge_sorted_streams(streams):
 <div class="callout"><strong>學習目標：</strong>能用反例否定規則；用交換論證或領先性質支持規則；分辨「選最多個」、「總價值最大」、「總等待最少」是不同問題。看過幾個成功案例，只代表規則尚未被推翻。</div>
 <h3 id="c08-choice">1. 一個貪心主張，必須回答四件事</h3>
 <ol><li><strong>目標：</strong>最大化數量、最小化成本，還是只判斷可不可行？</li><li><strong>可行性：</strong>做完這個選擇後，是否仍符合容量、時間、先後順序等限制？</li><li><strong>安全選擇：</strong>是否至少存在一個最優解，包含這個當下選擇？</li><li><strong>剩餘問題：</strong>固定此選擇後，剩下的問題能否用同一種規則處理？</li></ol>
-<p>「最優子結構」本身不保證可以貪心；動態規劃也常有最優子結構，但需要比較多個第一步。要採用貪心，還需證明某一個選擇可以安全地固定，不必探索其他分支。若只能說「我覺得最小的比較好」，先把它寫成猜想。</p>
+<p>「最優子結構」同時存在於多種解法中，貪心還需要安全選擇的證明；動態規劃也常有最優子結構，但需要比較多個第一步。要採用貪心，還需證明某一個選擇可以安全地固定，不必探索其他分支。若只能說「我覺得最小的比較好」，先把它寫成猜想。</p>
 <h3 id="c08-intervals">2. 工作室排程：最多不重疊區間</h3>
 <p class="problem-source"><strong>自編排程情境／相近題型：</strong><a href="https://leetcode.com/problems/non-overlapping-intervals/">LeetCode 435：Non-overlapping Intervals</a> 問最少刪除幾個區間，才能讓剩餘區間互不重疊。本節改成回傳最多能留下的活動清單；若原有 n 場、最多留下 m 場，原題答案就是 n−m。兩者都允許端點相接，工作室與 A–F 範例為自編。</p>
 <p>有一間工作室，活動用半開區間 [start, end) 表示，且 start &lt; end。任兩場不能重疊，但 [1, 3) 與 [3, 5) 可以連排。所有活動價值相同，目標是選最多場。貪心規則：按結束時間由早到晚檢查，若活動開始不早於上一場結束，就接受。</p>
@@ -1553,7 +1553,7 @@ inside = bisect_left(values, b) - bisect_left(values, a)  # 3</code></pre>
 <p class="complexity">令 n 為貨箱數，L=max(weights)、U=sum(weights)。初始化 O(n)，每次判斷 O(n)，總時間 O(n log(U−L+2))，額外空間 O(1)。這不是 O(n log n)，因為二分的是數值範圍。這裡採常見的成本模型，將整數加總與比較視為常數成本；但 Python 整數極大時，仍須考慮位元長度造成的成本。</p>
 <h3 id="c09-pitfalls">8. 何時不要急著二分</h3>
 <ul><li><strong>單調性不成立：</strong>某個容量可行，下一個卻不可行，就必須重新定義判斷。單調性必須從原本的限制推得，不能只根據幾個樣本判斷。</li><li><strong>答案不在界內：</strong>hi 必須能覆蓋答案或代表合法的不存在哨兵，不能隨意填一個大數。</li><li><strong>「至多」變「恰好」：</strong>若允許空天、貨箱可再切成更多非空天，以及 D 是否大於 n，都會影響問題。本文只求至多 D 天。</li><li><strong>浮點答案：</strong>實數區間沒有 mid+1 這種操作，常需誤差門檻或固定次數；不能直接套整數停止條件。</li><li><strong>旋轉陣列：</strong>原始值並非整段排序，必須另外辨識有序半邊。重複值可能使單次無法排除一半，最壞情況也可能退化。</li></ul>
-<p><strong>手動追蹤時：</strong>先畫出所有可能的分界位置，而不是只畫元素。長度五的陣列有六個可能邊界，包含最前面與最尾端。每次更新後，重新檢查被排除的部分是否符合已知條件。若你說不出某個端點為什麼還需要保留，就先不要修改程式中的加減一。最後記錄停止當下 lo、hi 的值，再翻譯成「不存在」、「第一個位置」或「最小可行容量」等題目需要的語意。這樣能把區間定義、端點更新與回傳值一起核對，減少混用不同模板的機會。</p>
+<p><strong>手動追蹤時：</strong>先畫出所有可能的分界位置，而不是只畫元素。長度五的陣列有六個可能邊界，包含最前面與最尾端。每次更新後，重新檢查被排除的部分是否符合已知條件。修改端點前，先寫出保留與排除該端點的理由。最後記錄停止當下 lo、hi 的值，再翻譯成「不存在」、「第一個位置」或「最小可行容量」等題目需要的語意。這樣能把區間定義、端點更新與回傳值一起核對，減少混用不同模板的機會。</p>
 <h3 id="c09-practice">9. 練習：把停止條件寫進答案</h3>
 <section class="exercise"><h4>練習一：重複值與空範圍</h4>
 <p class="problem-source"><strong>自編測例：</strong>本題用來練習 lower／upper 邊界與出現次數；若要轉成 <a href="https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/">LeetCode 34：Find First and Last Position of Element in Sorted Array</a> 的回傳格式，需再處理不存在與含尾索引。</p><p>對 [1,1,3,5,5]，求 target=1、2、5、8 的 lower、upper 及出現次數。</p><details><summary>參考解答</summary><p>1 → (0,2)，兩次；2 → (2,2)，零次；5 → (3,5)，兩次；8 → (5,5)，零次。回傳 n=5 合法，但不是可以讀取的索引。</p></details></section>
@@ -1609,7 +1609,7 @@ inside = bisect_left(values, b) - bisect_left(values, a)  # 3</code></pre>
 <figure class="diagram"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="同一份 path 的生命週期：呼叫返回後，必須回到進入前的狀態" viewBox="0 0 760 260"><title>同一份 path 的生命週期：呼叫返回後，必須回到進入前的狀態</title><rect x="0" y="0" width="760" height="260" rx="12" fill="#f8fafc"/><rect x="25" y="65" width="155" height="60" rx="8" fill="#dbeafe" stroke="#334155"/><text x="102.5" y="100.0" text-anchor="middle" font-size="16" fill="#0f172a">path=[A]</text><rect x="210" y="65" width="155" height="60" rx="8" fill="#fef3c7" stroke="#334155"/><text x="287.5" y="100.0" text-anchor="middle" font-size="16" fill="#0f172a">append(B)</text><rect x="395" y="65" width="155" height="60" rx="8" fill="#dcfce7" stroke="#334155"/><text x="472.5" y="100.0" text-anchor="middle" font-size="16" fill="#0f172a">探索 [A,B]</text><rect x="580" y="65" width="155" height="60" rx="8" fill="#fce7f3" stroke="#334155"/><text x="657.5" y="100.0" text-anchor="middle" font-size="16" fill="#0f172a">pop() → [A]</text><path d="M180,95 L210,95" stroke="#64748b" stroke-width="2" fill="none"/><path d="M365,95 L395,95" stroke="#64748b" stroke-width="2" fill="none"/><path d="M550,95 L580,95" stroke="#64748b" stroke-width="2" fill="none"/><text x="35" y="180" font-size="16" fill="#0f172a">儲存答案：answer.append(path.copy())</text><text x="35" y="215" font-size="16" fill="#0f172a">錯誤共享：answer.append(path) 會指向持續變動的同一個串列</text></svg><figcaption>同一份 path 的生命週期：呼叫返回後，必須回到進入前的狀態</figcaption></figure>
 <p>共享可變狀態時，每條分支要遵守「進入與離開的現場一致」：append 對應 pop，集合 add 對應 remove，used=True 對應 used=False。撤銷順序通常與修改相反。下一個兄弟分支才能從同樣的狀態開始，不受前一條路留下的修改影響。</p>
 <p>path.copy() 是淺複製；本章 path 裝的是整數或字元，足以保存答案。若裡面放的是之後還會修改的巢狀串列，淺複製仍共享內層物件，要改存不可變值，或依資料結構複製必要層級。也能用 dfs(path + [x]) 避免手動撤銷，但每次連接都要 O(path 長度) 的複製，峰值記憶體也可能增加。</p>
-<div class="warning"><strong>提早返回陷阱：</strong>找到答案後直接 return，可能跳過 pop 或 remove。若只做存在性搜尋，先把結果存起來、撤銷後再 return；也可以像本章格子練習一樣，使用 try/finally，讓成功與失敗都恢復現場。遞迴深度也有限制；即使把限制調得很大，仍無法解決指數時間的問題，也不保證堆疊不會耗盡。</div>
+<div class="warning"><strong>提早返回陷阱：</strong>找到答案後直接 return，可能跳過 pop 或 remove。若只做存在性搜尋，先把結果存起來、撤銷後再 return；也可以像本章格子練習一樣，使用 try/finally，讓成功與失敗都恢復現場。遞迴深度也有限制；提高深度限制會增加堆疊負擔，也不會改善指數級搜尋的時間複雜度。</div>
 
 <h3 id="c10-generation">10.3 組合與排列：下一層可以選誰？</h3>
 <p class="problem-link"><strong>題目對照：</strong>本節的去重排列對應 <a href="https://leetcode.com/problems/permutations-ii/">LeetCode 47．Permutations II</a>：輸入可含重複值，回傳所有不重複的完整排列，答案順序不限。原題使用整數，本節用字卡說明；[A,A,B] 的三個結果是 AAB、ABA、BAA，也另外測試空輸入。本節也用組合來比較兩種搜尋方式。</p>
@@ -1816,7 +1816,7 @@ inside = bisect_left(values, b) - bisect_left(values, a)  # 3</code></pre>
 <article id="chapter-11" data-title="動態規劃：狀態、轉移與計算順序">
 <h2>11．動態規劃：狀態、轉移與計算順序</h2>
 <p>動態規劃（dynamic programming，DP）需要先定義狀態，不能只把答案放進陣列。狀態要能完整描述「接下來的問題」，又捨去不影響未來的過去。若許多路徑抵達同樣的狀態，就只解一次，再重用結果。DP 可以求最大值、最小值、可行性或數量；不是每題都在找最佳值。</p>
-<p>解題時要交代六件事：狀態定義、轉移、邊界、計算順序、答案位置、複雜度。本章從一維湊數開始，再處理背包、雙字串、矩陣與狀態機，也會說明「使用 DP」並不等於「多項式時間」。</p>
+<p>解題時要交代六件事：狀態定義、轉移、邊界、計算順序、答案位置、複雜度。本章從一維湊數開始，再處理背包、雙字串、矩陣與狀態機，並分析狀態數量與轉移成本如何共同決定時間複雜度。</p>
 
 <h3 id="c11-framework">11.1 填 dp 表前，先回答六個問題</h3>
 <ol><li><strong>狀態：</strong>dp 的每個索引與儲存值是什麼？例如 dp[a] 是「恰好湊成 a 的最少硬幣數」，不是含糊的「到這裡的答案」。</li>
@@ -2139,7 +2139,7 @@ def shortest_route(graph, start, goal):
     return []</code></pre>
 <p><strong>正確性：</strong>佇列中節點按起點距離不減排列。從距離 d 的節點第一次發現鄰居時，距離為 d+1；若存在更短的路，該更短路的前一個節點應更早出列並先發現它，矛盾。因此第一次記錄的父節點鏈即為最短路徑，遇到終點後逆向追 parent 並反轉即可。</p>
 <div class="example"><h4>逐步追蹤</h4><table><thead><tr><th>本輪出列</th><th>新增 parent</th><th>處理後 queue</th><th>說明</th></tr></thead><tbody><tr><td>初始化</td><td>S:None</td><td>[S]</td><td>起點已發現</td></tr><tr><td>S</td><td>A:S、B:S</td><td>[A,B]</td><td>距離 1</td></tr><tr><td>A</td><td>C:A</td><td>[B,C]</td><td>C 距離 2</td></tr><tr><td>B</td><td>T:B</td><td>[C,T]</td><td>C 已發現，不再入列</td></tr><tr><td>C</td><td>無</td><td>[T]</td><td>S、T 都已發現</td></tr><tr><td>T</td><td>無</td><td>[]</td><td>反向 T→B→S，輸出 S→B→T</td></tr></tbody></table></div>
-<p class="complexity">設可達區域有 V 個節點、E 筆鄰接項，最壞時間 O(V+E)，額外空間 O(V)。重建長度 L 的路徑需 O(L) 時間與輸出空間；path[::-1] 也建立新串列，仍在 O(V) 總界內。若邊有不同非負耗時，BFS 最少段數不保證最短時間，應改考慮 Dijkstra。</p>
+<p class="complexity">設可達區域有 V 個節點、E 筆鄰接項，最壞時間 O(V+E)，額外空間 O(V)。重建長度 L 的路徑需 O(L) 時間與輸出空間；path[::-1] 也建立新串列，仍在 O(V) 總界內。若邊有不同非負耗時，改用 Dijkstra 求最短時間；BFS 求的是最少邊數。</p>
 <h3 id="c12-templates">6. 可攜模板：保留不變量，不盲目複製</h3>
 <p>上面兩個 mock 已提供視窗與 BFS 模板。這裡再補上兩個短模板，方便搭配前章的方法使用。使用每份模板前，都要確認輸入契約；修改條件後，先重新讀一遍註解與不變量。</p>
 <h4>模板 A：有序序列中的第一個不小於目標的位置</h4>
