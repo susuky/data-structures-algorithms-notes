@@ -133,7 +133,7 @@ def is_valid_bst(root: Node | None) -&gt; bool:
             if neighbor not in seen:
                 seen.add(neighbor)  # Mark before pushing.
                 stack.append(neighbor)
-    return seen</code></pre><p><strong>在推入堆疊時就標記。</strong>這使每個頂點最多進入待處理集合一次。若等彈出才標記，多個鄰居可能在它還沒處理之前把它重複推入；若沒有進一步跳過已訪問節點，甚至會重做大量工作。本函式只保證可達集合，不保證與遞迴 DFS 完全相同的訪問順序，也不能直接把它的彈出順序當成 DFS 完成時間。</p>
+    return seen</code></pre><p><strong>在推入堆疊時就標記。</strong>這使每個頂點最多進入待處理集合一次。若等彈出才標記，多個鄰居可能在它還沒處理之前把它重複推入；若沒有進一步跳過已訪問節點，甚至會重做大量工作。本函式回傳可達集合；若需要與遞迴 DFS 相同的訪問順序或完成時間，須另外維護堆疊狀態與進出節點的時機。</p>
 <p>從起點出發只能得到該起點可達的部分。無向圖若想數連通分量，要再用一個外層迴圈掃過所有頂點，遇到未見過的起點才啟動走訪。<strong>有向圖不能把這個外層技巧直接稱為強連通分量演算法</strong>；沿有向邊到得了對方，不代表對方也到得了自己。</p>
 <div class="complexity">單次走訪的時間為 O(Vᵣ+Eᵣ)，其中 Vᵣ、Eᵣ 是可達部分的頂點與相鄰邊數；整張圖完整掃描為 O(V+E)。seen 與堆疊至多 O(V)。以上使用 Python set/dict 平均 O(1) 的查找假設；這個平均分析不保證極端碰撞時仍有相同成本。</div>
 
