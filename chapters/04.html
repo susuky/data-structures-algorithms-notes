@@ -17,7 +17,7 @@
 <g stroke="#66758c" stroke-width="3" marker-end="url(#c04-arrow-a)"><path d="M74 90 H111"/><path d="M250 90 H306"/><path d="M445 90 H501"/><path d="M640 90 H672"/></g>
 <text x="164" y="163" fill="#66758c">A.value == B.value，但 A is not B</text>
 </g></svg>
-<figcaption>每條 next 都保存一個參照。相同數值不代表同一節點，節點也不保證連續存放。</figcaption>
+<figcaption>每條 next 都保存一個參照。相同數值不代表同一節點，節點可以分散在記憶體中。</figcaption>
 </figure>
 <table><caption>單向串列與 Python list 的差異</caption><thead><tr><th>操作</th><th>單向串列</th><th>Python list</th></tr></thead><tbody>
 <tr><td>讀第 i 個元素</td><td>O(i)，最壞 O(n)</td><td>O(1)</td></tr>
