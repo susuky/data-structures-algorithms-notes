@@ -109,7 +109,7 @@ CHROMIUM_PATH=/usr/bin/chromium node tests/test_browser.js
 DSA_SCREENSHOTS=/tmp/dsa-qa CHROMIUM_PATH=/usr/bin/chromium node tests/test_browser.js
 ```
 
-Chromium 腳本可在支援瀏覽器程序的環境執行，檢查桌面、手機、深色主題與互動實驗畫面。
+Chromium 腳本可在允許啟動瀏覽器行程的環境執行，檢查桌面、手機、深色主題與互動實驗畫面。
 
 ## 教材定位與來源
 
