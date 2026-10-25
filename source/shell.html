@@ -5,37 +5,106 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'">
-<meta name="description" content="獨立編寫的繁體中文資料結構與演算法教材：13 章原創圖解、Python 範例、練習與 6 個可操作的分步演算法實驗。可完整離線閱讀。">
-<title>資料結構與演算法：把思路變成解法</title>
+<meta name="description" content="繁體中文資料結構與演算法教材：13 章圖解、Python 範例、練習與 6 個互動實驗。">
+<title>資料結構與演算法</title>
 <style>{{STYLES}}</style>
 </head>
 <body class="no-js">
 <a class="skip-link" href="#main-content">跳至主要內容</a>
 <header class="topbar">
   <button class="icon-button menu-button js-only" id="menu-button" type="button" aria-label="開啟章節目錄" aria-controls="sidebar" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-  <a class="brand" href="#course-home" aria-label="資料結構與演算法首頁"><svg class="brand-symbol" viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="9" width="7" height="10" rx="1"/><rect x="11" y="4" width="7" height="15" rx="1"/><rect x="20" y="9" width="6" height="10" rx="1"/><path d="M5 23h18"/></svg><span>資料結構與演算法<span class="brand-subtitle">把思路變成解法</span></span></a>
-  <div class="topbar-actions js-only"><button class="search-trigger" id="search-button" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><span>搜尋全書</span><kbd>/</kbd></button><label class="theme-control"><span class="sr-only">顯示主題</span><select id="theme-select" aria-label="顯示主題"><option value="system">跟隨系統</option><option value="light">淺色</option><option value="dark">深色</option></select></label><button class="icon-button" id="print-button" type="button" aria-label="列印全書與答案" title="列印全書與答案"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8V3h10v5M7 17H4V8h16v9h-3M7 14h10v7H7zM16 11h1"/></svg></button></div>
+  <a class="brand" href="#course-home" aria-label="資料結構與演算法首頁"><svg class="brand-symbol" viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="9" width="7" height="10" rx="1"/><rect x="11" y="4" width="7" height="15" rx="1"/><rect x="20" y="9" width="6" height="10" rx="1"/><path d="M5 23h18"/></svg><span>資料結構與演算法</span></a>
+  <div class="topbar-actions js-only">
+    <button class="search-trigger" id="search-button" type="button" aria-label="搜尋全書"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><span>搜尋全書</span><kbd aria-hidden="true">/</kbd></button>
+    <label class="theme-control"><span class="sr-only">顯示主題</span><select id="theme-select"><option value="system">跟隨系統</option><option value="light">淺色</option><option value="dark">深色</option></select></label>
+    <button class="icon-button" id="print-button" type="button" aria-label="列印全書與答案" title="列印全書與答案"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8V3h10v5M7 17H4V8h16v9h-3M7 14h10v7H7zM16 11h1"/></svg></button>
+  </div>
 </header>
 <button class="drawer-backdrop" id="drawer-backdrop" tabindex="-1" aria-label="關閉章節目錄" hidden></button>
-<aside class="sidebar" id="sidebar" aria-label="教材導覽"><div class="sidebar-top"><span>學習目錄</span><button class="icon-button sidebar-close js-only" id="sidebar-close" type="button" aria-label="關閉章節目錄"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><a class="home-link" href="#course-home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8M5 9v12h5v-7h4v7h5V9"/></svg>學習路線圖</a><a class="home-link" href="#algorithm-labs"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v7l-6 9a1 1 0 0 0 1 2h14a1 1 0 0 0 1-2l-6-9V3M7 15h10"/></svg>演算法實驗室</a><nav aria-label="全部章節"><ol class="chapter-nav">{{SIDEBAR}}</ol></nav><div class="sidebar-bottom js-only"><div class="course-progress-label"><span>我的學習進度</span><strong id="course-progress-text">0 / 13</strong></div><progress id="course-progress" max="13" value="0" aria-label="已完成章節">0 / 13</progress><button class="text-button" id="show-bookmarks" type="button">我的書籤 <span id="bookmark-count">0</span></button><button class="text-button sidebar-print" id="sidebar-print" type="button">列印全書與答案</button><p class="local-note" id="storage-note">進度與書籤只儲存在這個瀏覽器。</p></div></aside>
+<aside class="sidebar" id="sidebar" aria-label="教材導覽">
+  <div class="sidebar-top"><span>目錄</span><button class="icon-button sidebar-close js-only" id="sidebar-close" type="button" aria-label="關閉章節目錄"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+  <a class="home-link" href="#course-home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8M5 9v12h5v-7h4v7h5V9"/></svg>章節目錄</a>
+  <a class="home-link" href="#algorithm-labs"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v7l-6 9a1 1 0 0 0 1 2h14a1 1 0 0 0 1-2l-6-9V3M7 15h10"/></svg>互動實驗</a>
+  <nav aria-label="全部章節"><ol class="chapter-nav">{{SIDEBAR}}</ol></nav>
+  <div class="sidebar-bottom js-only">
+    <div class="course-progress-label"><span>完成章節</span><strong id="course-progress-text">0 / 13</strong></div>
+    <progress id="course-progress" max="13" value="0" aria-label="已完成章節">0 / 13</progress>
+    <button class="text-button" id="show-bookmarks" type="button">書籤 <span id="bookmark-count">0</span></button>
+    <button class="text-button sidebar-print" id="sidebar-print" type="button">列印全書與答案</button>
+    <p class="local-note" id="storage-note" role="status" hidden></p>
+  </div>
+</aside>
 <div class="reading-line js-only" aria-hidden="true"><span id="reading-progress"></span></div>
 <main id="main-content" tabindex="-1">
-<noscript><div class="notice">JavaScript 已停用。完整 13 章、圖解、Python 範例與練習仍在下方，可用目錄跳轉、瀏覽器搜尋與列印。互動實驗、書籤及進度需要 JavaScript。</div></noscript>
+<noscript><div class="notice">JavaScript 已停用。可用下方目錄閱讀全部章節；互動實驗、書籤與進度需啟用 JavaScript。</div></noscript>
 <section id="course-home" class="home-page" aria-labelledby="course-title" tabindex="-1">
-  <div class="home-hero"><div class="hero-copy"><h1 id="course-title">資料結構<br>與演算法：<br><em>把思路變成解法。</em></h1><p class="hero-description">逐步追蹤狀態的變化，說明每一步為什麼正確。<br>練習陣列的指標移動，再讀圖搜尋與動態規劃。</p><div class="hero-actions"><a class="button primary" href="#chapter-01">開始學習 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6"/></svg></a><a class="button secondary" href="#algorithm-labs">先動手試試</a></div><a class="resume-link js-only" id="resume-link" href="#chapter-01" hidden>繼續上次閱讀</a></div><div class="hero-diagram"><svg viewBox="0 0 430 376" role="img" aria-labelledby="hero-title hero-desc"><title id="hero-title">把一個問題化為可驗證的解法</title><desc id="hero-desc">範例陣列 2、4、7、9、12。左右指標先看總和 14，再向內縮小候選範圍；解題流程從觀察到不變量再到驗證。</desc><defs><marker id="hero-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 10 5 0 10z" fill="currentColor"/></marker></defs><g fill="none" stroke="currentColor" stroke-width="1.5"><path class="diagram-grid" d="M26 26h378v324H26zM26 80h378M26 134h378M26 188h378M26 242h378M26 296h378M80 26v324M134 26v324M188 26v324M242 26v324M296 26v324M350 26v324"/></g><g class="diagram-box"><rect x="48" y="92" width="58" height="64" rx="3"/><rect x="116" y="92" width="58" height="64" rx="3"/><rect x="184" y="92" width="58" height="64" rx="3"/><rect x="252" y="92" width="58" height="64" rx="3"/><rect x="320" y="92" width="58" height="64" rx="3"/></g><g class="diagram-type" text-anchor="middle"><text x="77" y="132">2</text><text x="145" y="132">4</text><text x="213" y="132">7</text><text x="281" y="132">9</text><text x="349" y="132">12</text><text x="77" y="68" class="hero-pointer">left</text><text x="349" y="68" class="hero-pointer">right</text><text x="213" y="202">2 + 12 = 14</text><text x="213" y="233" class="diagram-small">有序，才知道可以排除哪一邊。</text><text x="84" y="302">觀察</text><text x="215" y="302">不變量</text><text x="346" y="302">驗證</text></g><g fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#hero-arrow)"><path d="M77 170v29h63M349 170v29h-63M113 296h52M262 296h52"/></g></svg><p>每次移動，都要說清楚「不會漏掉什麼」。</p></div></div>
-  <div class="course-facts"><span><strong>13</strong> 章完整路線</span><span><strong>6</strong> 個分步實驗</span><span><strong>{{TOPIC_COUNT}}</strong> 個學習小節</span><span><strong>離線</strong> 隨時閱讀</span></div>
-  <section class="home-section" id="learning-path" aria-labelledby="path-title"><div class="section-heading"><h2 id="path-title">從「會寫」走向「會解釋」</h2><p>每次讀一節，先試著說清楚其中的不變量，不必一次背完。</p></div><div class="learning-paths"><div class="path"><span class="path-number">01</span><h3>第一次學 DSA</h3><p>依序閱讀 01–11 章。每節先手動畫出一輪狀態，再讀 Python；完成練習後才展開參考解答。</p><a href="#chapter-01">從成本與遞迴開始 <span aria-hidden="true">↗</span></a></div><div class="path"><span class="path-number">02</span><h3>準備程式面試</h3><p>先讀 12 章的解題流程，再依不熟悉的主題回讀 02–11。計時練習後，補上正確性、邊界與複雜度的說明。</p><a href="#chapter-12">進入面試工作台 <span aria-hidden="true">↗</span></a></div><div class="path"><span class="path-number">03</span><h3>總是在某一步卡住</h3><p>在實驗室按下一步或上一步，觀察變數、候選區間與停止條件，再換一組輸入找反例。</p><a href="#algorithm-labs">逐步觀察六種演算法模式 <span aria-hidden="true">↗</span></a></div></div></section>
-  <section class="home-section" aria-labelledby="map-title"><div class="section-heading"><h2 id="map-title">全課程路線圖</h2><p>按主題查看資料的儲存方式、搜尋範圍的縮小過程，以及子問題如何重用。</p></div><ol class="chapter-map">{{CHAPTER_MAP}}</ol></section>
-  <section class="home-section" id="algorithm-labs" aria-labelledby="labs-title"><div class="section-heading"><h2 id="labs-title">演算法實驗室</h2><p>修改輸入後，逐步觀察並解釋每次變化。六個實驗都在本機運作。</p></div><nav class="lab-index" aria-label="演算法實驗"><a href="#lab-two-pointers">01 雙指標</a><a href="#lab-sliding-window">02 滑動視窗</a><a href="#lab-binary-search">03 二分搜尋</a><a href="#lab-bfs">04 廣度優先</a><a href="#lab-backtracking">05 回溯</a><a href="#lab-dp">06 動態規劃</a></nav>{{LABS}}</section>
-  <section class="home-section editorial-note" aria-labelledby="editorial-title"><h2 id="editorial-title">關於這份教材</h2><p>這份繁體中文教材依 LeetCode 公開 DSA 課綱安排主題，搭配範例、圖解與練習。題目旁會標明與公開原題的關係；各章提供延伸閱讀來源，點擊外部連結時才需連線。</p><p class="problem-source"><strong>題目連結怎麼看：</strong>「對應原題」表示解題目標相同，例子與解說由本教材編寫；「改編題型」會列出介面或條件的調整；「相近題型／延伸練習」會說明差異，不能直接當成同一題；「自編題／自編範例」依教材列出的條件作答。題意、輸入輸出與例子都保留在教材內，只有開啟外部題目連結時需要網路。</p><p>Python 範例以 Python 3 撰寫。互動實驗刻意限制小輸入，方便逐步觀察；實驗的視覺化追蹤會儲存每一步，不能拿它的記憶體成本代替原演算法的空間複雜度。</p><p>全書、圖解與功能皆包含在這個 HTML，不需要帳號、CDN 或追蹤服務。進度只在本瀏覽器保存，私人瀏覽或清除網站資料可能使紀錄消失。</p></section>
+  <div class="home-hero">
+    <div class="hero-copy">
+      <h1 id="course-title">資料結構<br>與演算法</h1>
+      <nav class="hero-actions" id="learning-path" aria-label="閱讀起點">
+        <a class="button primary" href="#chapter-01">從第 01 章開始 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6"/></svg></a>
+        <a class="button secondary" href="#chapter-12">面試工具箱</a>
+        <a class="button secondary" href="#algorithm-labs">互動實驗</a>
+      </nav>
+      <a class="resume-link js-only" id="resume-link" href="#chapter-01" hidden>繼續閱讀</a>
+    </div>
+    <div class="hero-diagram">
+      <svg viewBox="0 0 430 280" role="img" aria-labelledby="hero-title hero-desc">
+        <title id="hero-title">雙指標尋找總和 11</title>
+        <desc id="hero-desc">有序陣列 2、4、7、9、12。兩端 2 加 12 得 14，大於目標 11，將 right 從 12 移到 9，得到答案 2 加 9 等於 11。</desc>
+        <g class="diagram-type"><text x="48" y="24" class="hero-pointer">left</text><text x="324" y="24" class="hero-pointer">right</text></g>
+        <g class="diagram-box"><rect x="48" y="38" width="58" height="52" rx="3"/><rect x="116" y="38" width="58" height="52" rx="3"/><rect x="184" y="38" width="58" height="52" rx="3"/><rect x="252" y="38" width="58" height="52" rx="3"/><rect x="320" y="38" width="58" height="52" rx="3"/></g>
+        <g class="diagram-type" text-anchor="middle"><text x="77" y="71">2</text><text x="145" y="71">4</text><text x="213" y="71">7</text><text x="281" y="71">9</text><text x="349" y="71">12</text><text x="213" y="121">2 + 12 = 14 &gt; 11</text></g>
+        <path d="M349 134v17h-68m7-6-7 6 7 6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <g class="diagram-box"><rect x="48" y="172" width="58" height="52" rx="3"/><rect x="116" y="172" width="58" height="52" rx="3"/><rect x="184" y="172" width="58" height="52" rx="3"/><rect x="252" y="172" width="58" height="52" rx="3"/><rect x="320" y="172" width="58" height="52" rx="3" stroke-dasharray="3 4" opacity=".45"/></g>
+        <g class="diagram-type" text-anchor="middle"><text x="77" y="205">2</text><text x="145" y="205">4</text><text x="213" y="205">7</text><text x="281" y="205">9</text><text x="349" y="205" opacity=".45">12</text><text x="213" y="261" class="hero-answer">2 + 9 = 11</text></g>
+      </svg>
+    </div>
+  </div>
+  <section class="home-section chapter-directory" aria-labelledby="map-title">
+    <div class="section-heading"><h2 id="map-title">章節目錄</h2></div>
+    <ol class="chapter-map">{{CHAPTER_MAP}}</ol>
+  </section>
+  <section class="home-section" id="algorithm-labs" aria-labelledby="labs-title">
+    <div class="section-heading"><h2 id="labs-title">互動實驗</h2></div>
+    <nav class="lab-index" aria-label="演算法實驗"><a href="#lab-two-pointers">01 雙指標</a><a href="#lab-sliding-window">02 滑動視窗</a><a href="#lab-binary-search">03 二分搜尋</a><a href="#lab-bfs">04 廣度優先</a><a href="#lab-backtracking">05 回溯</a><a href="#lab-dp">06 動態規劃</a></nav>
+    {{LABS}}
+  </section>
+  <section class="home-section editorial-note" aria-labelledby="editorial-title">
+    <h2 id="editorial-title">閱讀與範例</h2>
+    <p>程式使用 Python 3.10 以上版本。各節附題目連結與延伸閱讀；輸入、輸出與範例列在正文中。</p>
+    <p>互動實驗以小型輸入顯示每一步；複雜度分析計算演算法本身的成本。書籤與進度保存在目前瀏覽器，清除網站資料也會移除紀錄。</p>
+  </section>
 </section>
-<div class="reader" id="reader"><div class="reader-tools js-only"><a href="#course-home" class="back-to-map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m6-6-6 6 6 6"/></svg>學習路線圖</a><span class="reader-position" id="reader-position"></span><div class="reader-tool-buttons"><button class="small-button" id="bookmark-button" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span>加入書籤</span></button><button class="small-button" id="complete-button" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><span>標記完成</span></button></div></div><details class="topic-toc js-only" id="topic-toc"><summary>本章小節 <span id="topic-count"></span></summary><nav aria-label="本章小節"><ol id="topic-list"></ol></nav></details><div id="chapters">{{CHAPTERS}}</div><nav class="chapter-pagination js-only" aria-label="章節導覽"><a id="prev-chapter" href="#course-home"><span>上一站</span><strong>學習路線圖</strong></a><a id="next-chapter" href="#chapter-02"><span>下一章</span><strong>繼續閱讀</strong></a></nav></div>
-<footer class="site-footer"><span>資料結構與演算法：把思路變成解法</span><span>繁體中文 · 圖解與實作 · 離線教材</span><a href="#course-home">回到學習路線圖</a></footer>
+<div class="reader" id="reader">
+  <div class="reader-tools js-only">
+    <a href="#course-home" class="back-to-map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m6-6-6 6 6 6"/></svg>章節目錄</a>
+    <span class="reader-position" id="reader-position"></span>
+    <div class="reader-tool-buttons">
+      <button class="small-button" id="bookmark-button" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span>加入書籤</span></button>
+      <button class="small-button" id="complete-button" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><span>標記完成</span></button>
+    </div>
+  </div>
+  <details class="topic-toc js-only" id="topic-toc"><summary>本章小節 <span id="topic-count"></span></summary><nav aria-label="本章小節"><ol id="topic-list"></ol></nav></details>
+  <div id="chapters">{{CHAPTERS}}</div>
+  <nav class="chapter-pagination js-only" aria-label="章節導覽"><a id="prev-chapter" href="#course-home"><span>回到首頁</span><strong>章節目錄</strong></a><a id="next-chapter" href="#chapter-02"><span>下一章</span><strong>02 陣列與字串</strong></a></nav>
+</div>
+<footer class="site-footer"><a href="#course-home">章節目錄</a><a href="https://github.com/susuky/data-structures-algorithms-notes">GitHub</a></footer>
 </main>
-<dialog class="search-dialog" id="search-dialog" aria-labelledby="search-title"><div class="search-header"><h2 id="search-title">搜尋全書</h2><button class="icon-button" id="close-search" type="button" aria-label="關閉搜尋"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div class="search-field"><label class="sr-only" for="search-input">輸入關鍵字</label><input id="search-input" type="search" placeholder="搜尋概念、例子或英文名詞…" autocomplete="off"><kbd>Esc</kbd></div><p class="search-status" id="search-status" role="status" aria-live="polite">輸入關鍵字，從全書找出相關小節。</p><ol class="search-results" id="search-results"></ol></dialog>
-<dialog class="bookmark-dialog" id="bookmark-dialog" aria-labelledby="bookmark-title"><div class="search-header"><h2 id="bookmark-title">我的書籤</h2><button class="icon-button" id="close-bookmarks" type="button" aria-label="關閉書籤"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><p class="empty-bookmarks" id="empty-bookmarks">還沒有書籤。閱讀章節時，按「加入書籤」。</p><ol class="bookmark-list" id="bookmark-list"></ol></dialog>
+<dialog class="search-dialog" id="search-dialog" aria-labelledby="search-title">
+  <div class="search-header"><h2 id="search-title">搜尋全書</h2><button class="icon-button" id="close-search" type="button" aria-label="關閉搜尋"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+  <div class="search-field"><label class="sr-only" for="search-input">輸入關鍵字</label><input id="search-input" type="search" placeholder="概念、程式或英文名詞" autocomplete="off"><kbd aria-hidden="true">Esc</kbd></div>
+  <p class="search-status" id="search-status" role="status" aria-live="polite"></p>
+  <ol class="search-results" id="search-results"></ol>
+</dialog>
+<dialog class="bookmark-dialog" id="bookmark-dialog" aria-labelledby="bookmark-title">
+  <div class="search-header"><h2 id="bookmark-title">書籤</h2><button class="icon-button" id="close-bookmarks" type="button" aria-label="關閉書籤"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+  <p class="empty-bookmarks" id="empty-bookmarks">還沒有書籤。閱讀時可按「加入書籤」。</p>
+  <ol class="bookmark-list" id="bookmark-list"></ol>
+</dialog>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <script id="course-meta" type="application/json">{{CHAPTER_META}}</script>
 <script>{{LABS_JS}}</script>
 <script>{{APP_JS}}</script>
-</body></html>
+</body>
+</html>

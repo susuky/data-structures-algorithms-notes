@@ -150,12 +150,12 @@ def word_exists(board, word):
     """矩形字元格；上下左右相鄰，同一次路徑不得重複使用格子。"""
     if not word:
         return True
-    if not board or not board[0]:
+    if not board:
         return False
     rows, cols = len(board), len(board[0])
     if any(len(row) != cols for row in board):
         raise ValueError("board 必須為矩形")
-    if len(word) > rows * cols:
+    if cols == 0 or len(word) > rows * cols:
         return False
     used = set()
 
@@ -243,6 +243,7 @@ def run_tests():
     assert word_exists(board, '')
     assert word_exists([], '')
     assert not word_exists([], 'A')
+    assert not word_exists([[], []], 'A')
     assert word_exists([['A']], 'A')
     assert not word_exists([['A']], 'AA')
     assert board == snapshot
@@ -250,7 +251,9 @@ def run_tests():
                            (choose_k_sum, ([1], -1, 0)),
                            (queens_columns, (-1,)),
                            (nonadjacent_slots, (-1,)),
-                           (balanced_parentheses, (-1,))]:
+                           (balanced_parentheses, (-1,)),
+                           (word_exists, ([[], ['A']], 'A')),
+                           (word_exists, ([['A'], []], 'A'))]:
         try:
             function(*args)
         except ValueError:

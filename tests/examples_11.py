@@ -5,9 +5,9 @@ from math import inf
 
 
 def minimum_coins_memo(coins, amount):
-    if amount < 0 or any(c <= 0 for c in coins):
-        raise ValueError("amount 必須非負，硬幣面額必須為正整數")
     values = tuple(sorted(set(coins)))
+    if amount < 0 or any(c <= 0 for c in values):
+        raise ValueError("amount 必須非負，硬幣面額必須為正整數")
 
     @cache
     def best(remain):
@@ -25,9 +25,9 @@ def minimum_coins_memo(coins, amount):
 
 
 def minimum_coins(coins, amount):
-    if amount < 0 or any(c <= 0 for c in coins):
-        raise ValueError("amount 必須非負，硬幣面額必須為正整數")
     values = sorted(set(coins))
+    if amount < 0 or any(c <= 0 for c in values):
+        raise ValueError("amount 必須非負，硬幣面額必須為正整數")
     dp = [float("inf")] * (amount + 1)
     dp[0] = 0
     for total in range(1, amount + 1):
@@ -38,12 +38,39 @@ def minimum_coins(coins, amount):
     return -1 if dp[amount] == float("inf") else dp[amount]
 
 
+def minimum_coin_solution(coins, amount):
+    """回傳一組最少硬幣；無解為 None，金額 0 為 []。"""
+    values = sorted(set(coins))
+    if amount < 0 or any(coin <= 0 for coin in values):
+        raise ValueError("amount 必須非負，硬幣面額必須為正整數")
+    dp = [float("inf")] * (amount + 1)
+    chosen = [0] * (amount + 1)
+    dp[0] = 0
+    for total in range(1, amount + 1):
+        for coin in values:
+            if coin > total:
+                break
+            candidate = dp[total - coin] + 1
+            if candidate < dp[total]:
+                dp[total] = candidate
+                chosen[total] = coin
+    if dp[amount] == float("inf"):
+        return None
+    answer = []
+    while amount:
+        coin = chosen[amount]
+        answer.append(coin)
+        amount -= coin
+    return answer
+
 def knapsack_01(items, capacity):
     """items 為 (正整數重量, 價值)；可不選，總重至多 capacity。"""
-    if capacity < 0 or any(weight <= 0 for weight, _ in items):
-        raise ValueError("capacity 必須非負，重量必須為正整數")
+    if capacity < 0:
+        raise ValueError("capacity 必須非負")
     dp = [0] * (capacity + 1)
     for weight, value in items:
+        if weight <= 0:
+            raise ValueError("重量必須為正整數")
         for limit in range(capacity, weight - 1, -1):
             dp[limit] = max(dp[limit], dp[limit - weight] + value)
     return dp[capacity]
@@ -89,11 +116,11 @@ def minimum_grid_path(grid):
 
 def cooldown_profit(prices):
     """可多次交易，最多持有一股；賣出後隔天不能買入。"""
-    if any(price < 0 for price in prices):
-        raise ValueError("價格必須非負")
     hold = sold = float("-inf")
     rest = 0
     for price in prices:
+        if price < 0:
+            raise ValueError("價格必須非負")
         old_hold, old_sold, old_rest = hold, sold, rest
         hold = max(old_hold, old_rest - price)
         sold = old_hold + price
@@ -102,9 +129,9 @@ def cooldown_profit(prices):
 
 
 def count_step_sequences(n, steps=(1, 3, 4)):
-    if n < 0 or any(step <= 0 for step in steps):
-        raise ValueError("n 必須非負，步長必須為正整數")
     choices = sorted(set(steps))
+    if n < 0 or any(step <= 0 for step in choices):
+        raise ValueError("n 必須非負，步長必須為正整數")
     dp = [0] * (n + 1)
     dp[0] = 1
     for total in range(1, n + 1):
@@ -164,9 +191,15 @@ def run_tests():
 
     rng = Random(20261011)
     assert minimum_coins([1, 3, 4], 6) == 2
+    assert minimum_coins_memo(iter([1, 3, 4]), 6) == 2
+    assert minimum_coins(iter([1, 3, 4]), 6) == 2
     assert minimum_coins([2, 4], 3) == -1
     assert minimum_coins([], 0) == 0
     assert minimum_coins([], 3) == -1
+    assert minimum_coin_solution([1, 3, 4], 6) == [3, 3]
+    assert minimum_coin_solution(iter([1, 3, 4]), 6) == [3, 3]
+    assert minimum_coin_solution([], 0) == []
+    assert minimum_coin_solution([2], 3) is None
     for _ in range(200):
         coins = [rng.randint(1, 9) for _ in range(rng.randrange(7))]
         amount = rng.randrange(26)
@@ -187,7 +220,14 @@ def run_tests():
                     queue.append((nxt, count + 1))
         assert minimum_coins(coins, amount) == expected
         assert minimum_coins_memo(coins, amount) == expected
+        solution = minimum_coin_solution(coins, amount)
+        if expected == -1:
+            assert solution is None
+        else:
+            assert len(solution) == expected and sum(solution) == amount
+            assert all(coin in coins for coin in solution)
     assert knapsack_01([(2, 4), (3, 5), (4, 7)], 5) == 9
+    assert knapsack_01(iter([(2, 4), (3, 5), (4, 7)]), 5) == 9
     assert knapsack_01([(2, 4)], 4) == 4  # 同一件不可取兩次
     assert knapsack_01([], 5) == 0
     for _ in range(200):
@@ -254,6 +294,7 @@ def run_tests():
 
     assert cooldown_profit([2, 5, 1, 4, 6]) == 5
     assert cooldown_profit([1, 2, 3, 0, 2]) == 3
+    assert cooldown_profit(iter([1, 2, 3, 0, 2])) == 3
     assert cooldown_profit([]) == 0
     for n in range(7):
         for prices in product(range(3), repeat=n):
@@ -265,6 +306,7 @@ def run_tests():
         return sum(brute_steps(n - step) for step in (1, 3, 4) if step <= n)
 
     assert [count_step_sequences(i) for i in range(6)] == [1, 1, 1, 2, 4, 6]
+    assert count_step_sequences(5, iter([1, 3, 4])) == 6
     for n in range(13):
         assert count_step_sequences(n) == brute_steps(n)
     for _ in range(200):

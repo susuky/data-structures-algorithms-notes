@@ -4,11 +4,12 @@ from itertools import permutations, combinations, product
 
 def select_intervals(intervals):
     """選最多個互不重疊半開區間 [start, end)；要求 start < end。"""
-    if any(start >= end for start, end in intervals):
+    ordered = sorted(intervals, key=lambda x: (x[1], x[0]))
+    if any(start >= end for start, end in ordered):
         raise ValueError("區間必須有正長度")
     chosen = []
     last_end = None
-    for start, end in sorted(intervals, key=lambda x: (x[1], x[0])):
+    for start, end in ordered:
         if last_end is None or start >= last_end:
             chosen.append((start, end))
             last_end = end
@@ -17,9 +18,9 @@ def select_intervals(intervals):
 
 def schedule_shortest_first(durations):
     """所有工作在時間 0 可開始，回傳順序及總等待時間。"""
-    if any(duration < 0 for duration in durations):
-        raise ValueError("工時不可為負")
     order = sorted(durations)
+    if any(duration < 0 for duration in order):
+        raise ValueError("工時不可為負")
     elapsed = total_wait = 0
     for duration in order:
         total_wait += elapsed
@@ -63,6 +64,7 @@ def waiting_time(order):
 def run_tests():
     sample = [(0, 4), (1, 3), (3, 5), (4, 7), (5, 8), (7, 9)]
     assert select_intervals(sample) == [(1, 3), (3, 5), (5, 8)]
+    assert select_intervals(iter(sample)) == [(1, 3), (3, 5), (5, 8)]
     assert select_intervals([]) == []
     assert select_intervals([(-4, -2), (-2, 0), (-3, 1)]) == [(-4, -2), (-2, 0)]
     assert select_intervals([(0, 2), (0, 2), (2, 3)]) == [(0, 2), (2, 3)]
@@ -71,6 +73,7 @@ def run_tests():
         for case in combinations(universe, size):
             assert len(select_intervals(case)) == brute_interval_count(case)
     assert schedule_shortest_first([6, 2, 4]) == ([2, 4, 6], 8)
+    assert schedule_shortest_first(iter([6, 2, 4])) == ([2, 4, 6], 8)
     assert schedule_shortest_first([]) == ([], 0)
     assert schedule_shortest_first([0, 3, 0]) == ([0, 0, 3], 0)
     for jobs in ([3, 1, 2], [5, 0, 2, 2], [4], [7, 2, 6, 1]):

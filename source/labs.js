@@ -58,7 +58,8 @@
     let sum = 0, best = null, bestLeft = 0, left = 0, right = -1;
     const frames = [];
     function push(explanation, done = false) {
-      frames.push({kind: 'array', values: [...values], markers: right < 0 ? {} : {left, right}, active: values.map((_, i) => i).filter(i => i >= left && i <= right), vars: {left, right, sum, k, '最大總和': best === null ? '尚無完整視窗' : best, '最佳起點': best === null ? '—' : bestLeft}, explanation, done, result: done ? {sum: best, left: bestLeft, right: bestLeft + k - 1} : null});
+      const shownLeft = done ? bestLeft : left, shownRight = done ? bestLeft + k - 1 : right;
+      frames.push({kind: 'array', values: [...values], markers: shownRight < 0 ? {} : {left: shownLeft, right: shownRight}, active: values.map((_, i) => i).filter(i => i >= shownLeft && i <= shownRight), vars: {left: shownLeft, right: shownRight, sum: done ? best : sum, k, '最大總和': best === null ? '尚無完整視窗' : best, '最佳起點': best === null ? '—' : bestLeft}, explanation, done, result: done ? {sum: best, left: bestLeft, right: bestLeft + k - 1} : null});
     }
     push(`從空視窗開始。先逐一加入前 ${k} 個元素；尚未湊滿 k 前，不更新最佳答案。`);
     for (right = 0; right < k; right++) {
@@ -76,7 +77,7 @@
       push(`移除 ${leaving}，加入 ${values[right]}，sum = ${sum}。${improved ? '比既有最佳值大，更新最佳視窗。' : '沒有嚴格超過最佳值，保留較早出現的答案。'}`);
     }
     right = values.length - 1;
-    push(`所有長度 ${k} 的視窗都已處理。最大總和為 ${best}，範圍是索引 ${bestLeft}–${bestLeft + k - 1}。`, true);
+    push(`所有長度 ${k} 的視窗都已處理。標出的最佳視窗為索引 ${bestLeft}–${bestLeft + k - 1}，最大總和 ${best}。`, true);
     return frames;
   }
   function binarySearch(input) {
@@ -126,13 +127,13 @@
     const parents = Object.fromEntries(nodes.map(n => [n, null]));
     const queue = [start], order = [], frames = [];
     distances[start] = 0;
-    let current = null;
+    let current = null, head = 0;
     function push(explanation, done = false) {
-      frames.push({kind: 'graph', nodes, edges, queue: [...queue], current, distances: {...distances}, parents: {...parents}, order: [...order], vars: {'目前節點': current || '—', '佇列（左端先出）': queue.join(' → ') || '空', '已出列': order.join(' → ') || '—', '已發現': nodes.filter(n => distances[n] !== null).length}, explanation, done, result: done ? {...distances} : null});
+      frames.push({kind: 'graph', nodes, edges, queue: queue.slice(head), current, distances: {...distances}, parents: {...parents}, order: [...order], vars: {'目前節點': current || '—', '已出列': order.join(' → ') || '—', '已發現': nodes.filter(n => distances[n] !== null).length}, explanation, done, result: done ? {...distances} : null});
     }
     push(`將起點 ${start} 入列，同時設距離 0、標記已發現。此後只有尚未發現的鄰居可以入列。`);
-    while (queue.length) {
-      current = queue.shift();
+    while (head < queue.length) {
+      current = queue[head++];
       order.push(current);
       push(`從佇列前端取出 ${current}，距離是 ${distances[current]}。依字母順序檢查它的鄰居。`);
       for (const next of adj[current]) {
@@ -226,9 +227,7 @@
       result += `<div class="array-item${active ? ' active' : ''}${muted ? ' excluded' : ''}${i === values.length ? ' sentinel' : ''}"><div class="array-pointers">${labels.map(l => `<span>${escape(l)}</span>`).join('')}</div><div class="array-value">${i === values.length ? '尾端' : frame.kind === 'dp' ? display(values[i]) : values[i]}</div><span class="array-index">${frame.kind === 'dp' ? 'dp[' + i + ']' : i}</span></div>`;
     }
     result += '</div></div>';
-    if (frame.kind === 'dp') result += '<p class="visual-legend">索引是總額；方格內是最少硬幣數。∞ = 目前不可行。</p>';
-    else if (frame.sentinel) result += '<p class="visual-legend">深色方格 = 仍需檢查的 [lo, hi)；淡色 = 已排除。尾端只有位置，不能讀值。</p>';
-    else result += '<p class="visual-legend">深色方格 = 目前比較元素或視窗；上方是指標，下方是索引。</p>';
+    if (frame.kind === 'dp') result += '<p class="visual-legend">dp[s]：湊出 s 的最少硬幣數；∞：尚未找到組合。</p>';
     return result;
   }
   function graphHTML(frame) {
@@ -244,13 +243,12 @@
       const found = frame.distances[node] !== null, current = frame.current === node;
       svg += `<g class="graph-node${found ? ' discovered' : ''}${current ? ' current' : ''}"><circle cx="${x}" cy="${y}" r="28"/><text x="${x}" y="${y - 2}" text-anchor="middle">${node}</text><text class="graph-distance" x="${x}" y="${y + 16}" text-anchor="middle">d=${display(frame.distances[node])}</text></g>`;
     }
-    svg += '</svg></div><div class="queue-view"><strong>佇列</strong><span class="queue-start">先出 →</span>' + (frame.queue.length ? frame.queue.map(n => `<span class="queue-node">${n}</span>`).join('') : '<span class="queue-empty">空</span>') + '</div><p class="visual-legend">粗虛線圈 = 目前處理；深色 = 已發現；深色邊 = 首次發現時的父節點邊。距離另列於下方。</p><div class="distance-list">';
-    svg += frame.nodes.map(n => `<span><strong>${n}</strong> ${display(frame.distances[n])}</span>`).join('') + '</div>';
+    svg += '</svg></div><div class="queue-view"><strong>佇列</strong><span class="queue-start">先出 →</span>' + (frame.queue.length ? frame.queue.map(n => `<span class="queue-node">${n}</span>`).join('') : '<span class="queue-empty">空</span>') + '</div><p class="visual-legend">虛線圈：目前節點。深色節點：已發現。深色邊：首次發現路徑。</p>';
     return svg;
   }
   function backtrackingHTML(frame) {
     const actionNames = {visit: '進入狀態', choose: '選擇', skip: '不選', undo: '撤銷', solution: '保存答案', prune: '剪枝', return: '返回', done: '完成'};
-    return `<div class="backtrack-state"><div class="decision-label">${actionNames[frame.action]}</div><div class="decision-trail"><strong>決策路徑</strong><span>${frame.decisions.length ? frame.decisions.map(escape).join(' → ') : '根節點'}</span></div><div class="path-view"><strong>path</strong>${frame.path.length ? frame.path.map(n => `<span class="path-node">${n}</span>`).join('') : '<span class="path-empty">[ ] 空集合</span>'}</div><div class="candidate-view"><strong>下一個</strong>${Array.from({length: frame.n}, (_, i) => `<span class="candidate${i + 1 === frame.i ? ' current' : ''}${i + 1 < frame.i ? ' past' : ''}">${i + 1}</span>`).join('')}</div><div class="solutions-view"><strong>已保存答案</strong><p>${frame.solutions.length ? frame.solutions.map(s => '[' + s.join(', ') + ']').join('　') : '還沒有；每一條分支都值得確認。'}</p></div></div>`;
+    return `<div class="backtrack-state"><div class="decision-label">${actionNames[frame.action]}</div><div class="decision-trail"><strong>決策路徑</strong><span>${frame.decisions.length ? frame.decisions.map(escape).join(' → ') : '根節點'}</span></div><div class="path-view"><strong>path</strong>${frame.path.length ? frame.path.map(n => `<span class="path-node">${n}</span>`).join('') : '<span class="path-empty">[]</span>'}</div><div class="candidate-view"><strong>下一個</strong>${Array.from({length: frame.n}, (_, i) => `<span class="candidate${i + 1 === frame.i ? ' current' : ''}${i + 1 < frame.i ? ' past' : ''}">${i + 1}</span>`).join('')}</div><div class="solutions-view"><strong>已保存答案</strong><p>${frame.solutions.length ? frame.solutions.map(s => '[' + s.join(', ') + ']').join('　') : '無'}</p></div></div>`;
   }
   function render(container, frame, index, total) {
     container.querySelector('.lab-visual').innerHTML = frame.kind === 'graph' ? graphHTML(frame) : frame.kind === 'backtracking' ? backtrackingHTML(frame) : arrayHTML(frame);

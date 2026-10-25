@@ -1,10 +1,11 @@
 """Chapter 13: original, executable examples. Python 3.10+, standard library."""
 from __future__ import annotations
+from collections.abc import Iterable
 from heapq import heappop, heappush
 from math import inf
 
 
-def range_add(n: int, updates: list[tuple[int, int, int]]) -> list[int]:
+def range_add(n: int, updates: Iterable[tuple[int, int, int]]) -> list[int]:
     if n < 0:
         raise ValueError('n must be nonnegative')
     difference = [0] * (n + 1)
@@ -90,6 +91,8 @@ def pow_mod(base: int, exponent: int, modulus: int) -> int:
 
 
 def dijkstra(graph: list[list[tuple[int, int]]], start: int) -> list[float | int]:
+    if not 0 <= start < len(graph):
+        raise ValueError('start must be a vertex in graph')
     if any(weight < 0 for edges in graph for _, weight in edges):
         raise ValueError('Dijkstra requires nonnegative weights')
     distance = [inf] * len(graph)
@@ -109,12 +112,14 @@ def dijkstra(graph: list[list[tuple[int, int]]], start: int) -> list[float | int
 
 def cheapest_with_stops(graph: list[list[tuple[int, int]]], start: int,
                         target: int, max_stops: int) -> int | None:
-    # max_stops counts intermediate vertices, so max_edges = max_stops + 1.
+    # 非負邊的最優路徑可移除環，至多需要 V-1 條邊。
+    if not (0 <= start < len(graph) and 0 <= target < len(graph)):
+        raise ValueError('start and target must be vertices in graph')
     if max_stops < -1:
         raise ValueError('max_stops must be at least -1')
     if any(weight < 0 for edges in graph for _, weight in edges):
         raise ValueError('requires nonnegative weights')
-    max_edges = max_stops + 1
+    max_edges = min(max_stops + 1, len(graph) - 1)
     distance = [[inf] * (max_edges + 1) for _ in graph]
     distance[start][0] = 0
     heap = [(0, start, 0)]
@@ -134,8 +139,39 @@ def cheapest_with_stops(graph: list[list[tuple[int, int]]], start: int,
     return None
 
 
+class UnionFind:
+    def __init__(self, n):
+        if n < 0:
+            raise ValueError("n 必須非負")
+        self.parent = list(range(n))
+        self.size = [1] * n
+        self.components = n
+
+    def find(self, node):
+        if not 0 <= node < len(self.parent):
+            raise ValueError("節點編號超出範圍")
+        root = node
+        while self.parent[root] != root:
+            root = self.parent[root]
+        while node != root:
+            previous = self.parent[node]
+            self.parent[node] = root
+            node = previous
+        return root
+
+    def union(self, a, b):
+        root_a, root_b = self.find(a), self.find(b)
+        if root_a == root_b:
+            return False
+        if self.size[root_a] < self.size[root_b]:
+            root_a, root_b = root_b, root_a
+        self.parent[root_b] = root_a
+        self.size[root_a] += self.size[root_b]
+        self.components -= 1
+        return True
+
 def peak_load(n: int, intervals: list[tuple[int, int]]) -> int:
-    counts = range_add(n, [(left, right, 1) for left, right in intervals])
+    counts = range_add(n, ((left, right, 1) for left, right in intervals))
     return max(counts, default=0)
 
 
@@ -194,6 +230,7 @@ def _bounded_reference(graph, start, target, max_edges):
 def tests() -> None:
     assert range_add(6, [(1, 4, 3), (3, 5, -2)]) == [0, 3, 3, 1, 1, -2]
     assert range_add(0, []) == []
+    assert range_add(3, iter([(0, 2, 1), (1, 1, 4)])) == [1, 5, 1]
     assert peak_load(7, [(0, 2), (2, 5), (4, 6)]) == 2
     assert peak_load(0, []) == 0
     assert range_add(1, [(0, 0, 7), (0, 0, -7)]) == [0]
@@ -242,6 +279,40 @@ def tests() -> None:
     zero_cycle = [[(1, 0)], [(0, 0), (2, 1)], []]
     assert dijkstra(zero_cycle, 0) == [0, 0, 1]
     assert cheapest_with_stops(zero_cycle, 0, 2, 1) == 1
+    assert cheapest_with_stops(zero_cycle, 0, 2, 10**9) == 1
+    assert cheapest_with_stops([[]], 0, 0, 10**9) == 0
+    for function, args in [(dijkstra, ([], 0)),
+                           (dijkstra, ([[]], -1)),
+                           (cheapest_with_stops, ([[]], 0, -1, 0))]:
+        try:
+            function(*args)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError('invalid vertex must be rejected')
+    uf = UnionFind(5)
+    assert [uf.union(a, b) for a, b in [(0, 1), (1, 2), (0, 2), (3, 4)]] == [True, True, False, True]
+    assert uf.components == 2
+    assert uf.find(0) == uf.find(2) != uf.find(3)
+    assert uf.size[uf.find(1)] == 3
+    assert not uf.union(4, 4) and uf.components == 2
+    assert UnionFind(0).components == 0
+    # Compare the groups with explicit set merging after each new edge.
+    uf = UnionFind(6)
+    groups = [{i} for i in range(6)]
+    for a, b in [(0, 1), (2, 3), (1, 2), (4, 5), (3, 5), (0, 4), (2, 2)]:
+        left = next(group for group in groups if a in group)
+        right = next(group for group in groups if b in group)
+        changed = left is not right
+        if changed:
+            left.update(right)
+            groups.remove(right)
+        assert uf.union(a, b) == changed
+        assert uf.components == len(groups)
+        for group in groups:
+            root = uf.find(next(iter(group)))
+            assert all(uf.find(node) == root for node in group)
+            assert uf.size[root] == len(group)
     try:
         dijkstra([[(1, -1)], []], 0)
     except ValueError:

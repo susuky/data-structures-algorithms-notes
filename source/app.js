@@ -18,7 +18,8 @@
   function save() {
     try { localStorage.setItem(storageKey, JSON.stringify(state)); storageAvailable = true; }
     catch (_) { storageAvailable = false; }
-    if (!storageAvailable) $('storage-note').textContent = '瀏覽器無法保存資料；目前操作仍有效，但關閉後可能遺失。';
+    $('storage-note').hidden = storageAvailable;
+    if (!storageAvailable) $('storage-note').textContent = '瀏覽器無法保存進度與書籤，關閉後將遺失。';
   }
   function toast(text) {
     clearTimeout(toastTimer);
@@ -54,7 +55,7 @@
       if (chapter) {
         $('resume-link').hidden = false;
         $('resume-link').href = '#' + state.last;
-        $('resume-link').textContent = `繼續上次閱讀：${chapter.number} ${chapter.short}`;
+        $('resume-link').textContent = `繼續閱讀：${chapter.number} ${chapter.short}`;
       }
     }
   }
@@ -112,14 +113,17 @@
       for (const [id, next] of [['prev-chapter', meta[position - 1]], ['next-chapter', meta[position + 1]]]) {
         const link = $(id);
         link.href = '#' + (next?.id || 'course-home');
-        link.querySelector('strong').textContent = next ? `${next.number} ${next.short}` : '學習路線圖';
+        link.querySelector('strong').textContent = next ? `${next.number} ${next.short}` : '章節目錄';
         link.querySelector('span').textContent = next ? (id === 'prev-chapter' ? '上一章' : '下一章') : '回到首頁';
       }
       state.last = target.id; save();
-    } else document.title = '資料結構與演算法：把思路變成解法';
+    } else document.title = '資料結構與演算法';
     refreshProgress();
     if ($('sidebar').classList.contains('is-open')) setDrawer(false, false);
-    if (target.id === 'course-home') window.scrollTo({top: 0, behavior: 'instant'});
+    if (target.id === 'course-home') {
+      window.scrollTo({top: 0, behavior: 'instant'});
+      target.focus({preventScroll: true});
+    }
     else {
       // Reveal an anchored answer if a deep link points inside a closed details element.
       let ancestor = target.parentElement;
@@ -138,7 +142,7 @@
     const walker = document.createTreeWalker(article, NodeFilter.SHOW_ELEMENT);
     let node, section = {id: chapter.id, chapter: chapter.short, title: chapter.title, text: '', keywords: chapter.keywords, nodes: []};
     while ((node = walker.nextNode())) {
-      if (node.tagName === 'H3' && node.id) { searchIndex.push(section); section = {id: node.id, chapter: chapter.short, title: node.textContent.trim(), text: '', keywords: chapter.keywords, nodes: []}; }
+      if (node.tagName === 'H3' && node.id) { searchIndex.push(section); section = {id: node.id, chapter: chapter.short, title: node.textContent.trim(), text: '', keywords: '', nodes: []}; }
       if (['P', 'LI', 'PRE', 'FIGCAPTION', 'TD', 'TH', 'SUMMARY', 'H2', 'H4'].includes(node.tagName)) { section.text += ' ' + node.textContent.trim(); section.nodes.push(node); }
     }
     searchIndex.push(section);
@@ -146,10 +150,10 @@
   function search() {
     const query = $('search-input').value.trim().toLocaleLowerCase();
     $('search-results').replaceChildren();
-    if (!query) { $('search-status').textContent = '輸入關鍵字，從全書找出相關小節。'; return; }
+    if (!query) { $('search-status').textContent = ''; return; }
     const terms = query.split(/\s+/).filter(Boolean);
-    const results = searchIndex.filter(s => terms.every(term => (s.title + ' ' + s.text + ' ' + s.keywords).toLocaleLowerCase().includes(term))).map(s => ({...s, score: terms.reduce((n, t) => n + (s.title.toLocaleLowerCase().includes(t) ? 10 : 0), 0)})).sort((a, b) => b.score - a.score);
-    $('search-status').textContent = results.length ? `找到 ${results.length} 個小節${results.length > 40 ? '，顯示前 40 個' : ''}。` : '沒有找到相符內容。試試較短的中文關鍵字或英文名詞。';
+    const results = searchIndex.filter(s => terms.every(term => (s.title + ' ' + s.text + ' ' + s.keywords).toLocaleLowerCase().includes(term))).map(s => ({...s, score: terms.reduce((n, t) => n + (s.title.toLocaleLowerCase().includes(t) ? 10 : s.keywords.toLocaleLowerCase().includes(t) ? 6 : 1), 0)})).sort((a, b) => b.score - a.score);
+    $('search-status').textContent = results.length ? `${results.length} 筆結果${results.length > 40 ? '，顯示前 40 筆' : ''}` : '沒有找到相符內容。試試較短的關鍵字。';
     for (const result of results.slice(0, 40)) {
       const li = document.createElement('li'), a = document.createElement('a'), small = document.createElement('small'), strong = document.createElement('strong'), p = document.createElement('p');
       a.className = 'search-result'; a.href = '#' + result.id;
@@ -158,13 +162,17 @@
       p.textContent = (start ? '…' : '') + text.slice(start, start + 160) + (text.length > start + 160 ? '…' : '');
       a.append(small, strong, p); li.append(a); $('search-results').append(li);
       a.addEventListener('click', () => {
-        for (const node of result.nodes) if (terms.every(term => node.textContent.toLocaleLowerCase().includes(term))) { let ancestor = node.closest('details'); while (ancestor) { ancestor.open = true; ancestor = ancestor.parentElement?.closest('details'); } }
+        for (const node of result.nodes) if (terms.some(term => node.textContent.toLocaleLowerCase().includes(term))) { let ancestor = node.closest('details'); while (ancestor) { ancestor.open = true; ancestor = ancestor.parentElement?.closest('details'); } }
         $('search-dialog').close(); if (safeHash() === result.id) route();
       });
     }
   }
   function openDialog(dialog, focusTarget) {
     if (dialog.open) return;
+    if ($('sidebar').classList.contains('is-open')) {
+      setDrawer(false, false);
+      $('menu-button').focus();
+    }
     if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', '');
     focusTarget?.focus();
   }
@@ -181,11 +189,13 @@
     openDialog($('bookmark-dialog'), $('close-bookmarks'));
   }
   const printDetails = [];
+  let printing = false;
   function beforePrint() {
-    printDetails.length = 0;
+    if (printing) return;
+    printing = true;
     document.querySelectorAll('#chapters details').forEach(detail => { if (!detail.open) { printDetails.push(detail); detail.open = true; } });
   }
-  function afterPrint() { printDetails.splice(0).forEach(detail => { detail.open = false; }); }
+  function afterPrint() { printDetails.splice(0).forEach(detail => { detail.open = false; }); printing = false; }
   document.querySelector('.skip-link').addEventListener('click', event => { event.preventDefault(); $('main-content').focus({preventScroll: true}); });
   $('search-button').addEventListener('click', () => openDialog($('search-dialog'), $('search-input')));
   $('close-search').addEventListener('click', () => $('search-dialog').close());

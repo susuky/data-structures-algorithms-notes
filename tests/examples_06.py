@@ -120,11 +120,13 @@ def shortest_path(graph: list[list[int]], start: int,
 
 def grid_distance(grid: list[list[int]]) -> int:
     # 0 = open, 1 = wall. Return the number of moves, not cells.
-    if not grid or not grid[0]:
+    if not grid:
         return -1
     rows, cols = len(grid), len(grid[0])
     if any(len(row) != cols for row in grid):
         raise ValueError('grid must be rectangular')
+    if cols == 0:
+        return -1
     if grid[0][0] or grid[-1][-1]:
         return -1
     queue = deque([(0, 0, 0)])
@@ -178,11 +180,13 @@ def component_sizes(graph: list[list[int]]) -> list[int]:
 
 def grid_one_break(grid: list[list[int]]) -> int:
     # At most one wall cell may be entered; start/end must be open.
-    if not grid or not grid[0]:
+    if not grid:
         return -1
     rows, cols = len(grid), len(grid[0])
     if any(len(row) != cols for row in grid):
         raise ValueError('grid must be rectangular')
+    if cols == 0:
+        return -1
     if grid[0][0] or grid[-1][-1]:
         return -1
     queue = deque([(0, 0, 0, 0)])  # row, col, used, moves
@@ -200,6 +204,24 @@ def grid_one_break(grid: list[list[int]]) -> int:
                     seen.add(state)
                     queue.append((nr, nc, next_used, moves + 1))
     return -1
+
+
+def topological_order(graph: list[list[int]]) -> list[int] | None:
+    """邊 u → v 表示 u 必須先於 v；有環回傳 None，空圖回傳 []。"""
+    indegree = [0] * len(graph)
+    for neighbors in graph:
+        for neighbor in neighbors:
+            indegree[neighbor] += 1
+    ready = deque(node for node, degree in enumerate(indegree) if degree == 0)
+    order = []
+    while ready:
+        node = ready.popleft()
+        order.append(node)
+        for neighbor in graph[node]:
+            indegree[neighbor] -= 1
+            if indegree[neighbor] == 0:
+                ready.append(neighbor)
+    return order if len(order) == len(graph) else None
 
 
 def tests() -> None:
@@ -241,6 +263,26 @@ def tests() -> None:
     assert grid_one_break([[0, 1, 1, 0]]) == -1
     assert grid_one_break([[0]]) == 0
     assert grid_one_break(board) == 5
+    for distance in (grid_distance, grid_one_break):
+        assert distance([[], []]) == -1
+        for ragged in ([[], [0]], [[0], []], [[0, 0], [0]]):
+            try:
+                distance(ragged)
+            except ValueError:
+                pass
+            else:
+                raise AssertionError('非矩形網格應拋 ValueError')
+    dependencies = [[2], [2, 3], [4], [4], []]
+    order = topological_order(dependencies)
+    assert order == [0, 1, 2, 3, 4]
+    position = {node: index for index, node in enumerate(order)}
+    assert all(position[u] < position[v]
+               for u, neighbors in enumerate(dependencies) for v in neighbors)
+    assert topological_order([]) == []
+    assert topological_order([[], []]) == [0, 1]
+    assert topological_order([[1, 1], []]) == [0, 1]
+    assert topological_order([[0]]) is None
+    assert topological_order([[1], [0], []]) is None
     # Every 3-by-3 grid with open endpoints: allowing a wall break cannot hurt.
     for mask in range(1 << 7):
         flat = [0] + [(mask >> i) & 1 for i in range(7)] + [0]

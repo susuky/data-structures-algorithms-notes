@@ -15,34 +15,34 @@ CHAPTERS = [
     ('雜湊', '存在性、計數與前綴狀態', '打好基礎'),
     ('鏈結串列', '快慢指標、反轉與指標不變量', '選對結構'),
     ('堆疊與佇列', '解析、deque 與單調結構', '選對結構'),
-    ('樹與圖', 'DFS、BFS、BST 與 visited', '選對結構'),
+    ('樹與圖', 'DFS、BFS、BST 與拓樸排序', '選對結構'),
     ('堆積', 'heapq、Top K 與串流合併', '選對結構'),
     ('貪婪', '交換論證、排序與反例', '設計解法'),
     ('二分搜尋', '邊界、答案空間與單調判定', '設計解法'),
     ('回溯', '生成、剪枝與狀態復原', '設計解法'),
     ('動態規劃', '狀態、轉移、記憶化與填表', '設計解法'),
     ('面試工具箱', '解題流程、模板與原創模擬題', '整合與延伸'),
-    ('進階補給', '差分、Trie、位元與最短路徑', '整合與延伸'),
+    ('進階補給', '差分、Trie、Union-Find 與最短路徑', '整合與延伸'),
 ]
 KEYWORDS = [
     'Big O recursion complexity Python',
     'array arrays string strings two pointers sliding window prefix sum',
-    'hash hashing map set counting',
+    'hash hashing map set counting longest substring unique sliding window last position',
     'linked list fast slow reverse dummy',
     'stack queue deque monotonic',
-    'tree graph DFS BFS BST visited',
+    'tree graph DFS BFS BST visited topological sort Kahn DAG indegree',
     'heap heapq top k merge',
     'greedy exchange sorting',
     'binary search lower_bound upper_bound bisect',
     'backtracking pruning undo',
     'dynamic programming DP memoization tabulation',
     'interview template complexity',
-    'difference array trie bit intervals modular Dijkstra',
+    'difference array trie bit intervals modular Dijkstra union find disjoint set DSU',
 ]
 LABS = [
     ('two-pointers', '雙指標', '找出有序陣列中總和等於目標的一組索引。', 'chapter-02',
      [('array', '有序整數（2–12 個，逗號分隔）', '1, 3, 4, 6, 8, 11', 'text'), ('target', '目標總和', '10', 'number')],
-     '左邊太小就往右，右邊太大就往左；前提是陣列已排序。', 'O(n) 時間、O(1) 額外空間。'),
+     '若答案存在，兩個索引都在 [left, right] 內。兩端總和太小就排除 left，太大就排除 right。', 'O(n) 時間、O(1) 額外空間。'),
     ('sliding-window', '滑動視窗', '固定長度 k 的連續子陣列，哪一段總和最大？', 'chapter-02',
      [('array', '整數（1–12 個，可含負數）', '4, -2, 5, 1, -3, 6, 2', 'text'), ('k', '視窗長度 k', '3', 'number')],
      'sum 永遠等於目前視窗內元素總和；移動時只減掉離開者、加上進入者。', 'O(n) 時間、O(1) 額外空間；負數也適用固定長度視窗。'),
@@ -103,7 +103,7 @@ def lab_markup():
 <form class="lab-inputs js-only" novalidate>{form}<button type="submit" class="button secondary">套用輸入</button><p class="lab-error" role="alert" hidden></p></form>
 <div class="lab-controls js-only"><button type="button" data-action="prev" aria-label="{title}上一步">上一步</button><button type="button" data-action="next" aria-label="{title}下一步">下一步 <span aria-hidden="true">→</span></button><button type="button" data-action="reset" aria-label="{title}重新開始">重新開始</button><span class="lab-step" aria-live="off"></span></div>
 <div class="lab-stage js-only"><div class="lab-visual" aria-label="{title}目前狀態"></div><dl class="lab-vars"></dl><p class="lab-explanation" role="status" aria-live="polite" aria-atomic="true"></p></div>
-<div class="lab-principle"><strong>不變量</strong><p>{invariant}</p><small>{cost} 以上不含教學追蹤紀錄。</small></div>
+<div class="lab-principle"><strong>不變量</strong><p>{invariant}</p><small>{cost}</small></div>
 <noscript><p class="lab-noscript">啟用 JavaScript 即可逐步操作本實驗。先<a href="#{chapter}">閱讀章節中的完整步驟、圖解與 Python 範例</a>。</p></noscript>
 </section>''')
     return '\n'.join(blocks)
@@ -113,7 +113,7 @@ def build(root: Path = ROOT, output: Path | None = None):
     output = output or root / 'index.html'
     missing = [f'{i:02}.html' for i in range(1, 14) if not (root / 'chapters' / f'{i:02}.html').is_file()]
     if missing:
-        raise ValueError('無法建置：缺少 chapters/' + ', chapters/'.join(missing) + '。不會以假內容替代。')
+        raise ValueError('無法建置：缺少 chapters/' + ', chapters/'.join(missing))
     all_ids = set()
     all_refs = []
     contents, meta, sidebar, cards = [], [], [], []
@@ -142,10 +142,10 @@ def build(root: Path = ROOT, output: Path | None = None):
             sidebar.append(f'<li class="nav-group">{group}</li>')
             previous_group = group
         sidebar.append(f'<li><a class="chapter-link" data-chapter="{chapter_id}" href="#{chapter_id}"><span class="chapter-number">{i:02}</span><span>{html.escape(short)}</span><span class="nav-done" aria-hidden="true"></span></a></li>')
-        cards.append(f'<li><a href="#{chapter_id}"><span class="map-number">{i:02}</span><span class="map-content"><strong>{html.escape(short)}</strong><span class="map-summary">{html.escape(description)}</span></span><small class="map-part">{group}</small><span class="map-arrow" aria-hidden="true">↗</span></a></li>')
+        cards.append(f'<li><a href="#{chapter_id}"><span class="map-number">{i:02}</span><span class="map-content"><strong>{html.escape(short)}</strong><span class="map-summary">{html.escape(description)}</span></span><span class="map-arrow" aria-hidden="true">→</span></a></li>')
     source = root / 'source'
-    replacements = {'STYLES': (source / 'styles.css').read_text(), 'APP_JS': (source / 'app.js').read_text(), 'LABS_JS': (source / 'labs.js').read_text(), 'CHAPTERS': '\n'.join(contents), 'CHAPTER_META': json.dumps(meta, ensure_ascii=False, separators=(',', ':')).replace('<', '\\u003c'), 'SIDEBAR': '\n'.join(sidebar), 'CHAPTER_MAP': '\n'.join(cards), 'LABS': lab_markup(), 'TOPIC_COUNT': str(sum(len(ch['topics']) for ch in meta))}
-    rendered = (source / 'shell.html').read_text()
+    replacements = {'STYLES': (source / 'styles.css').read_text(encoding='utf-8'), 'APP_JS': (source / 'app.js').read_text(encoding='utf-8'), 'LABS_JS': (source / 'labs.js').read_text(encoding='utf-8'), 'CHAPTERS': '\n'.join(contents), 'CHAPTER_META': json.dumps(meta, ensure_ascii=False, separators=(',', ':')).replace('<', '\\u003c'), 'SIDEBAR': '\n'.join(sidebar), 'CHAPTER_MAP': '\n'.join(cards), 'LABS': lab_markup(), 'TOPIC_COUNT': str(sum(len(ch['topics']) for ch in meta))}
+    rendered = (source / 'shell.html').read_text(encoding='utf-8')
     for key, value in replacements.items():
         rendered = rendered.replace('{{' + key + '}}', value)
     if re.search(r'\{\{[A-Z_]+\}\}', rendered):
@@ -161,7 +161,7 @@ def build(root: Path = ROOT, output: Path | None = None):
     broken = sorted({ref for ref in final.refs if ref and ref not in ids})
     if broken:
         raise ValueError('無效的內部連結: ' + ', '.join(broken))
-    output.write_text(rendered, encoding='utf-8')
+    output.write_text(rendered, encoding='utf-8', newline='\n')
     return {'chapters': len(meta), 'topics': sum(len(ch['topics']) for ch in meta), 'bytes': output.stat().st_size, 'path': str(output)}
 
 if __name__ == '__main__':

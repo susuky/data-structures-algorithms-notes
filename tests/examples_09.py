@@ -27,6 +27,8 @@ def upper_bound(values, target):
 
 def first_true(n, predicate):
     """predicate 在 [0, n) 先 False 後 True；全 False 回傳 n。"""
+    if n < 0:
+        raise ValueError("搜尋範圍長度不可為負")
     lo, hi = 0, n
     while lo < hi:
         mid = (lo + hi) // 2
@@ -51,6 +53,8 @@ def minimum_capacity(weights, days):
         for weight in weights:
             if load + weight > capacity:
                 used_days += 1
+                if used_days > days:
+                    return False
                 load = 0
             load += weight
         return used_days <= days
@@ -98,6 +102,15 @@ def run_tests():
     for n in range(20):
         for boundary in range(n + 1):
             assert first_true(n, lambda x, b=boundary: x >= b) == boundary
+    calls = []
+    assert first_true(0, lambda x: calls.append(x)) == 0
+    assert calls == []
+    try:
+        first_true(-1, lambda x: True)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("應拒絕負範圍長度")
     assert minimum_capacity([3, 2, 4, 1, 3], 3) == 5
     assert minimum_capacity([3, 2, 4, 1, 3], 1) == 13
     assert minimum_capacity([3, 2, 4, 1, 3], 8) == 4

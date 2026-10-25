@@ -90,6 +90,28 @@ def merge_sorted(a, b):
     return dummy.next
 
 
+def is_palindrome(head):
+    """判斷無環串列是否為回文，結束前還原所有 next。"""
+    if head is None or head.next is None:
+        return True
+    first_half_end = fast = head
+    while fast.next is not None and fast.next.next is not None:
+        first_half_end = first_half_end.next
+        fast = fast.next.next
+
+    second_half = reverse(first_half_end.next)
+    left, right = head, second_half
+    matched = True
+    while right is not None:
+        if left.value != right.value:
+            matched = False
+            break
+        left, right = left.next, right.next
+
+    first_half_end.next = reverse(second_half)
+    return matched
+
+
 def expect_value_error(fn):
     try:
         fn()
@@ -139,6 +161,15 @@ def run_tests():
     a, b = Node(2), Node(2)
     result = merge_sorted(a, b)
     assert result is a and a.next is b and b.next is None  # 相等時取 a，保持穩定。
+    for values in ([], [1], [1, 1], [1, 2], [1, 2, 1], [1, 2, 2, 1], [1, 2, 3, 1]):
+        head = from_values(values)
+        links, node = [], head
+        while node is not None:
+            links.append((node, node.next))
+            node = node.next
+        assert is_palindrome(head) == (values == values[::-1])
+        assert all(node.next is following for node, following in links)
+        assert to_values(head) == values
 
 
 if __name__ == "__main__":

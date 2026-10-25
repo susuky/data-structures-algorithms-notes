@@ -59,6 +59,19 @@ def longest_subarray_sum(nums: list[int], target: int) -> tuple[int, int]:
     return best
 
 
+def longest_unique_window(text: str) -> tuple[int, int]:
+    """最長無重複字元區間；同長取最早，回傳半開邊界。"""
+    last_position = {}
+    left = 0
+    best = (0, 0)
+    for right, char in enumerate(text):
+        left = max(left, last_position.get(char, -1) + 1)
+        if right + 1 - left > best[1] - best[0]:
+            best = (left, right + 1)
+        last_position[char] = right
+    return best
+
+
 def group_anagrams(words: list[str]) -> list[list[str]]:
     """只接受 a 到 z；保留各組輸入順序及分組首次出現順序。"""
     groups = {}
@@ -102,6 +115,11 @@ if __name__ == "__main__":
     assert count_subarrays_sum([2, -1, 2, 1, -2], 2) == 4
     assert count_subarrays_sum([0, 0, 0], 0) == 6
     assert longest_subarray_sum([1, -1, 1], 1) == (0, 3)
+    assert two_sum_any([1, 2, 8, 9], 10) == (1, 2)
+    assert two_sum_any([3, 3, 7], 10) == (0, 2)
+    for text, expected in [("", (0, 0)), ("aaaa", (0, 1)), ("abba", (0, 2)),
+                           ("tmmzuxt", (2, 7)), ("資🙂料🙂", (0, 3))]:
+        assert longest_unique_window(text) == expected
     assert group_anagrams(["arc", "b", "car", "", "", "rab", "bar"]) == [
         ["arc", "car"], ["b"], ["", ""], ["rab", "bar"]]
     assert group_anagrams([]) == []

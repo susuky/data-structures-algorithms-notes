@@ -49,6 +49,9 @@ for (let n = 0; n <= 6; n++) for (const arr of arrays(n, [0, 2])) {
     }
   }
 }
+const bestWindow = a['sliding-window']({array: [4, -2, 5, 1, -3, 6, 2], k: 3}).at(-1);
+equal(bestWindow.active, [0, 1, 2], 'completion highlights the best window, not the last visited window');
+equal(bestWindow.vars.sum, bestWindow.result.sum);
 const allEdges = ['A-B','A-C','A-D','B-C','B-E','C-D','D-E','E-F'];
 for (let mask = 0; mask < 256; mask++) for (const start of ['A', 'C', 'F']) {
   const edges = allEdges.filter((_, i) => mask & (1 << i));
