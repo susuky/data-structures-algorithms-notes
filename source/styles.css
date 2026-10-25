@@ -2775,4 +2775,20 @@ article pre code {
   .chapter-directory {
     padding-top: 16px;
   }
+
+  .lab-heading {
+    display: grid;
+    grid-template-columns: 27px minmax(0, 1fr);
+    gap: 10px 12px;
+  }
+
+  .lab-heading>div {
+    min-width: 0;
+  }
+
+  .lab-chapter-link {
+    grid-column: 2;
+    justify-self: start;
+    margin-left: 0;
+  }
 }
