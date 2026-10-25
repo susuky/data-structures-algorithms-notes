@@ -9,15 +9,15 @@
 <li><strong>邊界：</strong>空問題的答案是什麼？哪些狀態不可達？最小化的不可達通常用正無限大，最大化常用負無限大。</li>
 <li><strong>順序：</strong>讀取某個狀態前，它依賴的結果是否都已算好？依賴較小金額就由小到大；區間依賴較短區間就由短到長。</li>
 <li><strong>答案：</strong>是 dp[n]、整列最大值、所有合法終態的最大值，還是其他位置？</li>
-<li><strong>成本：</strong>狀態數 × 每狀態轉移成本，再加前處理、輸出與資料結構操作。空間要包含表格、遞迴、重建答案。</li></ol>
-<div class="callout"><strong>足夠的狀態：</strong>兩段歷史若映射到同一狀態，它們之後的合法選擇與所求結果必須相同；最佳化時，可只保留這個狀態下最好的已累積值。若過去某個資訊仍會改變未來，就不能丟掉它。回溯的整條 path 往往資訊太多，但只存「目前走到第幾步」又可能太少。</div>
+<li><strong>成本：</strong><mark>狀態數 × 每狀態轉移成本</mark>，再加前處理、輸出與資料結構操作。空間要包含表格、遞迴、重建答案。</li></ol>
+<div class="callout"><strong>足夠的狀態：</strong>兩段歷史若映射到同一狀態，<mark class="mark-invariant">它們之後的合法選擇與所求結果必須相同</mark>；最佳化時，可只保留這個狀態下最好的已累積值。若過去某個資訊仍會改變未來，就不能丟掉它。回溯的整條 path 往往資訊太多，但只存「目前走到第幾步」又可能太少。</div>
 <p>「重疊子問題」說明為什麼可以省下重算；「最優子結構」說明局部子問題的最佳答案能組成整體最佳答案。兩者都需要由題意論證。用遞迴求解的問題，也不一定適合 DP：若子問題根本不重複，cache 可能只增加開銷；若轉移含循環，普通遞迴記憶化還可能無限遞迴，需另外處理循環與求解方法。</p>
 
 <h3 id="c11-memo">11.2 自頂向下：先寫遞迴，再記住答案</h3>
 <p class="problem-link"><a href="https://leetcode.com/problems/coin-change/">LeetCode 322．Coin Change</a>。coins=[1,3,4]、amount=6，最少需要 2 枚。</p>
 <p>面額都是正整數，每種硬幣可以無限使用。求恰好湊成 amount 的最少枚數，不能湊出就回傳 −1。令 best(a) 為湊 a 的最少枚數。最後放入一枚 c 之前，必須先湊出 a−c，因此 best(a)=min(1+best(a−c))，只考慮 c≤a。best(0)=0，沒有合法選法則為無限大。</p>
 <figure class="diagram"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="重疊子問題：湊 6 的兩條分支都會需要 best(2)，記憶化只計算一次" viewBox="0 0 760 360"><title>重疊子問題：湊 6 的兩條分支都會需要 best(2)，記憶化只計算一次</title><rect x="0" y="0" width="760" height="360" rx="12" fill="#f8fafc"/><path d="M380,66 L155,140" stroke="#64748b" stroke-width="2" fill="none"/><text x="267.5" y="98.0" text-anchor="middle" font-size="14" fill="#334155">−1</text><path d="M380,66 L380,140" stroke="#64748b" stroke-width="2" fill="none"/><text x="380.0" y="98.0" text-anchor="middle" font-size="14" fill="#334155">−3</text><path d="M380,66 L605,140" stroke="#64748b" stroke-width="2" fill="none"/><text x="492.5" y="98.0" text-anchor="middle" font-size="14" fill="#334155">−4</text><path d="M155,184 L380,250" stroke="#64748b" stroke-width="2" fill="none"/><text x="267.5" y="212.0" text-anchor="middle" font-size="14" fill="#334155">−3</text><path d="M380,184 L380,250" stroke="#64748b" stroke-width="2" fill="none"/><text x="380.0" y="212.0" text-anchor="middle" font-size="14" fill="#334155">−1</text><rect x="305" y="24" width="150" height="42" rx="8" fill="#dbeafe" stroke="#334155"/><text x="380.0" y="50.0" text-anchor="middle" font-size="16" fill="#0f172a">best(6)</text><rect x="85" y="140" width="140" height="44" rx="8" fill="#dbeafe" stroke="#334155"/><text x="155.0" y="167.0" text-anchor="middle" font-size="16" fill="#0f172a">best(5)</text><rect x="310" y="140" width="140" height="44" rx="8" fill="#dbeafe" stroke="#334155"/><text x="380.0" y="167.0" text-anchor="middle" font-size="16" fill="#0f172a">best(3)</text><rect x="535" y="140" width="140" height="44" rx="8" fill="#dcfce7" stroke="#334155"/><text x="605.0" y="167.0" text-anchor="middle" font-size="16" fill="#0f172a">best(2)</text><rect x="280" y="250" width="200" height="44" rx="8" fill="#dcfce7" stroke="#334155"/><text x="380.0" y="277.0" text-anchor="middle" font-size="16" fill="#0f172a">同一個 best(2)</text><text x="35" y="335" font-size="15" fill="#0f172a">圖只畫出部分相依邊；面額是 1、3、4。</text></svg><figcaption>重疊子問題：湊 6 的兩條分支都會需要 best(2)，記憶化只計算一次</figcaption></figure>
-<p>不加記憶化時，相同餘額會被沿不同路徑重算。加上 cache 後，每個餘額的函式主體只執行一次。面額正值保證餘額嚴格下降，轉移沒有循環。下面將快取放在函式內，讓每次呼叫使用自己的面額集合，不會把另一組輸入的答案誤當成相同問題。</p>
+<p>不加記憶化時，相同餘額會被沿不同路徑重算。加上 cache 後，<mark>每個餘額的函式主體只執行一次</mark>。面額正值保證餘額嚴格下降，轉移沒有循環。下面將快取放在函式內，讓每次呼叫使用自己的面額集合，不會把另一組輸入的答案誤當成相同問題。</p>
 <pre><code class="language-python">from functools import cache
 from math import inf
 
@@ -45,7 +45,7 @@ def minimum_coins_memo(coins, amount):
 
 <h3 id="c11-tabulation">11.3 自底向上：按相依順序填表</h3>
 
-<p>由於 a−c&lt;a，金額從 0 遞增就是合法順序。dp[a] 更新時，它讀取的所有較小金額都已完成。這樣不用遞迴，也省下函式呼叫和雜湊快取的開銷。</p>
+<p>由於 a−c&lt;a，金額從 0 遞增就是合法順序。dp[a] 更新時，<mark class="mark-invariant">它讀取的所有較小金額都已完成</mark>。這樣不用遞迴，也省下函式呼叫和雜湊快取的開銷。</p>
 <pre><code class="language-python">def minimum_coins(coins, amount):
     values = sorted(set(coins))
     if amount &lt; 0 or any(c &lt;= 0 for c in values):
@@ -70,7 +70,7 @@ def minimum_coins_memo(coins, amount):
 </tbody></table></div>
 <p>每次拿最大面額會取 4+1+1，共 3 枚；DP 比較所有最後一步，找到 3+3。</p>
 <h4>從最少枚數還原一組硬幣</h4>
-<p>更新 dp[total] 時，同時用 chosen[total] 記住最後一枚硬幣。從目標金額反覆減去這枚硬幣，就能沿著已記錄的選擇回到 0。只在枚數嚴格變少時更新，平手時保留先找到的方案。</p>
+<p>更新 dp[total] 時，同時<mark>用 chosen[total] 記住最後一枚硬幣</mark>。從目標金額反覆減去這枚硬幣，就能沿著已記錄的選擇回到 0。只在枚數嚴格變少時更新，平手時保留先找到的方案。</p>
 <pre><code class="language-python">def minimum_coin_solution(coins, amount):
     &quot;&quot;&quot;回傳一組最少硬幣；無解為 None，金額 0 為 []。&quot;&quot;&quot;
     values = sorted(set(coins))
@@ -121,7 +121,7 @@ def minimum_coins_memo(coins, amount):
         for limit in range(capacity, weight - 1, -1):
             dp[limit] = max(dp[limit], dp[limit - weight] + value)
     return dp[capacity]</code></pre>
-<p><strong>一維不變量：</strong>處理某件物品、由大容量往小容量掃描時，比目前容量更小的格子尚未更新，所以 dp[w−a] 仍代表「沒有使用這一件」的上一輪答案。這正是每件只用一次所需的語意。若改由小往大，會讀到本輪新值，等同允許重用同一物品。</p>
+<p><strong>一維不變量：</strong>處理某件物品、<mark class="mark-invariant">由大容量往小容量掃描</mark>時，比目前容量更小的格子尚未更新，所以 dp[w−a] 仍代表「沒有使用這一件」的上一輪答案。這正是每件只用一次所需的語意。若改由小往大，會讀到本輪新值，等同允許重用同一物品。</p>
 <div class="example"><h4>逐步例子二：樣品 (2,4)、(3,5)、(4,7)，容量 5</h4>
 <table><thead><tr><th>完成的物品</th><th>容量 0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr></thead><tbody>
 <tr><td>尚未處理</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
@@ -129,12 +129,12 @@ def minimum_coins_memo(coins, amount):
 <tr><td>再處理 (3,5)</td><td>0</td><td>0</td><td>4</td><td>5</td><td>5</td><td>9</td></tr>
 <tr><td>再處理 (4,7)</td><td>0</td><td>0</td><td>4</td><td>5</td><td>7</td><td>9</td></tr>
 </tbody></table><p>第二輪先更新容量 5：max(4, dp[2]+5)=9。此時 dp[2]=4 仍是上一輪的值，恰好代表挑第一件、再挑第二件。答案為 9，沒有必要用完所有物品。</p></div>
-<div class="complexity">n 件物品、容量 W：時間 O(nW)，完整二維表 O(nW) 空間，一維壓縮 O(W)。這同樣是偽多項式。若題目改成「恰好用滿 W」，初值必須改成 dp[0]=0、其餘負無限大，並維持不可達語意；全部設 0 會把沒湊出的重量誤認為合法。</div>
+<div class="complexity">n 件物品、容量 W：時間 O(nW)，完整二維表 O(nW) 空間，一維壓縮 O(W)。這同樣是偽多項式。若題目改成「恰好用滿 W」，初值必須改成 <mark class="mark-pitfall">dp[0]=0、其餘負無限大</mark>，並維持不可達語意；全部設 0 會把沒湊出的重量誤認為合法。</div>
 <p>壓縮空間時，也會丟掉歷史決策。若要重建選了哪些物品，最直接的做法是保留二維表，從最後一列逆推選／不選；不要假設最後那一維數字已保留每次取用的物品。先確認狀態與計算順序都正確，再壓縮空間。</p>
 
 <h3 id="c11-multidimensional">11.5 兩個進度：最長共同子序列</h3>
 <p class="problem-link"><a href="https://leetcode.com/problems/longest-common-subsequence/">LeetCode 1143．Longest Common Subsequence</a>。回傳共同子序列的長度。</p>
-<p>子序列可以刪掉元素，但保留相對順序；不要求連續。令 dp[i][j] 為 a 的前 i 個元素與 b 的前 j 個元素的最長共同子序列（LCS）長度。兩個前綴各有自己的進度，所以要兩個索引，不能只記較短長度或目前匹配總數。</p>
+<p>子序列可以刪掉元素，但保留相對順序；不要求連續。令 dp[i][j] 為 a 的前 i 個元素與 b 的前 j 個元素的最長共同子序列（LCS）長度。<mark>兩個前綴各有自己的進度，所以要兩個索引</mark>，不能只記較短長度或目前匹配總數。</p>
 <ul><li>末元素相同：存在一個最優解配對這兩個末元素，故 dp[i][j]=dp[i−1][j−1]+1。</li><li>末元素不同：它們不可能作為同一配對，至少跳過一邊，故取 max(dp[i−1][j], dp[i][j−1])。</li><li>任一前綴長度為 0：共同子序列長度是 0。</li></ul>
 <pre><code class="language-python">def lcs_length(a, b):
     &quot;&quot;&quot;子序列可跳過元素，但不能改變相對次序。&quot;&quot;&quot;
@@ -152,7 +152,7 @@ def minimum_coins_memo(coins, amount):
 
 <h3 id="c11-matrix">11.6 矩陣 DP：路徑與障礙</h3>
 <p class="problem-link"><a href="https://leetcode.com/problems/minimum-path-sum/">LeetCode 64．Minimum Path Sum</a> 的延伸：加入 None 障礙、負代價與無路可走時回傳 None 的規則。</p>
-<p>在矩形格子中，每格有通過代價，只能向右或向下；None 表示不可走。求從左上走到右下的最小總和，起點與終點代價都算。dp[r][c] 是「抵達這格」的最小總和，並非「從這格出發」的剩餘代價。相依格子是上方與左方，因此按列、再按欄遞增即可。</p>
+<p>在矩形格子中，每格有通過代價，只能向右或向下；None 表示不可走。求從左上走到右下的最小總和，起點與終點代價都算。dp[r][c] 是「抵達這格」的最小總和，並非「從這格出發」的剩餘代價。<mark class="mark-invariant">相依格子是上方與左方</mark>，因此按列、再按欄遞增即可。</p>
 <figure class="diagram"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="矩陣的局部相依：右下格只能從上或左抵達，形成無環的相依圖" viewBox="0 0 760 285"><title>矩陣的局部相依：右下格只能從上或左抵達，形成無環的相依圖</title><rect x="0" y="0" width="760" height="285" rx="12" fill="#f8fafc"/><rect x="245" y="20" width="150" height="58" rx="8" fill="#dbeafe" stroke="#334155"/><text x="320.0" y="54.0" text-anchor="middle" font-size="16" fill="#0f172a">上：dp[r−1][c]</text><rect x="30" y="130" width="165" height="58" rx="8" fill="#dbeafe" stroke="#334155"/><text x="112.5" y="164.0" text-anchor="middle" font-size="16" fill="#0f172a">左：dp[r][c−1]</text><rect x="245" y="130" width="185" height="58" rx="8" fill="#dcfce7" stroke="#334155"/><text x="337.5" y="164.0" text-anchor="middle" font-size="16" fill="#0f172a">目前：dp[r][c]</text><path d="M320,78 L320,130" stroke="#64748b" stroke-width="2" fill="none"/><path d="M195,159 L245,159" stroke="#64748b" stroke-width="2" fill="none"/><text x="475" y="60" font-size="16" fill="#0f172a">取上、左的較小值，</text><text x="475" y="90" font-size="16" fill="#0f172a">再加目前格子的代價。</text><text x="475" y="143" font-size="16" fill="#0f172a">障礙＝不可達（∞）</text><text x="475" y="174" font-size="16" fill="#0f172a">起點＝起點自己的代價</text><text x="35" y="250" font-size="16" fill="#0f172a">列由上到下、欄由左到右；即使代價有負數，仍沒有循環。</text></svg><figcaption>矩陣的局部相依：右下格只能從上或左抵達，形成無環的相依圖</figcaption></figure>
 <pre><code class="language-python">def minimum_grid_path(grid):
     &quot;&quot;&quot;只能往右或下；None 是障礙。回傳最小總和，無路可走則 None。&quot;&quot;&quot;
@@ -190,7 +190,7 @@ def minimum_coins_memo(coins, amount):
 <p>每天有一個價格，可以多次買賣，但最多持有一股；賣出後隔天必須冷卻，不能買入。光存「到今天的最高收益」不足以描述明天能做什麼：持股與否、今天是否剛賣出都會影響下一步。把一天結束的狀態分成：</p>
 <ul><li>hold：結束時持有一股的最大淨現金；買入花的錢已扣除。</li><li>sold：恰在今天賣出，結束時不持股的最大收益。</li><li>rest：結束時不持股，而且今天沒有賣出的最大收益；明天可買。</li></ul>
 <figure class="diagram"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="有冷卻日的交易狀態：所有箭頭都從昨天移動到今天，不可原地連走兩條" viewBox="0 0 760 325"><title>有冷卻日的交易狀態：所有箭頭都從昨天移動到今天，不可原地連走兩條</title><rect x="0" y="0" width="760" height="325" rx="12" fill="#f8fafc"/><rect x="30" y="100" width="170" height="55" rx="8" fill="#dbeafe" stroke="#334155"/><text x="115.0" y="132.5" text-anchor="middle" font-size="16" fill="#0f172a">rest：可買入</text><rect x="295" y="100" width="170" height="55" rx="8" fill="#fef3c7" stroke="#334155"/><text x="380.0" y="132.5" text-anchor="middle" font-size="16" fill="#0f172a">hold：持股</text><rect x="560" y="100" width="170" height="55" rx="8" fill="#dcfce7" stroke="#334155"/><text x="645.0" y="132.5" text-anchor="middle" font-size="16" fill="#0f172a">sold：今天賣出</text><path d="M200,127 L295,127" stroke="#64748b" stroke-width="2" fill="none"/><text x="247.5" y="122.0" text-anchor="middle" font-size="14" fill="#334155">買：−p</text><path d="M465,127 L560,127" stroke="#64748b" stroke-width="2" fill="none"/><text x="512.5" y="122.0" text-anchor="middle" font-size="14" fill="#334155">賣：+p</text><path d="M645,155 L645,225 L115,225 L115,155" stroke="#64748b" fill="none" stroke-width="2"/><text x="255" y="253" font-size="16" fill="#0f172a">sold → rest：度過一天冷卻，收益不變</text><text x="35" y="50" font-size="16" fill="#0f172a">rest → rest：休息；hold → hold：繼續持有。</text><text x="35" y="292" font-size="16" fill="#0f172a">沒有 sold → hold 的隔日邊，因此賣出後隔天不能買。</text></svg><figcaption>有冷卻日的交易狀態：所有箭頭都從昨天移動到今天，不可原地連走兩條</figcaption></figure>
-<p>處理今天價格 p 時，新 hold=max(舊 hold, 舊 rest−p)，新 sold=舊 hold+p，新 rest=max(舊 rest, 舊 sold)。舊 sold 今天只能進入 rest 度過冷卻，不能直接買入。所有轉移都必須讀昨天的值；若先覆寫 rest，再拿新 rest 去算 hold，就可能讓昨天剛賣出的錢在今天立刻買入。</p>
+<p>處理今天價格 p 時，新 hold=max(舊 hold, 舊 rest−p)，新 sold=舊 hold+p，新 rest=max(舊 rest, 舊 sold)。舊 sold 今天只能進入 rest 度過冷卻，不能直接買入。<mark class="mark-invariant">所有轉移都必須讀昨天的值</mark>；若先覆寫 rest，再拿新 rest 去算 hold，就可能讓昨天剛賣出的錢在今天立刻買入。</p>
 <pre><code class="language-python">def cooldown_profit(prices):
     &quot;&quot;&quot;可多次交易，最多持有一股；賣出後隔天不能買入。&quot;&quot;&quot;
     hold = sold = float(&quot;-inf&quot;)
@@ -216,7 +216,7 @@ def minimum_coins_memo(coins, amount):
 
 <h3 id="c11-state-audit">11.8 先審狀態，再估複雜度</h3>
 <p><strong>完整性檢查：</strong>背包狀態漏掉容量會混合不同問題；路徑不能重訪時漏掉 visited 集合會混合不同合法選項；限制相鄰字元時漏掉上一個字元會允許違規轉移。反過來，把整段 path 放進 key 可能完全保留歷史，卻幾乎無法合併狀態，並付出建立 tuple 與雜湊的成本。</p>
-<p><strong>狀態數檢查：</strong>i 有 n 種、容量 w 有 W 種，最多 nW 個；但「已選集合」有 2ⁿ 種，不能因為它只用一個整數 mask 儲存，就說只有 n 種狀態。若還記最後一個點 last，狀態可能是 n·2ⁿ，每個狀態再試 n 個下一點，時間可能到 O(n²·2ⁿ)。cache 只避免同狀態重算，無法消除本來就不同的指數個狀態。</p>
+<p><strong>狀態數檢查：</strong>i 有 n 種、容量 w 有 W 種，最多 nW 個；但<mark class="mark-pitfall">「已選集合」有 2ⁿ 種</mark>，不能因為它只用一個整數 mask 儲存，就說只有 n 種狀態。若還記最後一個點 last，狀態可能是 n·2ⁿ，每個狀態再試 n 個下一點，時間可能到 O(n²·2ⁿ)。cache 只避免同狀態重算，無法消除本來就不同的指數個狀態。</p>
 <p><strong>Python 成本檢查：</strong>切片、拼字串、建立 tuple 都可能不是 O(1)；使用 a[i:] 當狀態，不如用索引 i。大整數計數可能長到數百或數千位，整數加法也有位元成本。本章常見 O(狀態×轉移) 估計採用比較與有界整數運算為 O(1) 的模型；處理巨大計數或位元遮罩時需補上數值長度成本。</p>
 
 <h3 id="c11-exercises">11.9 練習：把題意翻成狀態</h3>
@@ -233,7 +233,7 @@ def minimum_coins_memo(coins, amount):
             if step &gt; total:
                 break
             dp[total] += dp[total - step]
-    return dp[n]</code></pre><p>dp[0..5]=[1,1,1,2,4,6]，答案 6。輸入 M 個步長、去重後 D 種，時間 O(M + D log D + nD)、空間 O(n+D)，以整數加法 O(1) 模型估計。</p><p>計數是否區分順序，會改變迴圈語意。步長 [1,2] 湊出 3：序列有 [1,1,1]、[1,2]、[2,1] 三種；組合只有 [1,1,1]、[1,2] 兩種。序列由外層枚舉總額、內層枚舉最後一步；組合則外層先枚舉面額、內層金額遞增，讓每個組合按固定面額順序建構。</p></details></section>
+    return dp[n]</code></pre><p>dp[0..5]=[1,1,1,2,4,6]，答案 6。輸入 M 個步長、去重後 D 種，時間 O(M + D log D + nD)、空間 O(n+D)，以整數加法 O(1) 模型估計。</p><p>計數是否區分順序，會改變迴圈語意。步長 [1,2] 湊出 3：序列有 [1,1,1]、[1,2]、[2,1] 三種；組合只有 [1,1,1]、[1,2] 兩種。序列由外層枚舉總額、內層枚舉最後一步；組合則<mark>外層先枚舉面額、內層金額遞增</mark>，讓每個組合按固定面額順序建構。</p></details></section>
 <section class="exercise"><h4>練習二：不能連續接案</h4>
 <p class="problem-link"><a href="https://leetcode.com/problems/house-robber/">LeetCode 198．House Robber</a> 的延伸：允許負分與空輸入，可全部不選。</p><p>每天接案會得到 values[i] 分，接案後隔天必須休息，可全部不接；求最高分。分數可能為負。例如 [4,−1,6,3] 的答案為 10。請使用 O(1) 輔助空間。</p>
 <details><summary>參考解答</summary><p>令 f[i] 為前 i 天的最高分。最後一天不接是 f[i−1]，接則是 f[i−2]+當天分數。邊界空前綴為 0，只保留前兩個值。允許不接任何案子，所以全負輸入答案為 0。</p><pre><code class="language-python">def best_nonadjacent(values):
@@ -244,7 +244,7 @@ def minimum_coins_memo(coins, amount):
     return previous</code></pre><p>每一天兩個選擇，時間 O(n)、空間 O(1)。若題目規定至少接一天，不能照抄這組全零邊界，因為空選擇不再合法。</p></details></section>
 <section class="exercise"><h4>練習三：最少插入成回文</h4>
 <p class="problem-link"><a href="https://leetcode.com/problems/minimum-insertion-steps-to-make-a-string-palindrome/">LeetCode 1312．Minimum Insertion Steps to Make a String Palindrome</a>。回傳最少插入次數，空字串回傳 0。</p><p>可以在字串任意位置插入字元，不能刪除或替換，求變成回文的最少插入次數。"ABCA" 只要插入一個字元就能得到 "ABCBA"。</p>
-<details><summary>參考解答</summary><p>dp[l][r] 是原字串閉區間 l..r 的答案。兩端相同，只處理內部；不同則在另一端插入一個字元，代價是 1+min(dp[l+1][r],dp[l][r−1])。長度 0 或 1 已是回文。每次依賴較短區間，因此外層按區間長度遞增。</p><pre><code class="language-python">def minimum_palindrome_insertions(text):
+<details><summary>參考解答</summary><p>dp[l][r] 是原字串閉區間 l..r 的答案。兩端相同，只處理內部；不同則在另一端插入一個字元，代價是 1+min(dp[l+1][r],dp[l][r−1])。長度 0 或 1 已是回文。<mark class="mark-invariant">每次依賴較短區間</mark>，因此外層按區間長度遞增。</p><pre><code class="language-python">def minimum_palindrome_insertions(text):
     n = len(text)
     if n == 0:
         return 0
@@ -260,7 +260,7 @@ def minimum_coins_memo(coins, amount):
     return dp[0][n - 1]</code></pre><p>O(n²) 時間、O(n²) 空間。若從左到右隨意掃 l、r，可能讀到尚未算好的較短區間；依賴圖比陣列外觀更重要。</p></details></section>
 <section class="exercise"><h4>練習四：指數 DP 的工作分配</h4>
 <p>n 個人分配 n 份工作，每人一份、每份只用一次。cost[i][j] 是第 i 人做第 j 份工作的代價，求總代價最小值。只討論 n 很小的情況；這題也有更適合大型輸入的專門演算法。</p>
-<details><summary>參考解答</summary><p>mask 的第 j 位為 1 表示第 j 份工作已用；已安排的人數等於 mask 中 1 的數量，所以不用再存 person。dp[mask] 是前 person 人完成這些工作的最小代價。枚舉下一份未使用的工作，設位後的 next_mask 一定大於 mask，數值遞增就是合法順序。</p><pre><code class="language-python">def minimum_assignment(cost):
+<details><summary>參考解答</summary><p>mask 的第 j 位為 1 表示第 j 份工作已用；<mark>已安排的人數等於 mask 中 1 的數量</mark>，所以不用再存 person。dp[mask] 是前 person 人完成這些工作的最小代價。枚舉下一份未使用的工作，設位後的 next_mask 一定大於 mask，數值遞增就是合法順序。</p><pre><code class="language-python">def minimum_assignment(cost):
     &quot;&quot;&quot;n 個人各分配一份不同工作；cost[人][工作] 為代價。&quot;&quot;&quot;
     n = len(cost)
     if any(len(row) != n for row in cost):

@@ -10,6 +10,21 @@
   --tint: #eef3ed;
   --warm: #f1eee6;
   --mark: #fae9a4;
+  --highlight-key: #ffe480;
+  --highlight-invariant: #bcebd2;
+  --highlight-pitfall: #ffccb6;
+  --code-bg: #f4f7fb;
+  --code-ink: #26374a;
+  --code-border: #d4dfec;
+  --code-keyword: #7c3ba6;
+  --code-function: #1d5eac;
+  --code-string: #176b46;
+  --code-number: #a3480a;
+  --code-comment: #53647a;
+  --code-operator: #8c3c70;
+  --code-builtin: #825400;
+  --code-class: #006b77;
+  --code-punctuation: #59677b;
   --sidebar-width: 280px;
   --topbar-height: 76px;
   --shadow: 0 18px 70px #18302a26;
@@ -32,6 +47,21 @@
   --tint: #23382e;
   --warm: #29312b;
   --mark: #665a20;
+  --highlight-key: #665523;
+  --highlight-invariant: #224e40;
+  --highlight-pitfall: #69432c;
+  --code-bg: #101c25;
+  --code-ink: #dce7ef;
+  --code-border: #354b5d;
+  --code-keyword: #d7a8ff;
+  --code-function: #8ebcff;
+  --code-string: #94d7ae;
+  --code-number: #f6b17c;
+  --code-comment: #96a8b7;
+  --code-operator: #e9aacb;
+  --code-builtin: #ffce8f;
+  --code-class: #76d5de;
+  --code-punctuation: #a9b9ca;
   --shadow: 0 18px 70px #0006;
 }
 
@@ -884,8 +914,9 @@ article pre {
   padding: 20px 24px;
   border-radius: 4px;
   overflow: auto;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--code-bg);
+  color: var(--code-ink);
+  border: 1px solid var(--code-border);
   font-size: .8rem;
   line-height: 1.8;
   tab-size: 2;
@@ -905,6 +936,71 @@ article pre code {
   background: transparent;
   font-size: inherit;
   overflow-wrap: normal;
+}
+
+article mark {
+  --highlight: var(--highlight-key);
+  color: inherit;
+  background: linear-gradient(transparent 18%, var(--highlight) 18%, var(--highlight) 92%, transparent 92%);
+  padding: .04em .13em;
+  border-radius: .15em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+article mark.mark-invariant {
+  --highlight: var(--highlight-invariant);
+}
+
+article mark.mark-pitfall {
+  --highlight: var(--highlight-pitfall);
+}
+
+article mark code {
+  background: transparent;
+  color: inherit;
+}
+
+.token.keyword,
+.token.decorator {
+  color: var(--code-keyword);
+}
+
+.token.keyword {
+  font-weight: 600;
+}
+
+.token.function {
+  color: var(--code-function);
+}
+
+.token.string {
+  color: var(--code-string);
+}
+
+.token.number,
+.token.constant {
+  color: var(--code-number);
+}
+
+.token.comment {
+  color: var(--code-comment);
+}
+
+.token.operator {
+  color: var(--code-operator);
+}
+
+.token.builtin {
+  color: var(--code-builtin);
+}
+
+.token.class-name {
+  color: var(--code-class);
+}
+
+.token.punctuation {
+  color: var(--code-punctuation);
 }
 
 article blockquote {
@@ -1666,7 +1762,28 @@ article hr {
     --accent: #143b36;
     --tint: #f1f3f1;
     --warm: #f5f5f5;
+    --highlight-key: #ffe480;
+    --highlight-invariant: #bcebd2;
+    --highlight-pitfall: #ffccb6;
+    --code-bg: #f4f7fb;
+    --code-ink: #26374a;
+    --code-border: #d4dfec;
+    --code-keyword: #7c3ba6;
+    --code-function: #1d5eac;
+    --code-string: #176b46;
+    --code-number: #a3480a;
+    --code-comment: #53647a;
+    --code-operator: #8c3c70;
+    --code-builtin: #825400;
+    --code-class: #006b77;
+    --code-punctuation: #59677b;
     font-size: 10pt;
+  }
+
+  article mark,
+  article pre {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   body {

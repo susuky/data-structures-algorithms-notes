@@ -4,7 +4,7 @@
 <p>優先佇列定義「優先取出哪一筆」；二元堆積是實現這個介面的資料結構。本章以整數示範，先理解極值維護，再處理帶優先權的物件。</p>
 
 <h3 id="c07-shape">1. 陣列裡的完全二元樹</h3>
-<p>最小堆積維持兩項條件：形狀是一棵完全二元樹，最後一層由左至右填滿；每個父節點的值不大於其子節點。採零起算索引時，位置 i 的左子是 2i + 1、右子是 2i + 2、父節點是 (i − 1) // 2（根沒有父節點）。因此不必建立樹節點物件，就能用陣列表示。</p>
+<p>最小堆積維持兩項條件：形狀是一棵完全二元樹，最後一層由左至右填滿；<mark class="mark-invariant">每個父節點的值不大於其子節點</mark>。採零起算索引時，位置 i 的左子是 2i + 1、右子是 2i + 2、父節點是 (i − 1) // 2（根沒有父節點）。因此不必建立樹節點物件，就能用陣列表示。</p>
 <figure class="diagram"><svg role="img" aria-labelledby="c07-tree-title" viewBox="0 0 760 370" xmlns="http://www.w3.org/2000/svg">
 <title id="c07-tree-title">最小堆積樹形與陣列索引對照，根為三，但陣列不是完整排序</title>
 <g stroke="#66758c" stroke-width="3"><path d="M380 53 L200 135 M380 53 L560 135 M200 135 L110 223 M200 135 L290 223 M560 135 L470 223 M560 135 L650 223"/></g>
@@ -15,12 +15,12 @@
 <rect x="80" y="292" width="600" height="55" rx="10" fill="#d8f3e8" stroke="#387b64"/>
 <text x="103" y="326">陣列：[3, 7, 5, 12, 9, 8, 6]　根最小，兄弟無序</text>
 </g></svg><figcaption>7 可以排在 5 前面，9 也可以排在 8 前面。堆積只保證父子關係，不能對內部陣列直接做二分搜尋。</figcaption></figure>
-<p>沿根出發的每條路徑，值都不會變小，因此根是全域最小值；次小值可能在左子或右子，不同子樹之間沒有完整的大小順序。讀 heap[0] 是 O(1)，找任意值則仍可能 O(n)。如果需求是大量查第 i 小、區間搜尋或完整有序走訪，堆積未必適合。</p>
+<p>沿根出發的每條路徑，值都不會變小，因此<mark>根是全域最小值</mark>；次小值可能在左子或右子，不同子樹之間沒有完整的大小順序。讀 heap[0] 是 O(1)，找任意值則仍可能 O(n)。如果需求是大量查第 i 小、區間搜尋或完整有序走訪，堆積未必適合。</p>
 
 <h3 id="c07-repair">2. 上浮、下沉與 O(n) 建堆</h3>
 <p>加入新值時，把它放在陣列末端以保留完全樹形，再與父節點比較，必要時往上交換，稱為上浮。刪除根時，先把最後一個值補到根，然後反覆與較小的子節點交換，稱為下沉。每次只沿一條根到葉的路徑，所以比較與交換步數都是 O(log n)。</p>
 <p>修復前，新值所在路徑以外的父子關係都仍合法。沿正確方向交換，就能把唯一可能違反堆積條件的位置往上或往下移，直到所有父子關係都符合條件。下沉若任意挑一個子節點交換，可能讓另一個更小的子節點留在父節點下方，破壞堆積條件。</p>
-<p>heapify 不是把每個元素逐一 heappush。它從最後一個非葉節點往根修復；葉節點本身已是合法的單節點堆積，不需要修復。大約一半的節點不需下沉，四分之一最多下一層，八分之一最多下兩層；總成本可用 n × (1/4 + 2/8 + 3/16 + …) 這個收斂和來估計，所以是 O(n)，不是 O(n log n)。</p>
+<p>heapify 不是把每個元素逐一 heappush。它<mark>從最後一個非葉節點往根修復</mark>；葉節點本身已是合法的單節點堆積，不需要修復。大約一半的節點不需下沉，四分之一最多下一層，八分之一最多下兩層；總成本可用 n × (1/4 + 2/8 + 3/16 + …) 這個收斂和來估計，所以是 O(n)，不是 O(n log n)。</p>
 <pre><code class="language-python">import heapq
 
 heap = [12, 3, 8, 7, 9, 5, 6]
@@ -37,12 +37,12 @@ assert heapq.heappop(heap) == 3</code></pre>
 <tr><td>heappushpop(h, x)</td><td>先加入再取最小值</td><td>O(log(n + 1))；空時回傳 x、仍為空</td></tr>
 <tr><td>heapreplace(h, x)</td><td>先取原本最小值再加入 x</td><td>O(log n)；空時 IndexError</td></tr>
 </tbody></table>
-<div class="warning">heappushpop 與 heapreplace 順序不同。若 h = [4, 8, 6] 且 x = 2，pushpop 回傳 2，留下原本三個元素；replace 回傳 4，堆中則加入 2。固定容量 top-k 若不先檢查新值，就直接 heapreplace，可能把較大的候選換成較小者。</div>
+<div class="warning"><mark class="mark-pitfall">heappushpop 與 heapreplace 順序不同</mark>。若 h = [4, 8, 6] 且 x = 2，pushpop 回傳 2，留下原本三個元素；replace 回傳 4，堆中則加入 2。固定容量 top-k 若不先檢查新值，就直接 heapreplace，可能把較大的候選換成較小者。</div>
 
 <h3 id="c07-topk">3. 最大的 k 個，為何使用「最小」堆積？</h3>
 <p class="problem-source"><a href="https://leetcode.com/problems/kth-largest-element-in-an-array/">LeetCode 215 · Kth Largest Element in an Array</a> 求第 k 大的一個值；本節回傳最大的至多 k 個值，並降序排列。重複值按出現次數計，k=0 回傳 []，k 超過資料數量時回傳全部資料。</p>
-<p>要留下最大的 k 個值，根應放目前保留值中最容易被淘汰的那一個。它是「目前保留集合中最小的值」，因此選最小堆積。新值比根大就有資格進來，否則直接略過。只看「找最大」這個說法，容易誤以為這裡應該用最大堆積。</p>
-<p>不變量：處理任一前綴後，heap 恰好保存該前綴最大的 min(k, 已讀數量) 個值，重複值按各次出現計數。未滿 k 時全部保留；已滿時，只有新值大於根才交換。因為根是保留者中最小的，交換後仍是前綴最大的 k 個。</p>
+<p>要留下最大的 k 個值，<mark>根應放目前保留值中最容易被淘汰的那一個</mark>。它是「目前保留集合中最小的值」，因此選最小堆積。新值比根大就有資格進來，否則直接略過。只看「找最大」這個說法，容易誤以為這裡應該用最大堆積。</p>
+<p>不變量：處理任一前綴後，<mark class="mark-invariant">heap 恰好保存該前綴最大的 min(k, 已讀數量) 個值</mark>，重複值按各次出現計數。未滿 k 時全部保留；已滿時，只有新值大於根才交換。因為根是保留者中最小的，交換後仍是前綴最大的 k 個。</p>
 <pre><code class="language-python">import heapq
 
 def largest_k(numbers, k):
@@ -76,7 +76,7 @@ def largest_k(numbers, k):
 
 <h3 id="c07-stream">4. 資料流的第 k 大</h3>
 <p class="problem-source"><a href="https://leetcode.com/problems/kth-largest-element-in-a-stream/">LeetCode 703 · Kth Largest Element in a Stream</a> 的建構子接收 k 與初始 nums。本節從空資料流開始，建構子接收 k；add 在資料不足 k 筆時回傳 None。</p>
-<p>處理資料流時，無法預先知道總長度，也不適合每收到一筆就把所有資料重新排序。把上面的 heap 保留下來，每次 add 只更新這個大小至多 k 的狀態。資料不足 k 筆時回傳 None，避免把「目前最小值」誤稱為「第 k 大」。</p>
+<p>處理資料流時，無法預先知道總長度，也不適合每收到一筆就把所有資料重新排序。把上面的 heap 保留下來，每次 add 只更新這個大小至多 k 的狀態。<mark>資料不足 k 筆時回傳 None</mark>，避免把「目前最小值」誤稱為「第 k 大」。</p>
 <pre><code class="language-python">import heapq
 
 class KthLargest:
@@ -93,12 +93,12 @@ class KthLargest:
         elif value &gt; self.heap[0]:
             heapq.heapreplace(self.heap, value)
         return self.heap[0] if len(self.heap) == self.k else None</code></pre>
-<p>對 k = 3，依序加入 11、4、8、15、7、13，add 的回傳依序是 None、None、4、8、8、11。重複值有獨立名次：5、5、2 的第 2 大是 5，而不是 2。若題目要第 k 個「不同值」，不變量與去重規則都要改。</p>
+<p>對 k = 3，依序加入 11、4、8、15、7、13，add 的回傳依序是 None、None、4、8、8、11。<mark>重複值有獨立名次</mark>：5、5、2 的第 2 大是 5，而不是 2。若題目要第 k 個「不同值」，不變量與去重規則都要改。</p>
 <p class="complexity">每次 add 最多 O(log(k + 1)) 次比較；計入 list 擴容時採攤銷 O(log(k + 1)) 時間。被略過的值只需 O(1) 比較；查根 O(1)，狀態 O(k)，不足 k 筆時實際只保存已收到的筆數。這裡的資料流只會加入，不支援過期或刪除；滑動視窗的第 k 大不能直接照搬。</p>
 
 <h3 id="c07-stable-priority">5. 平手、無法比較的物件與更新陷阱</h3>
 <p class="problem-source">push 加入優先權與資料；pop 回傳優先權最小的資料，同優先權按加入順序取出。空佇列 pop 拋 IndexError。</p>
-<p>Python tuple 由左到右比較。若放 (priority, payload)，兩個 priority 相同時就會比較 payload；dict 等資料不一定可排序，可能在平手時拋 TypeError。加入唯一遞增序號，改存 (priority, serial, payload)，就能讓平手維持先到先出，且完全不需要比較 payload。</p>
+<p>Python tuple 由左到右比較。若放 (priority, payload)，兩個 priority 相同時就會比較 payload；dict 等資料不一定可排序，可能在平手時拋 TypeError。加入唯一遞增序號，<mark>改存 (priority, serial, payload)</mark>，就能讓平手維持先到先出，且完全不需要比較 payload。</p>
 <pre><code class="language-python">import heapq
 from itertools import count
 
@@ -114,12 +114,12 @@ class StablePriorityQueue:
     def pop(self):
         return heapq.heappop(self.heap)[2]</code></pre>
 <p>若數字越大越優先，可存負 priority，用最小堆積模擬最大堆積。Python 3.14 起也提供 heapify_max、heappush_max、heappop_max，直接操作最大堆積。</p>
-<div class="warning">不要直接修改 heap 中某項的 priority，父子順序不會自動修復。一般 heapq 也沒有直接按任意 key 找元素、降低優先權的操作。簡單方案是重建 O(n)；更進階可另存 task 的版本，在 heap 加入新版，取出時跳過舊版。但舊項目會累積，空間要按「尚未清理的項目數」計算，不能仍宣稱只與有效任務數成正比。</div>
+<div class="warning"><mark class="mark-pitfall">不要直接修改 heap 中某項的 priority</mark>，父子順序不會自動修復。一般 heapq 也沒有直接按任意 key 找元素、降低優先權的操作。簡單方案是重建 O(n)；更進階可另存 task 的版本，在 heap 加入新版，取出時跳過舊版。但舊項目會累積，空間要按「尚未清理的項目數」計算，不能仍宣稱只與有效任務數成正比。</div>
 
 
 <h3 id="c07-merge">6. 合併多條排序串流：每條只保留一個前端候選</h3>
 <p class="problem-source"><a href="https://leetcode.com/problems/merge-k-sorted-lists/">LeetCode 23 · Merge k Sorted Lists</a> 合併排序鏈結串列；本節使用排序迭代器逐筆產生值。兩者都以每個來源的下一筆作為候選。</p>
-<p>有 m 條遞增串流，每條都已排序。全域下一個最小值一定是某一條的第一個未輸出值，因此不必把全部 N 筆資料放進 heap。先放每條非空串流的一個前端候選；取出最小者後，只向同一來源索取下一個值。</p>
+<p>有 m 條遞增串流，每條都已排序。全域下一個最小值一定是某一條的第一個未輸出值，因此不必把全部 N 筆資料放進 heap。先放每條非空串流的一個前端候選；<mark>取出最小者後，只向同一來源索取下一個值</mark>。</p>
 <pre><code class="language-python">import heapq
 
 def merge_sorted_streams(streams):
@@ -141,7 +141,7 @@ def merge_sorted_streams(streams):
         except StopIteration:
             continue
         heapq.heappush(heap, (following, source, iterator))</code></pre>
-<p>heap 中的 tuple 是 (value, source, iterator)。source 是唯一的來源編號；每個來源同時至多一個候選，因此 value 相同時，比較到 source 就能分出順序，不會比較 iterator。相同值時編號小的來源先出；若需要別種平手規則，應另放對應的穩定序號。</p>
+<p>heap 中的 tuple 是 (value, source, iterator)。source 是唯一的來源編號；<mark class="mark-invariant">每個來源同時至多一個候選</mark>，因此 value 相同時，比較到 source 就能分出順序，不會比較 iterator。相同值時編號小的來源先出；若需要別種平手規則，應另放對應的穩定序號。</p>
 <figure class="diagram"><svg role="img" aria-labelledby="c07-frontier-title" viewBox="0 0 760 270" xmlns="http://www.w3.org/2000/svg">
 <title id="c07-frontier-title">每條排序串流只貢獻一個最前面的候選，三個候選負二、一、零中負二先輸出</title>
 <defs><marker id="c07-arrow-b" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#66758c"/></marker></defs>
@@ -169,9 +169,9 @@ assert list(heapq.merge([-2, 5, 10], [1, 5], [0, 6, 9])) == [-2, 0, 1, 5, 5, 6, 
 <section class="exercise"><h4>練習 A：留下最小的 k 筆延遲</h4>
 <p>測試延遲依序為 [42, 17, 31, 12, 29]，只留最小的 2 筆，要求不保存全部輸入。你應把哪個值放在淘汰門檻？</p><details><summary>參考解答</summary><p>門檻應是保留者中最大的值。以最小堆積存負值：保留 17、42 時存 [−42, −17]，根代表最大保留值 42。新值 x 小於 −heap[0] 才替換根，實際放入 −x。最後取反並排序得到 [12, 17]。k &gt; 0 時維護 O(n log(k + 1))、空間 O(k)，並需處理 k = 0 與負 k。</p></details></section>
 <section class="exercise"><h4>練習 B：第 k 大「不同」值</h4>
-<p class="problem-source"><a href="https://leetcode.com/problems/third-maximum-number/">LeetCode 414 · Third Maximum Number</a> 固定找第 3 大不同值，不足時回傳最大值；本題使用一般 k，不足時回傳 None。</p><p>資料 [8, 8, 5, 9, 5, 7]，k = 3，答案應是 7。如何以 O(k) 狀態避免把相同值占成多個名次？是否一定要記住歷史所有值？</p><details><summary>參考解答</summary><p>用大小最多 k 的最小堆積，搭配只含「目前堆內值」的 set。新值已在 set 就略過；未滿就同時加入兩者；已滿且比根大，就移除舊根及其 set 紀錄，再加入新值。不需要記住已淘汰的所有值：門檻只會上升，被淘汰的值再次出現時不可能超過目前門檻。set 採平均 O(1) 模型，總維護時間 O(n log(k + 1))，狀態 O(k)。不足 k 個不同值時仍回傳 None。</p></details></section>
+<p class="problem-source"><a href="https://leetcode.com/problems/third-maximum-number/">LeetCode 414 · Third Maximum Number</a> 固定找第 3 大不同值，不足時回傳最大值；本題使用一般 k，不足時回傳 None。</p><p>資料 [8, 8, 5, 9, 5, 7]，k = 3，答案應是 7。如何以 O(k) 狀態避免把相同值占成多個名次？是否一定要記住歷史所有值？</p><details><summary>參考解答</summary><p>用大小最多 k 的最小堆積，搭配只含「目前堆內值」的 set。新值已在 set 就略過；未滿就同時加入兩者；已滿且比根大，就移除舊根及其 set 紀錄，再加入新值。不需要記住已淘汰的所有值：<mark>門檻只會上升</mark>，被淘汰的值再次出現時不可能超過目前門檻。set 採平均 O(1) 模型，總維護時間 O(n log(k + 1))，狀態 O(k)。不足 k 個不同值時仍回傳 None。</p></details></section>
 <section class="exercise"><h4>練習 C：兩個 heap 追蹤中位數</h4>
-<p class="problem-source"><a href="https://leetcode.com/problems/find-median-from-data-stream/">LeetCode 295 · Find Median from Data Stream</a>。依序加入 4、8、2，中位數依序為 4、6、4；偶數筆時取中間兩值的平均。</p><p>資料只加入，要求每次回傳目前中位數。請描述兩個 heap 的內容、不變量與偶數筆時的答案，不必寫完整程式。</p><details><summary>參考解答</summary><p>lower 用最大堆積保存較小半部，可用負值模擬；upper 用最小堆積保存較大半部。保持 lower 的最大值 ≤ upper 的最小值，且 lower 筆數等於 upper 或多一筆。每次先按邊界分配新值，再從較大堆移動根來平衡。奇數筆時答案是 lower 的根取反，偶數筆時是兩個根的平均。加入 O(log n)，查詢 O(1)，空間 O(n)。</p></details></section>
+<p class="problem-source"><a href="https://leetcode.com/problems/find-median-from-data-stream/">LeetCode 295 · Find Median from Data Stream</a>。依序加入 4、8、2，中位數依序為 4、6、4；偶數筆時取中間兩值的平均。</p><p>資料只加入，要求每次回傳目前中位數。請描述兩個 heap 的內容、不變量與偶數筆時的答案，不必寫完整程式。</p><details><summary>參考解答</summary><p>lower 用最大堆積保存較小半部，可用負值模擬；upper 用最小堆積保存較大半部。保持 <mark class="mark-invariant">lower 的最大值 ≤ upper 的最小值，且 lower 筆數等於 upper 或多一筆</mark>。每次先按邊界分配新值，再從較大堆移動根來平衡。奇數筆時答案是 lower 的根取反，偶數筆時是兩個根的平均。加入 O(log n)，查詢 O(1)，空間 O(n)。</p></details></section>
 
 <h3 id="c07-summary">8. 決策小結與驗證清單</h3>
 <ul><li>反覆只要極值：可用 heap，讀根的成本低，不必完整排序。</li><li>保留最大的 k 個：最小 heap 將保留值中的最小值放在根；保留最小的 k 個則反過來。</li><li>合併已排序來源：一個來源一個前端候選，空間跟來源數而非總資料量成正比。</li><li>遇到 tuple：先想平手時會比較誰；用唯一序號隔離不可排序的 payload。</li><li>需求包括刪除、更新或過期：修改 heap 內元素時，必須另外處理查找與堆積修復。</li><li>說明複雜度時別漏最後排序、收集生成器結果，以及 lazy deletion 尚未清掉的舊資料。</li></ul>

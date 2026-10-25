@@ -8,7 +8,7 @@
 <p class="problem-link"><a href="https://leetcode.com/problems/subsets/">LeetCode 78．Subsets</a>。元素互異時，每組索引對應唯一的值子集合。</p>
 <p>節點是部分解，邊是一個選擇，葉節點是完整決策。有些葉節點合法，有些不合法。子集合問題每件物品有選／不選兩條邊；排列問題每層從尚未使用的元素挑一個；格子搜尋則從鄰居挑下一格。回溯通常用深度優先走這棵隱含樹，不需要先把樹建成資料結構。</p>
 <figure class="diagram"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="兩個候選 A、B 的決策樹：每條根到葉路徑對應一個子集合" viewBox="0 0 760 300"><title>兩個候選 A、B 的決策樹：每條根到葉路徑對應一個子集合</title><rect x="0" y="0" width="760" height="300" rx="12" fill="#f8fafc"/><path d="M380,60 L195,120" stroke="#64748b" stroke-width="2" fill="none"/><text x="287.5" y="85.0" text-anchor="middle" font-size="14" fill="#334155">不選 A</text><path d="M380,60 L565,120" stroke="#64748b" stroke-width="2" fill="none"/><text x="472.5" y="85.0" text-anchor="middle" font-size="14" fill="#334155">選 A</text><path d="M195,160 L100,225" stroke="#64748b" stroke-width="2" fill="none"/><text x="147.5" y="187.5" text-anchor="middle" font-size="14" fill="#334155">不選 B</text><path d="M195,160 L290,225" stroke="#64748b" stroke-width="2" fill="none"/><text x="242.5" y="187.5" text-anchor="middle" font-size="14" fill="#334155">選 B</text><path d="M565,160 L475,225" stroke="#64748b" stroke-width="2" fill="none"/><text x="520.0" y="187.5" text-anchor="middle" font-size="14" fill="#334155">不選 B</text><path d="M565,160 L665,225" stroke="#64748b" stroke-width="2" fill="none"/><text x="615.0" y="187.5" text-anchor="middle" font-size="14" fill="#334155">選 B</text><rect x="305" y="20" width="150" height="40" rx="8" fill="#dbeafe" stroke="#334155"/><text x="380.0" y="45.0" text-anchor="middle" font-size="16" fill="#0f172a">i=0，path=[]</text><rect x="120" y="120" width="150" height="40" rx="8" fill="#dbeafe" stroke="#334155"/><text x="195.0" y="145.0" text-anchor="middle" font-size="16" fill="#0f172a">i=1，[]</text><rect x="490" y="120" width="150" height="40" rx="8" fill="#dbeafe" stroke="#334155"/><text x="565.0" y="145.0" text-anchor="middle" font-size="16" fill="#0f172a">i=1，[A]</text><rect x="40" y="225" width="120" height="40" rx="8" fill="#dcfce7" stroke="#334155"/><text x="100.0" y="250.0" text-anchor="middle" font-size="16" fill="#0f172a">[]</text><rect x="230" y="225" width="120" height="40" rx="8" fill="#dcfce7" stroke="#334155"/><text x="290.0" y="250.0" text-anchor="middle" font-size="16" fill="#0f172a">[B]</text><rect x="415" y="225" width="120" height="40" rx="8" fill="#dcfce7" stroke="#334155"/><text x="475.0" y="250.0" text-anchor="middle" font-size="16" fill="#0f172a">[A]</text><rect x="605" y="225" width="120" height="40" rx="8" fill="#dcfce7" stroke="#334155"/><text x="665.0" y="250.0" text-anchor="middle" font-size="16" fill="#0f172a">[A,B]</text></svg><figcaption>兩個候選 A、B 的決策樹：每條根到葉路徑對應一個子集合</figcaption></figure>
-<p>以兩張不同講題卡 A、B 為例，選與不選的位置固定，所以四個葉子各代表一種子集合。不變量是：進入 dfs(i) 時，前 i 個位置的決策已完成，path 恰好包含其中被選的元素，而且順序與原輸入一致。i 每次增加一，必然抵達終點。</p>
+<p>以兩張不同講題卡 A、B 為例，選與不選的位置固定，所以四個葉子各代表一種子集合。不變量是：進入 dfs(i) 時，<mark class="mark-invariant">前 i 個位置的決策已完成，path 恰好包含其中被選的元素</mark>，而且順序與原輸入一致。i 每次增加一，必然抵達終點。</p>
 <pre><code class="language-python">def subsets(items):
     &quot;&quot;&quot;items 中的位置視為不同選項；若值相同，輸出可能值相同。&quot;&quot;&quot;
     answer, path = [], []
@@ -34,18 +34,18 @@
 <tr><td>6</td><td>先撤銷 B，再撤銷 A</td><td>[]</td><td>四份獨立的答案保留下來</td></tr>
 </tbody></table></div>
 <p><strong>為何不漏、不重？</strong>任何子集合都能唯一寫成 n 個選／不選的決策。程式兩條分支都走，因此涵蓋全部；不同決策必有某個位置不同，因此索引集合不重複。若輸入是 [A,A]，兩個位置各自選取會產生兩份值相同的 [A]。要讓值組合也唯一，可先排序，再用 10.4 節的同層去重規則。</p>
-<div class="complexity">n 個相異位置產生 2ⁿ 個子集合。只走樹是 O(2ⁿ)，但複製並回傳所有答案要 O(n·2ⁿ) 時間和輸出空間；遞迴堆疊與 path 的輔助空間為 O(n)。空輸入回傳 [[]]，因為空集合也有一種選法。</div>
+<div class="complexity">n 個相異位置產生 2ⁿ 個子集合。只走樹是 O(2ⁿ)，但<mark>複製並回傳所有答案要 O(n·2ⁿ) 時間和輸出空間</mark>；遞迴堆疊與 path 的輔助空間為 O(n)。空輸入回傳 [[]]，因為空集合也有一種選法。</div>
 
 <h3 id="c10-undo">10.2 返回上一層時，恢復原狀</h3>
 <figure class="diagram"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="同一份 path 的生命週期：呼叫返回後，必須回到進入前的狀態" viewBox="0 0 760 260"><title>同一份 path 的生命週期：呼叫返回後，必須回到進入前的狀態</title><rect x="0" y="0" width="760" height="260" rx="12" fill="#f8fafc"/><rect x="25" y="65" width="155" height="60" rx="8" fill="#dbeafe" stroke="#334155"/><text x="102.5" y="100.0" text-anchor="middle" font-size="16" fill="#0f172a">path=[A]</text><rect x="210" y="65" width="155" height="60" rx="8" fill="#fef3c7" stroke="#334155"/><text x="287.5" y="100.0" text-anchor="middle" font-size="16" fill="#0f172a">append(B)</text><rect x="395" y="65" width="155" height="60" rx="8" fill="#dcfce7" stroke="#334155"/><text x="472.5" y="100.0" text-anchor="middle" font-size="16" fill="#0f172a">探索 [A,B]</text><rect x="580" y="65" width="155" height="60" rx="8" fill="#fce7f3" stroke="#334155"/><text x="657.5" y="100.0" text-anchor="middle" font-size="16" fill="#0f172a">pop() → [A]</text><path d="M180,95 L210,95" stroke="#64748b" stroke-width="2" fill="none"/><path d="M365,95 L395,95" stroke="#64748b" stroke-width="2" fill="none"/><path d="M550,95 L580,95" stroke="#64748b" stroke-width="2" fill="none"/><text x="35" y="180" font-size="16" fill="#0f172a">儲存答案：answer.append(path.copy())</text><text x="35" y="215" font-size="16" fill="#0f172a">錯誤共享：answer.append(path) 會指向持續變動的同一個串列</text></svg><figcaption>同一份 path 的生命週期：呼叫返回後，必須回到進入前的狀態</figcaption></figure>
-<p>共享可變狀態時，每條分支要遵守「進入與離開的現場一致」：append 對應 pop，集合 add 對應 remove，used=True 對應 used=False。撤銷順序通常與修改相反。下一個兄弟分支才能從同樣的狀態開始，不受前一條路留下的修改影響。</p>
+<p>共享可變狀態時，每條分支要遵守「<mark class="mark-invariant">進入與離開的現場一致</mark>」：append 對應 pop，集合 add 對應 remove，used=True 對應 used=False。撤銷順序通常與修改相反。下一個兄弟分支才能從同樣的狀態開始，不受前一條路留下的修改影響。</p>
 <p>path.copy() 是淺複製；本章 path 裝的是整數或字元，足以保存答案。若裡面放的是之後還會修改的巢狀串列，淺複製仍共享內層物件，要改存不可變值，或依資料結構複製必要層級。也能用 dfs(path + [x]) 避免手動撤銷，但每次連接都要 O(path 長度) 的複製，峰值記憶體也可能增加。</p>
-<div class="warning"><strong>提早返回陷阱：</strong>找到答案後直接 return，可能跳過 pop 或 remove。若只做存在性搜尋，先把結果存起來、撤銷後再 return；也可以像本章格子練習一樣，使用 try/finally，讓成功與失敗都恢復現場。</div>
+<div class="warning"><strong>提早返回陷阱：</strong><mark class="mark-pitfall">找到答案後直接 return，可能跳過 pop 或 remove</mark>。若只做存在性搜尋，先把結果存起來、撤銷後再 return；也可以像本章格子練習一樣，使用 try/finally，讓成功與失敗都恢復現場。</div>
 
 <h3 id="c10-generation">10.3 組合與排列：下一層可以選誰？</h3>
 <p class="problem-link"><a href="https://leetcode.com/problems/permutations-ii/">LeetCode 47．Permutations II</a>。列出不重複的完整排列。</p>
-<p><strong>組合</strong>不計順序，[2,5] 與 [5,2] 是同一答案；用 start 限制後續只選更右邊的位置，就把順序固定下來。若每個位置至多一次，遞迴傳 j+1；若題目允許同一正值重複使用，才可能傳 j。<strong>排列</strong>計順序，下一層必須從所有尚未用過的位置選，不能只往右，因此改用 used。</p>
-<p>輸入有重複值時，排序後能讓等值相鄰；我們只保留相同值的一種代表順序。跳過條件固定相同值的使用順序：前一個 A 尚未用過時，跳過後面的 A。若前面的 A 已經在目前 path 中，後面的 A 就可以接上去。</p>
+<p><strong>組合</strong>不計順序，[2,5] 與 [5,2] 是同一答案；<mark>用 start 限制後續只選更右邊的位置</mark>，就把順序固定下來。若每個位置至多一次，遞迴傳 j+1；若題目允許同一正值重複使用，才可能傳 j。<strong>排列</strong>計順序，下一層必須從所有尚未用過的位置選，不能只往右，因此改用 used。</p>
+<p>輸入有重複值時，排序後能讓等值相鄰；我們只保留相同值的一種代表順序。跳過條件固定相同值的使用順序：<mark class="mark-invariant">前一個 A 尚未用過時，跳過後面的 A</mark>。若前面的 A 已經在目前 path 中，後面的 A 就可以接上去。</p>
 <figure class="diagram"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="排列的去重規則：同值元素依索引先後使用，不刪掉合法的第二個 A" viewBox="0 0 760 300"><title>排列的去重規則：同值元素依索引先後使用，不刪掉合法的第二個 A</title><rect x="0" y="0" width="760" height="300" rx="12" fill="#f8fafc"/><rect x="280" y="20" width="200" height="42" rx="8" fill="#dbeafe" stroke="#334155"/><text x="380.0" y="46.0" text-anchor="middle" font-size="16" fill="#0f172a">A₀、A₁、B</text><path d="M380,62 L160,125" stroke="#64748b" stroke-width="2" fill="none"/><path d="M380,62 L600,125" stroke="#64748b" stroke-width="2" fill="none"/><rect x="45" y="125" width="230" height="48" rx="8" fill="#dcfce7" stroke="#334155"/><text x="160.0" y="154.0" text-anchor="middle" font-size="16" fill="#0f172a">根層先選 A₀：允許</text><rect x="485" y="125" width="230" height="48" rx="8" fill="#fee2e2" stroke="#334155"/><text x="600.0" y="154.0" text-anchor="middle" font-size="16" fill="#0f172a">根層先選 A₁：跳過</text><path d="M160,173 L160,225" stroke="#64748b" stroke-width="2" fill="none"/><rect x="45" y="225" width="310" height="48" rx="8" fill="#dcfce7" stroke="#334155"/><text x="200.0" y="254.0" text-anchor="middle" font-size="16" fill="#0f172a">已選 A₀，再選 A₁：允許</text><text x="395" y="227" font-size="15" fill="#0f172a">只有前一個 A 尚未使用時，</text><text x="395" y="251" font-size="15" fill="#0f172a">才跳過目前這個 A。</text></svg><figcaption>排列的去重規則：同值元素依索引先後使用，不刪掉合法的第二個 A</figcaption></figure>
 <pre><code class="language-python">def unique_permutations(items):
     values = sorted(items)
@@ -82,7 +82,7 @@
 
 <h3 id="c10-pruning">10.4 剪枝必須有證明：正值包裹挑選</h3>
 <p class="problem-link"><a href="https://leetcode.com/problems/combination-sum-ii/">LeetCode 40．Combination Sum II</a> 的延伸：增加「恰好挑 k 件」的限制。</p>
-<p>有一批重量為正整數的樣品，挑恰好 k 件使總重等於 target；每個位置至多用一次，相同重量的值組合只列一次。狀態是 (start, need, remain)，path 則記錄已挑的重量。不變量：path 的索引遞增，need 是仍須挑的件數，remain 是仍須湊的重量。</p>
+<p>有一批重量為正整數的樣品，挑恰好 k 件使總重等於 target；每個位置至多用一次，相同重量的值組合只列一次。狀態是 (start, need, remain)，path 則記錄已挑的重量。不變量：<mark class="mark-invariant">path 的索引遞增</mark>，need 是仍須挑的件數，remain 是仍須湊的重量。</p>
 <p>排序後可以安全使用三種界限：剩餘件數不足就失敗；剩餘 need 件的最小可能總和已大於 remain 就失敗；最大可能總和仍小於 remain 也失敗。前綴和讓這兩個加總檢查都是 O(1)。候選大於 remain 時，由於所有值都正且有序，後面的候選更不可能，因此可以 break。</p>
 <pre><code class="language-python">def choose_k_sum(numbers, k, target):
     &quot;&quot;&quot;恰選 k 個位置、每個至多一次；回傳不重複的值組合。&quot;&quot;&quot;
@@ -127,7 +127,7 @@
 <tr><td>path=[1,4]，剩 1 件湊 3</td><td>剩餘最小候選是 5</td><td>下界剪枝</td></tr>
 <tr><td>path=[2,2,4]</td><td>三件總重 8</td><td>記錄第二個答案</td></tr>
 </tbody></table></div>
-<p>正值讓「候選已超過 remain」成為有效剪枝。若允許負值，已排序的 [-3,-2]、k=2、target=-5 有合法解，但第一個候選 −3&gt;−5，照此條件就會提前停止。支援負值時，移除這個比較，改用剩餘候選的總和上下界來判斷。</p>
+<p>正值讓「候選已超過 remain」成為有效剪枝。若允許負值，已排序的 [-3,-2]、k=2、target=-5 有合法解，但第一個候選 −3&gt;−5，照此條件就會提前停止。支援負值時，移除這個比較，<mark>改用剩餘候選的總和上下界來判斷</mark>。</p>
 <p>剪枝能減少實際搜尋量，但不會因此就把指數問題變成多項式。這個實作的保守時間上界是 O(n log n + n·2ⁿ + kR)，其中 R 是答案數；前兩項涵蓋排序與候選掃描，最後一項是輸出複製。實際可用「被探索的節點數、每節點掃過的候選數、輸出長度」更精準衡量。輔助空間 O(n+k)，含排序副本、前綴和與深度至多 k 的路徑。</p>
 
 <h3 id="c10-constraints">10.5 多重限制：一列一列放皇后</h3>
@@ -161,12 +161,12 @@
 
     dfs(0)
     return answer</code></pre>
-<p>進入 dfs(row) 時，前 row 列各有一個互不攻擊的皇后，三個集合恰好描述它們佔用的欄與對角線。只接受不在集合的候選，維持不變量；到 row=n 就得到合法配置。每個合法配置的第 row 欄值都會在該層被考慮，因此不漏解。撤銷會把集合回復成前 row 列的狀態。</p>
+<p>進入 dfs(row) 時，<mark class="mark-invariant">前 row 列各有一個互不攻擊的皇后</mark>，三個集合恰好描述它們佔用的欄與對角線。只接受不在集合的候選，維持不變量；到 row=n 就得到合法配置。每個合法配置的第 row 欄值都會在該層被考慮，因此不漏解。撤銷會把集合回復成前 row 列的狀態。</p>
 <div class="complexity">只看「欄不得重複」，深度 r 最多有 P(n,r) 種狀態。此版本每個非葉節點仍掃 n 欄，安全上界為 O(n·n! + nQ)，Q 為輸出的解數；對角線剪枝通常讓實際搜尋小很多。使用集合的查找視為平均 O(1)。輔助空間 O(n)，輸出 O(nQ)。</div>
 
 <h3 id="c10-cache">10.6 回溯、DFS 與記憶化的分界</h3>
 <p>DFS 描述走訪順序；回溯強調探索決策與撤銷；它們不是互斥概念。圖形 DFS 的全域 visited 用來保證一個節點處理一次。回溯中的 used 常常只代表目前路徑使用過的元素，離開路徑就必須清除。把兩者混用，會錯把其他合法路徑排除。</p>
-<p>想加 cache 之前，先問「相同 key 的所有呼叫，未來合法選擇真的相同嗎？」排列不能只記 len(path)，因為 [A] 與 [B] 尚可用的字元不同；格子找字也不能只記 (r,c,i)，因為已佔用的格子可能不同。把 used 的位元遮罩放進 key 可能正確，但狀態數隨格數指數成長。對列舉任務，僅快取布林或「看過狀態」也可能讓不同前綴應產生的答案消失。</p>
+<p>想加 cache 之前，先問「相同 key 的所有呼叫，未來合法選擇真的相同嗎？」排列不能只記 len(path)，因為 [A] 與 [B] 尚可用的字元不同；<mark class="mark-pitfall">格子找字也不能只記 (r,c,i)，因為已佔用的格子可能不同</mark>。把 used 的位元遮罩放進 key 可能正確，但狀態數隨格數指數成長。對列舉任務，僅快取布林或「看過狀態」也可能讓不同前綴應產生的答案消失。</p>
 
 <h3 id="c10-exercises">10.7 練習：從限制推導狀態</h3>
 <section class="exercise"><h4>練習一：不相鄰的展示時段</h4>
@@ -188,7 +188,7 @@
     dfs(0)
     return answer</code></pre><p>設答案數為 R，R 滿足費波那契型遞迴 R(n)=R(n−1)+R(n−2)，R(0)=1、R(1)=2，仍呈指數成長。包含答案複製的保守上界 O(nR)，輔助空間 O(n)。</p></details></section>
 <section class="exercise"><h4>練習二：合法的巢狀括號</h4>
-<p class="problem-link"><a href="https://leetcode.com/problems/generate-parentheses/">LeetCode 22．Generate Parentheses</a>。n=2 的答案是 ["(())","()()"]。</p><p>輸入 n，列出包含 n 對括號的所有合法字串。任何前綴裡，右括號都不能多於左括號。不要先生成所有長度 2n 的二元字串再過濾。</p>
+<p class="problem-link"><a href="https://leetcode.com/problems/generate-parentheses/">LeetCode 22．Generate Parentheses</a>。n=2 的答案是 ["(())","()()"]。</p><p>輸入 n，列出包含 n 對括號的所有合法字串。任何前綴裡，<mark class="mark-invariant">右括號都不能多於左括號</mark>。不要先生成所有長度 2n 的二元字串再過濾。</p>
 <details><summary>參考解答</summary><p>opened、closed 是已使用數量。只在 opened&lt;n 時放左括號，在 closed&lt;opened 時放右括號。這兩個條件直接維持前綴合法性；closed=n 時也必然 opened=n。</p><pre><code class="language-python">def balanced_parentheses(n):
     if n &lt; 0:
         raise ValueError(&quot;n 必須非負&quot;)
@@ -211,7 +211,7 @@
     return answer</code></pre><p>解數為第 n 個 Catalan 數 Cₙ=(2n)!／(n!(n+1)!)。保守時間 O(nCₙ)，輸出空間 O(nCₙ)，輔助空間 O(n)。n=0 回傳 [""]。</p></details></section>
 <section class="exercise"><h4>練習三：字卡格子尋路</h4>
 <p class="problem-link"><a href="https://leetcode.com/problems/word-search/">LeetCode 79．Word Search</a>。空 word 回傳 True；空棋盤搭配非空 word 回傳 False。</p><p>矩形字卡板只能上下左右走，同一條路不得重複用格子。判斷能否拼出 word。board=["AB","CD"] 可以拼 ABDC，不能拼 ABA。成功時也要清理暫存狀態。</p>
-<details><summary>參考解答</summary><p>used 是路徑區域的集合；每個起點都要能從乾淨狀態搜尋。try/finally 保證 any 的短路成功與提早 return 都不會省略撤銷。此版本完全不修改輸入棋盤。</p><pre><code class="language-python">def word_exists(board, word):
+<details><summary>參考解答</summary><p><mark class="mark-invariant">used 是路徑區域的集合</mark>；每個起點都要能從乾淨狀態搜尋。try/finally 保證 any 的短路成功與提早 return 都不會省略撤銷。此版本完全不修改輸入棋盤。</p><pre><code class="language-python">def word_exists(board, word):
     &quot;&quot;&quot;矩形字元格；上下左右相鄰，同一次路徑不得重複使用格子。&quot;&quot;&quot;
     if not word:
         return True

@@ -6,7 +6,7 @@
 <h3 id="c13-difference">一、差分陣列：記錄「從哪裡開始改變」</h3>
 <p class="problem-link"><a href="https://leetcode.com/problems/corporate-flight-bookings/">LeetCode 1109．Corporate Flight Bookings</a>。套用到原題時，先將航班的兩個端點都減 1；本節也接受負增量。</p>
 <p>假設有長度 n 的零陣列，收到 q 個指令「索引 left 到 right，每格加 delta」，最後才需要完整陣列。逐格修改最壞 O(nq)。若只記錄變化的起點與終點，每次更新只要兩個位置。</p>
-<p>差分 d 的意思是相鄰值之差：d[0]=a[0]，d[i]=a[i]−a[i−1]。反過來把 d 做前綴和，就能還原 a。因此閉區間 [left,right] 增加 delta 時，只需 d[left]+=delta、d[right+1]−=delta。第一個位置讓之後的累積多 delta，第二個位置讓效果停止。</p>
+<p>差分 d 的意思是相鄰值之差：d[0]=a[0]，d[i]=a[i]−a[i−1]。反過來把 d 做前綴和，就能還原 a。因此閉區間 [left,right] 增加 delta 時，只需 <mark>d[left]+=delta、d[right+1]−=delta</mark>。第一個位置讓之後的累積多 delta，第二個位置讓效果停止。</p>
 <pre><code class="language-python">from collections.abc import Iterable
 
 def range_add(n: int, updates: Iterable[tuple[int, int, int]]) -&gt; list[int]:
@@ -34,7 +34,7 @@ def range_add(n: int, updates: Iterable[tuple[int, int, int]]) -&gt; list[int]:
 </svg><figcaption>差分把「對整段做同一件事」改成「在兩個邊界登記開始與結束」。</figcaption></figure>
 <div class="example"><strong>逐步例子 A：兩次更新，再還原一次</strong>
 <table><thead><tr><th>階段</th><th>difference（含哨兵）</th><th>意義</th></tr></thead><tbody><tr><td>初始化</td><td>[0,0,0,0,0,0,0]</td><td>尚未改動</td></tr><tr><td>[1,4] 加 3</td><td>[0,3,0,0,0,−3,0]</td><td>1 起生效，5 起取消</td></tr><tr><td>[3,5] 加 −2</td><td>[0,3,0,−2,0,−3,2]</td><td>3 起生效，6 起取消</td></tr><tr><td>累積前 6 格</td><td>running：0,3,3,1,1,−2</td><td>得到最終答案</td></tr></tbody></table></div>
-<p><strong>不變量：</strong>還原到索引 i 時，running 等於所有 left≤i≤right 的更新量總和。每個區間恰好在它的左界加入，超過右界後扣回，因此一個區間對每個位置的貢獻都正確；多個更新可以相加，整體也正確。</p>
+<p><strong>不變量：</strong>還原到索引 i 時，<mark class="mark-invariant">running 等於所有 left≤i≤right 的更新量總和</mark>。每個區間恰好在它的左界加入，超過右界後扣回，因此一個區間對每個位置的貢獻都正確；多個更新可以相加，整體也正確。</p>
 <div class="complexity">q 次更新加一次還原共 O(q+n) 時間；差分與輸出各 O(n) 空間。這適合批次更新、最後一次輸出的情境。如果每次更新後立刻詢問某個區間總和，重新累積仍可能很慢，需要另學 Fenwick tree 或 segment tree。原陣列非零時，可以先建立它的差分，或把上面得到的「增量」逐格加回原值。</div>
 <div class="warning">最容易漏的是 right+1。若寫成 difference[right]−=delta，右端點就少更新了一格。請先寫清楚區間是閉區間還是半開區間，再安排終止位置。</div>
 
@@ -82,7 +82,7 @@ class Trie:
 
     def starts_with(self, prefix: str) -&gt; bool:
         return self._walk(prefix) is not None</code></pre><p><strong>插入的逐步狀態：</strong>先插入 car，建立 c→a→r 並將 r 標記 end；再插入 cart，重用前三條邊，只新增 t，保留 r 的 end；最後插入 cat，重用 c→a，再新增另一條 t 邊。此時 search("ca") 為 False，starts_with("ca") 為 True，search("car") 為 True。</p>
-<p><strong>不變量：</strong>處理完字串前 i 個字元後，node 恰好代表長度 i 的字首。下一條匹配字元的邊存在，就延長一個字元；不存在，整個字首也不可能存在。走完全部字元後，再查 end 才能決定完整單字是否存在。</p>
+<p><strong>不變量：</strong>處理完字串前 i 個字元後，node 恰好代表長度 i 的字首。下一條匹配字元的邊存在，就延長一個字元；不存在，整個字首也不可能存在。<mark>走完全部字元後，再查 end</mark> 才能決定完整單字是否存在。</p>
 <div class="complexity">長度 L 的插入、完整查找、字首查找，平均時間 O(L)，假設字典單次操作平均 O(1)。總儲存量 O(S+1)，S 是所有插入字串的總長度，另加根節點；共用字首會減少實際節點數。Python 每個節點與字典本身都有額外記憶體成本，若只需要查詢完整單字是否存在，set 往往更簡單。這個實作支援 Unicode 字元，但不自動做大小寫、重音、字形正規化。</div>
 <p>本版採集合語意，重複插入同一字不增加計數。空字首永遠有根這條零步路徑，所以 starts_with("") 為 True；search("") 只有在 insert("") 後才為 True。刪除、出現次數與自動補全排序都需要另外設計，不能從 end 一個布林值直接推得。</p>
 
@@ -90,7 +90,7 @@ class Trie:
 <p class="problem-link"><a href="https://leetcode.com/problems/number-of-1-bits/">LeetCode 191．Number of 1 Bits</a>。本節接受任意非負 Python 整數。</p>
 <p>若候選元素編號為 0 到 b−1，可用整數 mask 的第 i 位代表元素 i 是否在集合中。這很適合小集合、狀態壓縮和子集合枚舉。這樣只是改變集合的表示法，子集合的數量仍是 2ᵇ 個。</p>
 <table><thead><tr><th>操作</th><th>Python 表達式</th><th>意思</th></tr></thead><tbody><tr><td>建立第 i 位</td><td>1 &lt;&lt; i</td><td>只有第 i 位是 1</td></tr><tr><td>檢查成員</td><td>(mask &amp; (1 &lt;&lt; i)) != 0</td><td>交集是否非空</td></tr><tr><td>加入</td><td>mask | (1 &lt;&lt; i)</td><td>把第 i 位設成 1</td></tr><tr><td>移除</td><td>mask &amp; ~(1 &lt;&lt; i)</td><td>把第 i 位設成 0</td></tr><tr><td>切換</td><td>mask ^ (1 &lt;&lt; i)</td><td>0、1 互換</td></tr><tr><td>集合交集／聯集</td><td>a &amp; b ／ a | b</td><td>每一位各自運算</td></tr></tbody></table>
-<p>一個常用技巧是 x &amp; (x−1)：它會移除最右邊的一個 1。因為減一把最右邊的 1 變成 0、它右邊的 0 變成 1；再與原數 AND，剛剛那個 1 就消失，其餘較高位保留。</p>
+<p>一個常用技巧是 x &amp; (x−1)：它會<mark>移除最右邊的一個 1</mark>。因為減一把最右邊的 1 變成 0、它右邊的 0 變成 1；再與原數 AND，剛剛那個 1 就消失，其餘較高位保留。</p>
 <pre><code class="language-python">def popcount(value: int) -&gt; int:
     if value &lt; 0:
         raise ValueError(&#x27;this implementation requires a nonnegative integer&#x27;)
@@ -123,14 +123,14 @@ class Trie:
 <g fill="#334155" font-size="17" font-family="sans-serif"><text x="26" y="72">[2,5]</text><text x="26" y="115">[4,8]</text><text x="26" y="158">[7,9]</text><text x="24" y="200">合併後</text><text x="572" y="73">每次只延伸最右一段</text><text x="572" y="112">巢狀區間也要取 max</text><text x="658" y="167">[12,12]</text></g>
 <g text-anchor="middle" fill="#334155" font-size="17" font-family="sans-serif"><text x="150" y="250">2</text><text x="260" y="250">4</text><text x="315" y="250">5</text><text x="425" y="250">7</text><text x="480" y="250">8</text><text x="535" y="250">9</text><text x="700" y="250">12</text></g>
 </svg><figcaption>排序後只需和最後一個合併結果比較，因為更前面的結果早已確定不再重疊。</figcaption></figure>
-<p><strong>不變量：</strong>處理完前 i 個已排序區間後，merged 依序表示這些區間的完整聯集，彼此不重疊。下一段若 left 大於最後一段 right，兩者中間有空隙，可以另開一段；否則合併成相同左界與較大的右界，不會漏掉或多出覆蓋位置。</p>
+<p><strong>不變量：</strong>處理完前 i 個已排序區間後，<mark class="mark-invariant">merged 依序表示這些區間的完整聯集，彼此不重疊</mark>。下一段若 left 大於最後一段 right，兩者中間有空隙，可以另開一段；否則合併成相同左界與較大的右界，不會漏掉或多出覆蓋位置。</p>
 <div class="complexity">排序 O(n log n)，掃描 O(n)。sorted 會建立新清單，Python 排序也可能需要 O(n) 暫存，因此即使不算輸出，此實作的額外空間仍是 O(n)。它不改動輸入的區間容器；輸出以新 list 建立。</div>
-<ul><li>閉區間 [1,3] 與 [3,4] 在 3 重疊，上面的函式會合併。</li><li>半開會議 [1,3) 與 [3,4) 不重疊，可以使用同一間會議室；釋放條件是 end≤next_start。</li><li>表示連續覆蓋範圍時，相接的半開區間也可合成 [1,4)，但這不表示兩場會議時間衝突。</li><li>[1,2] 與 [3,4] 在實數線上有間隙；若題目只在乎整數點且允許相鄰合併，則是另一種規則，不能偷換定義。</li></ul>
+<ul><li>閉區間 [1,3] 與 [3,4] 在 3 重疊，上面的函式會合併。</li><li>半開會議 [1,3) 與 [3,4) 不重疊，可以使用同一間會議室；<mark class="mark-pitfall">釋放條件是 end≤next_start</mark>。</li><li>表示連續覆蓋範圍時，相接的半開區間也可合成 [1,4)，但這不表示兩場會議時間衝突。</li><li>[1,2] 與 [3,4] 在實數線上有間隙；若題目只在乎整數點且允許相鄰合併，則是另一種規則，不能偷換定義。</li></ul>
 
 <h3 id="c13-mod">五、模運算：加減乘可逐步取餘數，除法要另問</h3>
 
 <p>當答案只需要除以正整數 m 的餘數，計算可以保持在 0 到 m−1。加法、減法、乘法都與「最後才取模」相容，例如 (a×b)%m 等於 ((a%m)×(b%m))%m。這能限制中間數字的成長，但不會自動保留原數的大小順序。</p>
-<p><strong>除法不能直接搬進來：</strong>模 6 時，2×1 與 2×4 都得到 2，知道乘積餘數是 2 並不能唯一倒推出另一個因數。a 的模反元素存在，當且僅當 a 與 m 互質；若 m 是質數，也仍要求 a 不被 m 整除。這些前提沒有確認，就不應使用「除以 a」的捷徑。</p>
+<p><strong>除法不能直接搬進來：</strong>模 6 時，2×1 與 2×4 都得到 2，知道乘積餘數是 2 並不能唯一倒推出另一個因數。<mark class="mark-pitfall">a 的模反元素存在，當且僅當 a 與 m 互質</mark>；若 m 是質數，也仍要求 a 不被 m 整除。這些前提沒有確認，就不應使用「除以 a」的捷徑。</p>
 <p>要算 base 的 exponent 次方，可利用 exponent 的二進位表示，把底數不斷平方。指數最低位為 1 時，把目前底數乘入 result；接著把指數右移一位。</p>
 <pre><code class="language-python">def pow_mod(base: int, exponent: int, modulus: int) -&gt; int:
     if exponent &lt; 0 or modulus &lt;= 0:
@@ -144,7 +144,7 @@ class Trie:
         exponent &gt;&gt;= 1
     return result</code></pre><div class="example"><strong>逐步例子 B：7¹³ mod 11</strong>
 <table><thead><tr><th>回合開始的 exponent</th><th>base</th><th>result</th><th>本輪動作</th></tr></thead><tbody><tr><td>13（奇數）</td><td>7</td><td>1</td><td>result=7；base=5；exponent=6</td></tr><tr><td>6（偶數）</td><td>5</td><td>7</td><td>不乘入；base=3；exponent=3</td></tr><tr><td>3（奇數）</td><td>3</td><td>7</td><td>result=10；base=9；exponent=1</td></tr><tr><td>1（奇數）</td><td>9</td><td>10</td><td>result=2；base=4；exponent=0</td></tr></tbody></table></div>
-<p><strong>不變量：</strong>result×baseᵉ 模 m 始終等於原問題的答案，其中 e 是目前 exponent。若 e=2t，baseᵉ=(base²)ᵗ；若 e=2t+1，先把一份 base 乘入 result，剩下同樣變成平方底數的 t 次方。到 e=0 時，答案全部留在 result。</p>
+<p><strong>不變量：</strong><mark class="mark-invariant">result×baseᵉ 模 m 始終等於原問題的答案</mark>，其中 e 是目前 exponent。若 e=2t，baseᵉ=(base²)ᵗ；若 e=2t+1，先把一份 base 乘入 result，剩下同樣變成平方底數的 t 次方。到 e=0 時，答案全部留在 result。</p>
 <div class="complexity">指數 e≥1 時只做 O(log e) 次模乘；e=0 是常數次工作。這是運算次數，並不表示任意大整數的乘除都 O(1)。本版保留常數個整數，底數與結果需要 O(log m) 位、指數需要 O(log e) 位。實務上可以直接使用 Python 的 pow(base, exponent, modulus)，不需要先算出巨大次方。</div>
 <p>本函式只接受非負指數與正模數。modulus=1 時任何結果都是 0，因此 result 用 1%modulus 初始化；exponent=0 按乘法單位元計算。Python 對正模數的 % 會給非負餘數，其他語言的負數餘數規則可能不同，移植時要再確認。</p>
 
@@ -184,13 +184,13 @@ def dijkstra(graph: list[list[tuple[int, int]]], start: int) -&gt; list[float | 
 <div class="example"><strong>逐步例子 C：同一個頂點可以有舊的堆積項目</strong>
 <table><thead><tr><th>彈出項目</th><th>更新</th><th>distance[S,A,B,T]</th></tr></thead><tbody><tr><td>(0,S)</td><td>A=8，B=2 入堆</td><td>[0,8,2,∞]</td></tr><tr><td>(2,B)</td><td>A 降至 5，T=11</td><td>[0,5,2,11]</td></tr><tr><td>(5,A)</td><td>T 降至 6</td><td>[0,5,2,6]</td></tr><tr><td>(6,T)</td><td>沒有出邊</td><td>[0,5,2,6]</td></tr><tr><td>(8,A)</td><td>8≠distance[A]，略過舊項目</td><td>不變</td></tr><tr><td>(11,T)</td><td>11≠distance[T]，略過舊項目</td><td>不變</td></tr></tbody></table></div>
 <p><strong>為什麼非負很重要？</strong>當一個未過期的最小成本項目 (d,u) 彈出，若還有更便宜的路到 u，沿那條路看第一個尚未確定的頂點；它之前的部分應已完成鬆弛。因為剩下所有邊都非負，它的暫定成本不會大於那條更便宜路的總成本，理應先於 u 彈出，矛盾。因此 u 的成本此時已是最優值。</p>
-<p>不能在「第一次加入 heap」就把頂點鎖死；上例 A 先以 8 入堆，之後才降成 5。Python heapq 沒有這段程式所需的原地 decrease-key 操作，因此放入新項目、等舊項目彈出時跳過即可。只有成本嚴格小於目前值時才更新，也能避免零成本環不斷加入相同成本項目。</p>
+<p><mark class="mark-pitfall">不能在「第一次加入 heap」就把頂點鎖死</mark>；上例 A 先以 8 入堆，之後才降成 5。Python heapq 沒有這段程式所需的原地 decrease-key 操作，因此放入新項目、等舊項目彈出時跳過即可。<mark class="mark-invariant">只有成本嚴格小於目前值時才更新</mark>，也能避免零成本環不斷加入相同成本項目。</p>
 <div class="complexity">本版先掃描所有 E 條邊檢查負權重。每次成功鬆弛至多新增一個堆項目，懶刪除堆積可能有 O(E) 項，所以一般鄰接清單含重邊時，時間可寫 O(V+E log(E+2))，額外空間 O(V+E)。簡單圖有 E≤V²，常見寫法因此是 O((V+E) log V)，但不能忘記堆中的過期項目會占空間。這些分析把成本加法與比較視為固定成本；巨大 Python 整數另有位元長度成本。</div>
 <div class="warning">含負邊時，尚未走到的負邊可能把成本降到已彈出狀態之下，所以程式會拒絕負邊。負權重可用 Bellman–Ford；有邊數上限時，也可用下一節的分層動態規劃。</div>
 
 <h3 id="c13-limited-stops">七、限制轉乘：同一個城市，也可能是不同狀態</h3>
 <p class="problem-link"><a href="https://leetcode.com/problems/cheapest-flights-within-k-stops/">LeetCode 787．Cheapest Flights Within K Stops</a>。本頁以鄰接表輸入，無解回傳 None。</p>
-<p>最多 K 個中途停靠點，對應最多 K+1 條邊。若只記 distance[city]，較便宜的抵達方式可能已用完額度，無法繼續飛；狀態還要保留已用邊數。</p>
+<p><mark>最多 K 個中途停靠點，對應最多 K+1 條邊</mark>。若只記 distance[city]，較便宜的抵達方式可能已用完額度，無法繼續飛；狀態還要保留已用邊數。</p>
 <p>非負邊權下，移除路徑中的環會讓費用與邊數都不增加，因此一定存在至多 V−1 條邊的最優路徑。實作取 B=min(K+1,V−1)，讓很大的 K 也只建立必要的層數。</p>
 <figure class="diagram"><svg role="img" aria-labelledby="c13-stops-title" viewBox="0 0 810 330" width="810" height="330">
 <title id="c13-stops-title">限制最多三條邊的反例：S 經 a、b 到 v 費用三但已用三邊，不能再去 T；S 直達 v 費用五且只用一邊，還能花一到 T，答案六</title>
@@ -229,13 +229,13 @@ def dijkstra(graph: list[list[tuple[int, int]]], start: int) -&gt; list[float | 
                 distance[neighbor][used + 1] = candidate
                 heappush(heap, (candidate, neighbor, used + 1))
     return None</code></pre><p>上圖編號 S=0、a=1、b=2、v=3、T=4。K=2 時，演算法先到 (v,3) 費用 3，但它不能擴展；之後仍保留 (v,1) 費用 5，走到 (T,2) 費用 6。若把 K 改成 3，可用四條邊，答案才變成 4。每次彈出的項目按費用排序，因此第一個未過期的目標狀態，就是所有合法用邊數中的最便宜答案。</p>
-<p><strong>不變量：</strong>每個距離項目只與相同城市、相同已用邊數的路徑比較。只有一個狀態同時「費用不更高、使用邊數不更多」，才可能支配另一個狀態；單獨費用較低並不足以刪除它。本版保留所有維度，沒有做這種額外剪枝。</p>
+<p><strong>不變量：</strong><mark class="mark-invariant">每個距離項目只與相同城市、相同已用邊數的路徑比較</mark>。只有一個狀態同時「費用不更高、使用邊數不更多」，才可能支配另一個狀態；單獨費用較低並不足以刪除它。本版保留所有維度，沒有做這種額外剪枝。</p>
 <div class="complexity">當 B≥1，擴展圖有 (B+1)V 個狀態與最多 BE 條轉移。此懶刪除實作時間 O(BV+BE log(BE+2))、額外空間 O(BV+BE)，最壞堆積也要計入。B=0 時不能走邊，起終點相同才可用零成本完成；本實作仍會配置距離與檢查輸入，花 O(V+E) 時間。K=−1 是程式特別允許的「最多零條邊」測試值，普通航班題通常從 K=0 開始。</div>
 <div class="callout"><strong>另一條思路：</strong>固定用邊數逐層做 DP，每一輪只從上一輪狀態計算下一輪，即可在 O(B(V+E)) 時間求限制邊數最短路，也能處理負邊。一定要使用新的下一層陣列；若在同一輪讀到剛寫入的距離，就可能在一輪內走了多條邊。若允許負邊，保留完整 K+1 層，因為重走負成本環可能降低總價。</div>
 
 <h3 id="c13-union-find">八、Union-Find：邊逐筆加入時，維護連通群組</h3>
 <p>無向圖的邊持續加入，每次要知道兩個節點是否已連通，可以用並查集（Union-Find／Disjoint Set Union，DSU）。find(x) 回傳 x 所在群組的代表；union(a,b) 合併兩個群組。代表相同，就屬於同一個連通分量。</p>
-<p>用 parent 把每個群組存成一棵樹，根滿足 parent[root]=root。合併時讓較小群組的根接到較大群組，避免長鏈；查找時把走過的節點直接接到根，稱為路徑壓縮。size 只在根上保存整個群組大小。</p>
+<p>用 parent 把每個群組存成一棵樹，根滿足 parent[root]=root。合併時讓<mark>較小群組的根接到較大群組</mark>，避免長鏈；查找時把走過的節點直接接到根，稱為路徑壓縮。size 只在根上保存整個群組大小。</p>
 <pre><code class="language-python">class UnionFind:
     def __init__(self, n):
         if n &lt; 0:
@@ -275,7 +275,7 @@ def dijkstra(graph: list[list[tuple[int, int]]], start: int) -&gt; list[float | 
 <tr><td>(3,4)</td><td>{0,1,2} {3,4}</td><td>True</td><td>2</td></tr>
 </tbody></table></div>
 <p>加入 (0,2) 前，0 與 2 已經由 0→1→2 連通。union 回傳 False 表示這條邊在現有路徑之外又形成一個環；components 只在成功合併時減 1。</p>
-<p><strong>不變量：</strong>每棵 parent 樹恰好對應一個連通分量。加入跨群組的邊時連接兩個根，正好合併兩個分量；同群組的邊維持原分量。路徑壓縮只改變同一群組內的父鏈，代表與成員保持相同。若原本是 3→2→0，find(3) 後會變成 3→0、2→0。</p>
+<p><strong>不變量：</strong><mark class="mark-invariant">每棵 parent 樹恰好對應一個連通分量</mark>。加入跨群組的邊時連接兩個根，正好合併兩個分量；同群組的邊維持原分量。路徑壓縮只改變同一群組內的父鏈，代表與成員保持相同。若原本是 3→2→0，find(3) 後會變成 3→0、2→0。</p>
 <div class="complexity">初始化 O(V) 時間、O(V) 空間。依大小合併加上路徑壓縮，q 次操作共 O(V+q·α(V)) 時間，α 是成長極慢的反 Ackermann 函數；每次操作的攤銷成本為 O(α(V))。單次尚未壓縮的 find 最壞仍可走 O(log V) 層。</div>
 <p>這個結構適合持續加邊、查群組與統計連通分量。需要實際路徑時用 BFS／DFS；刪邊可能拆開群組，則要額外的動態連通性方法。<a href="https://algs4.cs.princeton.edu/15uf/">Princeton：Union-Find 與攤銷分析</a>。</p>
 
@@ -305,7 +305,7 @@ def dijkstra(graph: list[list[tuple[int, int]]], start: int) -&gt; list[float | 
         result ^= value
     return result</code></pre></details></section>
 <section class="exercise"><h4>練習 4｜排除自己後的乘積，模數可能不是質數</h4>
-<p class="problem-link"><a href="https://leetcode.com/problems/product-of-array-except-self/">LeetCode 238．Product of Array Except Self</a> 的延伸：回傳乘積對正整數模數 m 的餘數。</p><p>回傳每個位置之外所有元素乘積對正整數 m 的餘數。允許零與負數，m 也可能是合數；不能使用除法。values=[2,3,4]、m=6 時得到 [0,2,0]。單元素陣列的空乘積是 1%m。</p><details><summary>參考解答</summary><p>第一輪把「左側乘積」存入結果，第二輪由右向左累乘「右側乘積」，把兩者相乘。每個位置的左、右集合互不重疊且正好排除自己。全程只用乘法與取模，因此零與沒有模反元素都不成問題。使用 O(n) 次模乘，結果 O(n)；不計結果只保留常數個整數，位元空間仍由 m 決定。</p><pre><code class="language-python">def products_except_self_mod(values: list[int], modulus: int) -&gt; list[int]:
+<p class="problem-link"><a href="https://leetcode.com/problems/product-of-array-except-self/">LeetCode 238．Product of Array Except Self</a> 的延伸：回傳乘積對正整數模數 m 的餘數。</p><p>回傳每個位置之外所有元素乘積對正整數 m 的餘數。允許零與負數，m 也可能是合數；不能使用除法。values=[2,3,4]、m=6 時得到 [0,2,0]。單元素陣列的空乘積是 1%m。</p><details><summary>參考解答</summary><p>第一輪把「左側乘積」存入結果，第二輪由右向左累乘「右側乘積」，把兩者相乘。<mark>每個位置的左、右集合互不重疊且正好排除自己</mark>。全程只用乘法與取模，因此零與沒有模反元素都不成問題。使用 O(n) 次模乘，結果 O(n)；不計結果只保留常數個整數，位元空間仍由 m 決定。</p><pre><code class="language-python">def products_except_self_mod(values: list[int], modulus: int) -&gt; list[int]:
     if modulus &lt;= 0:
         raise ValueError(&#x27;modulus must be positive&#x27;)
     result = [1 % modulus] * len(values)

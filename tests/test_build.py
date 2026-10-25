@@ -89,6 +89,20 @@ class CodeBlocks(HTMLParser):
 
 
 class ChapterExamplesTests(unittest.TestCase):
+    def test_highlighted_code_preserves_all_chapter_examples(self):
+        expected = CodeBlocks()
+        for chapter in sorted((ROOT / 'chapters').glob('*.html')):
+            expected.feed(chapter.read_text(encoding='utf-8'))
+        with tempfile.TemporaryDirectory(prefix='dsa-color-test-') as directory:
+            output = Path(directory) / 'index.html'
+            builder.build(output=output)
+            rendered = output.read_text(encoding='utf-8')
+        actual = CodeBlocks()
+        actual.feed(rendered)
+        self.assertEqual(actual.blocks, expected.blocks)
+        self.assertIn('<span class="token keyword">def</span>', rendered)
+        self.assertIn('<span class="token string">', rendered)
+
     def test_displayed_python_matches_executable_examples(self):
         for chapter in sorted((ROOT / 'chapters').glob('*.html')):
             parser = CodeBlocks()

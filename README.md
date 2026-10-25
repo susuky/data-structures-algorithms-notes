@@ -13,6 +13,7 @@
 - 章節與小節有固定錨點，可分享連結並使用瀏覽器的上一頁／下一頁。
 - 書籤、完成進度與閱讀位置保存在目前瀏覽器。清除網站資料會移除紀錄。
 - 支援淺色、深色、跟隨系統、手機目錄與鍵盤操作。
+- 重點句使用螢光筆標記，Python 程式依語法上色；配色隨主題切換。
 - 「列印全書與答案」會展開全部解答；列印結束後還原原本狀態。
 - 停用 JavaScript 時仍可閱讀全部章節、圖解與程式。
 
@@ -66,7 +67,7 @@ python build.py
 | `source/styles.css` | 共用樣式 |
 | `source/app.js` | 導覽、搜尋、儲存、主題與列印 |
 | `source/labs.js` | 演算法追蹤與互動實驗 |
-| `build.py` | 驗證並產生 `index.html` |
+| `build.py` | 驗證、Python 語法上色並產生 `index.html` |
 | `tests/examples_*.py` | 與正文同步的 Python 實作及驗證 |
 | `tests/test_build.py` | 建置、錨點、Python 語法與實作同步檢查 |
 | `tests/test_labs.js` | 互動演算法與獨立基準交叉比對 |

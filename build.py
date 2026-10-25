@@ -2,9 +2,13 @@
 """Build a deterministic, standalone DSA textbook using Python's standard library."""
 from __future__ import annotations
 import argparse
+import builtins
 import html
+import io
 import json
+import keyword
 import re
+import tokenize
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -90,6 +94,63 @@ class ChapterParser(HTMLParser):
             self.current = None
 
 
+def highlight_python(code: str) -> str:
+    """Color Python tokens while preserving the exact text and whitespace."""
+    tokens = list(tokenize.generate_tokens(io.StringIO(code).readline))
+    line_offsets = [0] + [match.end() for match in re.finditer('\n', code)]
+    builtin_names = set(dir(builtins))
+    output, cursor = [], 0
+    for index, token in enumerate(tokens):
+        kind, value = token.type, token.string
+        style = None
+        if kind == tokenize.COMMENT:
+            style = 'comment'
+        elif kind == tokenize.STRING or tokenize.tok_name[kind].startswith('FSTRING_'):
+            style = 'string'
+        elif kind == tokenize.NUMBER:
+            style = 'number'
+        elif kind == tokenize.OP:
+            style = 'punctuation' if value in '()[]{}:.,;' else 'operator'
+        elif kind == tokenize.NAME:
+            previous = tokens[index - 1].string if index else ''
+            following = tokens[index + 1].string if index + 1 < len(tokens) else ''
+            if value in ('True', 'False', 'None'):
+                style = 'constant'
+            elif keyword.iskeyword(value):
+                style = 'keyword'
+            elif previous == 'def':
+                style = 'function'
+            elif previous == 'class' or value[:1].isupper():
+                style = 'class-name'
+            elif previous == '@':
+                style = 'decorator'
+            elif value in builtin_names:
+                style = 'builtin'
+            elif following == '(':
+                style = 'function'
+        if style is None:
+            continue
+        start = line_offsets[token.start[0] - 1] + token.start[1]
+        end = line_offsets[token.end[0] - 1] + token.end[1]
+        output.append(html.escape(code[cursor:start]))
+        output.append(f'<span class="token {style}">{html.escape(code[start:end])}</span>')
+        cursor = end
+    output.append(html.escape(code[cursor:]))
+    return ''.join(output)
+
+
+def highlight_code_blocks(content: str) -> str:
+    def render(match):
+        code = html.unescape(match.group(2))
+        try:
+            highlighted = highlight_python(code)
+        except (tokenize.TokenError, IndentationError) as error:
+            raise ValueError(f'Python 程式碼無法上色：{error}') from error
+        return match.group(1) + highlighted + match.group(3)
+    return re.sub(r'(<pre><code class="language-python">)(.*?)(</code></pre>)',
+                  render, content, flags=re.DOTALL)
+
+
 def lab_markup():
     blocks = []
     for i, (key, title, question, chapter, fields, invariant, cost) in enumerate(LABS, 1):
@@ -137,7 +198,7 @@ def build(root: Path = ROOT, output: Path | None = None):
         all_refs.extend(parser.refs)
         title = parser.articles[0].get('data-title', short)
         meta.append({'id': chapter_id, 'number': f'{i:02}', 'title': title, 'short': short, 'keywords': KEYWORDS[i - 1], 'topics': parser.headings})
-        contents.append(content)
+        contents.append(highlight_code_blocks(content))
         if group != previous_group:
             sidebar.append(f'<li class="nav-group">{group}</li>')
             previous_group = group
