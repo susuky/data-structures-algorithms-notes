@@ -1,11 +1,11 @@
 <article id="chapter-05" data-title="堆疊與佇列：從配對到單調候選">
-<h2>05　堆疊與佇列：從配對到單調候選</h2>
+<h2>05｜堆疊與佇列：從配對到單調候選</h2>
 
-<p>遇到需要「回到最近還沒完成的事」，想到堆疊；遇到需要「照抵達順序處理」，想到佇列。如果問題還要求快速找下一個更大的值，或維護視窗最大值，就進一步思考：目前保留的索引中，哪些已找到答案，哪些不必再當候選？本章先說明操作規則，再推導單調結構中 while 迴圈的條件與理由。</p>
-<div class="callout"><strong>讀完要能做到：</strong>分清 LIFO 與 FIFO，說明括號配對為何要檢查堆疊頂端，正確處理重複值的嚴格／非嚴格比較，並證明單調堆疊與單調佇列的總工作量為 O(n)。除特別說明外，整數比較與四則運算採固定大小數值模型。</div>
+<p>在程式設計中，面對需要「暫停當前手邊工作、優先解決最近發生的巢狀事件」時，我們會自然聯想到堆疊（Stack）；而面對需要「遵循抵達先後、公平排隊依序處理」的任務時，佇列（Queue）則是不可或缺的基石。然而，當問題進一步要求「在陣列中以線性時間尋找下一個更大元素」，或是「在持續滑動的視窗中即時維護極值」時，我們就需要將這兩種結構昇華為強大的「單調結構」：在遍歷的每一步中，精準辨識出哪些舊元素已經找到了答案、哪些歷史候選已經被新生力量永久支配而可以被安全淘汰。本章將從基本操作出發，一步步推導單調堆疊與單調佇列的核心不變量，並用平攤分析證明它們優異的線性時間複雜度。</p>
+<div class="callout"><p>學習目標：清楚分辨後進先出（LIFO）與先進先出（FIFO）的適用場景；深刻理解括號配對為何必須比對堆疊頂端而非全域計數；在面對重複元素時能正確拿捏嚴格與非嚴格的大小比較；並能夠用平攤分析（Amortized Analysis）嚴謹證明單調堆疊與單調佇列的總工作量為 O(n)。除特別標註外，數值計算皆採固定大小整數模型。</p></div>
 
 <h3 id="c05-operations">1. 兩種等待規則，兩種 Python 容器</h3>
-<p>堆疊（stack）是<mark>後進先出 LIFO</mark>；加入稱 push，拿走最近加入者稱 pop。佇列（queue）是<mark>先進先出 FIFO</mark>；從尾端加入、頭端取出。這些是抽象規則，不限定某種實體儲存方式。Python 通常以 list 實作堆疊，以 collections.deque 實作雙端佇列。</p>
+<p>堆疊（Stack）遵循<strong>後進先出（LIFO, Last-In First-Out）</strong>的哲學：最新加入的元素擁有最先被處理的特權；放入資料稱為 push（在 Python 中對應 append），取出最近加入的資料則稱為 pop。相較之下，佇列（Queue）遵循<strong>先進先出（FIFO, First-In First-Out）</strong>的公平原則：元素永遠從尾端依序排入，並從頭端依序取出。這兩種都是高層次的抽象資料型態（ADT），並不限定底層的實體儲存形式。在 Python 中，堆疊通常直接以原生的動態陣列 list 實作；而佇列則強烈建議採用標準函式庫中的 collections.deque（雙端佇列）。</p>
 <figure class="diagram"><svg role="img" aria-labelledby="c05-order-title" viewBox="0 0 760 255" xmlns="http://www.w3.org/2000/svg">
 <title id="c05-order-title">同樣先放 A 再 B 再 C，堆疊先取 C，佇列先取 A</title>
 <defs><marker id="c05-arrow-a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#66758c"/></marker></defs>
@@ -28,20 +28,20 @@ queue = deque(["A", "B"])
 queue.append("C")
 assert queue.popleft() == "A"
 assert queue[0] == "B"</code></pre>
-<table><caption>常見 Python 操作成本</caption><thead><tr><th>操作</th><th>成本</th><th>注意事項</th></tr></thead><tbody>
-<tr><td>list.append／末端 pop</td><td>攤銷 O(1)</td><td>擴容可能讓單次操作較貴</td></tr>
-<tr><td>list.pop(0)</td><td>O(n)</td><td>其餘參照須往前移</td></tr>
-<tr><td>deque.append／pop／appendleft／popleft</td><td>約 O(1)</td><td>適合兩端操作</td></tr>
-<tr><td>deque 的頭尾索引</td><td>O(1)</td><td>中間索引最壞 O(n)</td></tr>
-<tr><td>找任意值、刪中間元素</td><td>通常 O(n)</td><td>不是堆疊／佇列擅長的工作</td></tr>
+<table><caption>Python 常見容器在堆疊與佇列操作上的時間複雜度比較</caption><thead><tr><th>具體操作</th><th>漸近計算成本</th><th>底層原理與注意事項</th></tr></thead><tbody>
+<tr><td>list.append() 與末端 pop()</td><td>平攤 O(1)</td><td>在動態陣列尾端操作極快，僅在偶發擴容時需要搬移參照</td></tr>
+<tr><td>list.pop(0) 與 list.insert(0, v)</td><td>O(n)</td><td><mark class="mark-pitfall">嚴格禁止用於佇列！</mark>每次從頭端彈出，後續所有元素參照都必須向左平移一格</td></tr>
+<tr><td>deque.append()、pop()、appendleft()、popleft()</td><td>嚴格 O(1)</td><td>底層由雙向鏈結的定長記憶體區塊（Chunk）組成，雙端增刪皆保證常數時間</td></tr>
+<tr><td>deque 的頭尾端點查看（queue[0]、queue[-1]）</td><td>O(1)</td><td>頭尾指標可直接定位</td></tr>
+<tr><td>在 deque 中依隨機下標讀取或刪除中間元素</td><td>最壞 O(n)</td><td>非連續陣列，需要沿著內部區塊逐一尋訪，並非 deque 的專長</td></tr>
 </tbody></table>
-<p>空容器 pop 或 popleft 會拋 IndexError，要由規格決定回傳特殊值還是先檢查。deque(maxlen=k) 滿時會自動丟棄另一端元素，適合固定容量歷史，但用來存 BFS 待辦或單調候選時，要確認自動丟棄的元素是否仍有用途，否則可能漏掉必要狀態。樹與圖的廣度優先走訪會在第 06 章使用 FIFO。</p>
+<p>在工程防禦上，對空容器執行 pop() 或 popleft() 都會直接拋出 IndexError 異常，實作時應依題目規格事先檢查 bool(container) 或做好邊界防護。另外，deque 支援傳入 maxlen=k 參數來建立固定容量的環形歷史緩衝區，滿載時新元素進入會自動將另一端的舊元素靜默擠出；但在實現圖的廣度優先搜尋（BFS）或維護單調候選時，請確保使用無容量上限的 deque，以防尚未處理的關鍵節點被意外丟棄。在第 06 章中，我們將大量依賴 deque 的 FIFO 特性來實現圖與樹的層序遍歷。</p>
 
 <h3 id="c05-brackets">2. 括號配對：最近開啟者必須最先關閉</h3>
-<p class="problem-source">輸入由 ()、[]、{} 組成的字串，判斷括號種類與巢狀順序是否完全配對。空字串回傳 True；出現其他字元時拋 ValueError。</p>
+<p class="problem-source">輸入由 ()、[]、{} 六種字元組成的字串，判斷括號的種類與巢狀開閉順序是否完全合法配對。若輸入為空字串視為合法回傳 True；若出現六種括號以外的非法字元則拋出 ValueError。</p>
 <p class="problem-source"><a href="https://leetcode.com/problems/valid-parentheses/">LeetCode 20 · Valid Parentheses</a></p>
-<p>讀到開括號，把它存入 stack；讀到閉括號，必須與頂端的開括號同種類。<mark class="mark-pitfall">只數左右括號無法判斷巢狀順序</mark>，例如 ([)] 各類數量都平衡，卻不是合法配對。也不能從堆疊中任選一個相符括號：跨過頂端，就會在內層尚未結束時先結束外層。</p>
-<p>不變量是：只要目前前綴仍合法，<mark class="mark-invariant">stack 從底到頂，恰好保存尚未關閉的開括號，由外層到內層排列</mark>。valid 記錄是否曾經失配；繼續掃描可檢查後續字元，且失配結果會一直保留。</p>
+<p>當我們由左至右掃描字串時，每當遇到一個開括號，代表開啟了一個新的作用域，我們將其壓入堆疊暫存；而當遇到閉括號時，它所期望關閉的，必須是當前「距離它最近、且尚未關閉的那個開括號」——這剛好完美對應到堆疊頂端的元素。<mark class="mark-pitfall">初學者常誤以為「只要統計各類左右括號的總數相等即可」，這是完全錯誤的</mark>；例如字串 "([)]"，每種括號數量各自平衡，但外層的圓括號還沒閉合，中括號就搶先跨越閉合，破壞了階層巢狀結構。在堆疊中，我們絕不能跨越頂端去關閉更深層的括號，因為「最晚開啟的區塊必須最先結束」。</p>
+<p><strong>核心不變量：</strong>在字串遍歷的每一步，只要當前的前綴子字串依然合法，<mark class="mark-invariant">stack 中由底至頂的元素，精準對應了目前尚未關閉的所有開括號，且嚴格按照由外層到內層的巢狀次序排列</mark>。我們可以用一個布林變數 valid 標記是否發生過失配；即便中途發現錯誤，依然可以完整走完字串以利驗證後續字元，並將失配結果忠實傳遞至最終判定。</p>
 <pre><code class="language-python">def valid_brackets(text):
     &quot;&quot;&quot;只接受六種括號；其他字元拋 ValueError。&quot;&quot;&quot;
     partner = {&quot;)&quot;: &quot;(&quot;, &quot;]&quot;: &quot;[&quot;, &quot;}&quot;: &quot;{&quot;}
@@ -58,15 +58,15 @@ assert queue[0] == "B"</code></pre>
         else:
             raise ValueError(&quot;輸入只能包含括號&quot;)
     return valid and not stack</code></pre>
-<div class="example"><h4>逐步例一：掃描 {[()]}</h4><table><thead><tr><th>字元</th><th>動作</th><th>stack（底 → 頂）</th></tr></thead><tbody>
-<tr><td>{</td><td>開啟外層</td><td>{</td></tr><tr><td>[</td><td>開啟中層</td><td>{ [</td></tr><tr><td>(</td><td>開啟內層</td><td>{ [ (</td></tr><tr><td>)</td><td>符合頂端 (，pop</td><td>{ [</td></tr><tr><td>]</td><td>符合頂端 [，pop</td><td>{</td></tr><tr><td>}</td><td>符合頂端 {，pop</td><td>空</td></tr>
-</tbody></table><p>掃完為空且沒有失配，所以為真。若停在 {[()，沒有任何錯誤的關閉符號，但仍有未關閉的 { 與 [，所以為假。</p></div>
-<p class="complexity">長度 n 的輸入掃一次，時間 O(n)，最壞空間 O(n)，例如全是開括號。若最大巢狀深度為 d，合法前綴的 stack 空間可更精確寫成 O(d)。空字串按本章規格為合法。</p>
+<div class="example"><h4>逐步追蹤範例一：依序掃描字串 "{[()]}"</h4><table><thead><tr><th>當前字元</th><th>執行的決策動作</th><th>stack 內部狀態（由底至頂）</th></tr></thead><tbody>
+<tr><td>{</td><td>開啟最外層大括號，push</td><td>['{']</td></tr><tr><td>[</td><td>開啟中層中括號，push</td><td>['{', '[']</td></tr><tr><td>(</td><td>開啟最內層小括號，push</td><td>['{', '[', '(']</td></tr><tr><td>)</td><td>遇到閉小括號，比對頂端 '(' 吻合，執行 pop</td><td>['{', '[']</td></tr><tr><td>]</td><td>遇到閉中括號，比對頂端 '[' 吻合，執行 pop</td><td>['{']</td></tr><tr><td>}</td><td>遇到閉大括號，比對頂端 '{' 吻合，執行 pop</td><td>[]（空堆疊）</td></tr>
+</tbody></table><p>字串掃描結束後，stack 剛好淨空且過程無失配，因此判定合法回傳 True。試想若輸入為 "{[()"，雖然中途沒有任何錯誤配對，但字串結束時堆疊中仍殘留未閉合的 '{' 與 '['，函式最後透過 not stack 精準攔截並判定為 False。</p></div>
+<p class="complexity">設字串長度為 n，演算法只需單次線性遍歷，時間複雜度為 O(n)；最壞空間複雜度為 O(n)（例如輸入全為開括號）。若已知括號的最大巢狀深度為 d，在合法情況下堆疊所需空間可更精準描述為 O(d)。</p>
 
 <h3 id="c05-parsing">3. 表達式解析：逆波蘭式與運算元順序</h3>
-<p class="problem-source">輸入逆波蘭式的字串 token 清單，內容為整數或 +、-、*、//，回傳計算結果。例如 ["8", "3", "-", "2", "*"] 回傳 10。不完整式子拋 ValueError，除零拋 ZeroDivisionError。</p>
-<p class="problem-source"><a href="https://leetcode.com/problems/evaluate-reverse-polish-notation/">LeetCode 150 · Evaluate Reverse Polish Notation</a> 使用 / 並向零截斷；本節的 // 向下取整。對 −7 除以 3，兩者分別得到 −2 與 −3。</p>
-<p>一般算式要處理優先級與括號；逆波蘭式（後綴式）把運算子放在兩個運算元之後。例如 8 3 − 2 × 表示 (8 − 3) × 2。每讀到數字就 push，讀到運算子就取出兩個已完成的子運算結果，計算後再 push。</p>
+<p class="problem-source">輸入代表逆波蘭表示法（Reverse Polish Notation, RPN）的字串清單，內容由整數或四則運算子 +、-、*、// 組成，回傳最終求值結果。例如輸入 ["8", "3", "-", "2", "*"] 回傳 10。若運算式不完整拋出 ValueError，除以零拋出 ZeroDivisionError。</p>
+<p class="problem-source"><a href="https://leetcode.com/problems/evaluate-reverse-polish-notation/">LeetCode 150 · Evaluate Reverse Polish Notation</a> 原題採用浮點數除法並向零截斷；本節實作採用 Python 內建的 // 向下取整。例如對於 −7 除以 3，兩者分別會得到 −2 與 −3。</p>
+<p>一般我們習慣的中綴表達式（如 (8 − 3) × 2）需要依賴括號與運算子優先級規則；而逆波蘭式（後綴表達式）則精妙地將運算子直接置於其作用的兩個運算元之後，徹底消除了括號的歧義。解析的規則非常單純：遇到數字就將其數值 push 存入堆疊；每當讀到運算子時，立刻從堆疊頂部彈出兩個已經算好的子運算結果進行計算，並將產生的新結果重新 push 回堆疊中。</p>
 <pre><code class="language-python">def evaluate_rpn(tokens):
     &quot;&quot;&quot;逆波蘭式整數運算，// 採 Python 向下取整。&quot;&quot;&quot;
     stack = []
@@ -88,14 +88,14 @@ assert queue[0] == "B"</code></pre>
     if len(stack) != 1:
         raise ValueError(&quot;運算式不完整&quot;)
     return stack[0]</code></pre>
-<p>不變量：stack 保存「已讀前綴中，尚未被後續運算子合併的子表達式結果」。<mark>先 pop 出來的是右運算元 b，第二個才是左運算元 a</mark>，所以要算 a − b 或 a // b。把順序寫反，在加法與乘法測試可能完全看不出來。8 3 − 的堆疊狀態依序是 [8]、[8, 3]、[5]。</p>
-<div class="warning">本例 // 明確採 Python 向下取整，因此 <mark class="mark-pitfall">−7 // 3 為 −3</mark>。若要向零截斷，可先計算 abs(a) // abs(b)，再依 a、b 是否異號決定正負；整個過程維持整數運算。除零會拋 ZeroDivisionError；運算元不足、最後剩多個結果或沒有結果，都是不完整的表達式。</div>
-<p class="complexity">t 個 token 的容器操作總共 O(t)，stack 最壞 O(t)。若整數位數可無限成長，字串轉整數、乘法與除法不能再當 O(1)；應額外計算數值的位元長度成本。</p>
+<p><strong>核心不變量與操作細節：</strong>stack 時刻保存著「在已處理的前綴中，尚未被後續運算子消耗掉的子表達式數值」。這裡有一個最經典的操作順序陷阱：<mark>第一個 pop() 出來的變數 b 是運算子的「右運算元」，第二個 pop() 出來的變數 a 才是「左運算元」</mark>！在計算減法或除法時，必須嚴格執行 a − b 與 a // b。如果把順序顛倒寫成 b − a，在加法與乘法的單元測試中因為交換律完全看不出破綻，卻會在減法與除法上引發致命錯誤。以 "8 3 −" 為例，堆疊狀態依序為 [8] → [8, 3] → 彈出 3 與 8 執行 8 − 3 → 壓入結果 [5]。</p>
+<div class="warning"><p>本實作明確採用 Python 標準的 // 整數除法向下取整規則，因此 <mark class="mark-pitfall">−7 // 3 的結果為 −3</mark>。若題目規格要求向零截斷（C/C++ 風格），可透過 int(a / b) 或先取絕對值相除後再根據正負號還原。在合約邊界上，遇到除以零直接觸發 ZeroDivisionError；若遇到運算子時堆疊不足兩個元素，或是全域運算結束後堆疊中殘留超過一個元素，皆屬於語法不完整的非法表達式，應拋出 ValueError。</p></div>
+<p class="complexity">設 token 總數為 t，所有項目在堆疊中各進出一次，總時間複雜度為 O(t)，堆疊輔助空間為 O(t)。若處理大整數運算，字串轉整數與大數乘除的耗時應按位元長度另計。</p>
 
 <h3 id="c05-monotonic-stack">4. 單調堆疊：下一個嚴格較大元素</h3>
-<p class="problem-source"><a href="https://leetcode.com/problems/daily-temperatures/">LeetCode 739 · Daily Temperatures</a> 回傳等待天數，無解填 0。本節先求下一個較大值的索引，無解填 −1；已知索引 j 後，等待天數就是 j−i。</p>
-<p>任務：對每個索引 i，找右側第一個值嚴格大於 values[i] 的索引，沒有就回傳 −1。逐格向右找最壞 O(n²)。掃描時也可以從新值出發：它是否是某些舊位置一直在等的第一個較大值？</p>
-<p>stack 存索引，而且<mark class="mark-invariant">索引遞增、對應值從底到頂非遞增</mark>。看到 value 時，頂端若比較小，它的第一個較大值就是現在：如果更早已有較大值，它當時早就被移除了。持續 pop 所有小於 value 的頂端，再把目前索引加入。相等值不能解決「嚴格較大」的要求，所以保留下來。</p>
+<p class="problem-source"><a href="https://leetcode.com/problems/daily-temperatures/">LeetCode 739 · Daily Temperatures</a> 原題求等待天數，無解填 0。本節實作先行求解「右側下一個較大元素的具體索引」，無解填 −1；一旦求得目標索引 j，等待天數直接等於 j − i。</p>
+<p>問題說明：對於陣列中的每一個索引 i，請找出在其右側第一個數值嚴格大於 values[i] 的索引位置；若右側完全沒有更大的數值，則該位置填入 −1。如果採用雙層迴圈對每個元素向右暴力搜尋，最壞時間複雜度為 O(n²)。要想在線性時間內解決，我們必須轉換視角：不要讓過去的元素苦苦向右搜尋，而是讓新讀入的元素主動去「認領」那些在過去歷史中一直在等待它的元素！</p>
+<p>我們在 stack 中存放尚未找到答案的索引，並維持強大的幾何單調性：<mark class="mark-invariant">堆疊內部的索引嚴格單調遞增，且其所對應的陣列數值由底至頂呈現「非遞增」排列</mark>。當前掃描到數值 value 時，如果當前堆疊頂端所對應的數值嚴格小於 value，這說明了什麼？說明了當前這個 value 正是頂端索引朝思暮想的「右側第一個更大值」！此時我們果斷將頂端 pop 出來並在答案陣列中記錄當前索引 i；隨後繼續檢查新的堆疊頂端，直到頂端數值不小於 value 為止，最後再將當前索引 i 壓入堆疊。請注意：相等數值無法滿足「嚴格較大」的合約，因此會被安全保留在堆疊中。</p>
 <pre><code class="language-python">def next_greater_indices(values):
     answer = [-1] * len(values)
     stack = []  # 未找到右側「嚴格較大」值的索引。
@@ -116,17 +116,17 @@ assert queue[0] == "B"</code></pre>
 <path d="M532 123 H435" stroke="#66758c" stroke-width="3" marker-end="url(#c05-arrow-b)"/>
 <text x="45" y="235" fill="#66758c">pop 2、1、0，各記答案 3；最後 push 3，stack = [3]</text>
 </g></svg><figcaption>相同的兩個 15 都需要保留自己的索引，因為它們是兩個尚待回答的位置。</figcaption></figure>
-<div class="example"><h4>逐步例二：18、15、15、20、17</h4><table><thead><tr><th>新索引／值</th><th>本輪移除</th><th>stack 索引</th><th>本輪確定的答案</th></tr></thead><tbody>
-<tr><td>0／18</td><td>無</td><td>[0]</td><td>無</td></tr><tr><td>1／15</td><td>無</td><td>[0, 1]</td><td>無</td></tr><tr><td>2／15</td><td>無，相等不是較大</td><td>[0, 1, 2]</td><td>無</td></tr><tr><td>3／20</td><td>2、1、0</td><td>[3]</td><td>answer[2] = answer[1] = answer[0] = 3</td></tr><tr><td>4／17</td><td>無</td><td>[3, 4]</td><td>無</td></tr>
-</tbody></table><p>結果是 [3, 3, 3, −1, −1]。若題目要「等待幾步」，每次記錄 i − popped_index；若要下一個較大值，就記錄 value。修改程式前，先確認輸出要表示什麼。</p></div>
-<p>看起來 for 裡還有 while，為什麼不是 O(n²)？<mark>每個索引只 push 一次、最多 pop 一次</mark>，整段 while 的成功迭代次數加總最多 n。可以想像每個索引加入時帶一張未來離場的票，票只能用一次。單一回合可能 O(n)，但 n 個回合的總成本仍是 O(n)。</p>
-<p class="complexity">時間 O(n)，額外 stack 空間 O(n)，另有 O(n) 輸出。最壞 stack 出現在非遞增輸入；相等值在此模板中也全部保留。</p>
+<div class="example"><h4>逐步追蹤範例二：輸入陣列 [18, 15, 15, 20, 17]</h4><table><thead><tr><th>當前處理的 i／數值</th><th>本輪觸發並 pop 的歷史索引</th><th>操作後的 stack（存放索引）</th><th>本輪確定並填入的答案</th></tr></thead><tbody>
+<tr><td>0／18</td><td>無</td><td>[0]</td><td>無</td></tr><tr><td>1／15</td><td>無</td><td>[0, 1]</td><td>無</td></tr><tr><td>2／15</td><td>無（相等不符合嚴格較大）</td><td>[0, 1, 2]</td><td>無</td></tr><tr><td>3／20</td><td>依序彈出 2、1、0</td><td>[3]</td><td>answer[2] = 3、answer[1] = 3、answer[0] = 3</td></tr><tr><td>4／17</td><td>無</td><td>[3, 4]</td><td>無</td></tr>
+</tbody></table><p>演算法終止後，留存在 stack 中的索引 3 與 4 因為右側再無更大值，保持初始的 −1，最終回傳 [3, 3, 3, −1, −1]。若題目要求回傳等待距離，只需在 pop 時記錄 i − popped_idx；若要求數值本身，則記錄 value。</p></div>
+<p><strong>平攤複雜度證明：</strong>程式碼外觀上是 for 迴圈內套了 while 迴圈，許多初學者會直覺誤以為它是 O(n²)。但請站在陣列元素的生命週期來思考：<mark>陣列中的每一個索引，在整個演算法生命週期中都恰好只會被 push 進入堆疊一次，且一旦被 pop 彈出後就永遠不會再次入棧</mark>。這意味著 while 迴圈內部的 pop 述句在全程的執行總次數上限嚴格為 n 次。雖然某些回合（如上述處理 20 時）可能一次性彈出多個元素，但平均分攤下來，每個元素平攤成本僅為 O(1)，整體的總時間複雜度是嚴密保證的 O(n)。</p>
+<p class="complexity">本演算法時間複雜度為 O(n)，輔助空間為 O(n)，輸出空間為 O(n)。最壞空間情況出現在輸入為單調遞減時，所有索引皆會累積在堆疊中。</p>
 
 <h3 id="c05-monotonic-deque">5. 單調雙端佇列：固定視窗最大值</h3>
-<p class="problem-source">輸入整數陣列 values 與整數視窗長度 k，回傳每個視窗的最大值。例如 [4,1,3,3,0,5]、k=3 得到 [4,3,3,5]；k 超出 1…len(values) 時拋 ValueError。</p>
+<p class="problem-source">輸入整數陣列 values 與正整數視窗長度 k，回傳每個大小為 k 的滑動視窗中的最大數值。例如輸入 [4, 1, 3, 3, 0, 5]、k = 3，回傳 [4, 3, 3, 5]；若 k 超出 1 到 len(values) 的合法範圍則拋出 ValueError。</p>
 <p class="problem-source"><a href="https://leetcode.com/problems/sliding-window-maximum/">LeetCode 239 · Sliding Window Maximum</a></p>
-<p>現在對每個長度 k 的連續視窗找最大值。堆疊只能在一端移除，不方便淘汰最舊元素；deque 能從頭移除過期索引，從尾移除被新值壓過的候選。deque 中只保存仍可能成為某個未來視窗最大值的索引。</p>
-<p>維持三個不變量：<mark class="mark-invariant">索引由小到大；所有索引都在目前視窗中；對應值由大到小</mark>。對新位置 i，先移除索引 ≤ i − k 的過期頭端，再移除尾端所有值 ≤ values[i] 的候選，最後加入 i。當視窗已湊滿 k 個，頭端就是最大值。</p>
+<p>在長度為 k 的連續滑動視窗中維護極值時，單調堆疊就顯得力不從心了：因為堆疊只能在一端進行彈出，無法自然地將隨著視窗右移而在左端「過期」的老舊元素淘汰掉。解決之道是採用 collections.deque（單調雙端佇列）：它允許我們從頭端剔除已經滑出視窗的過期索引，同時從尾端淘汰掉被新元素徹底壓制（支配）的無用候選。</p>
+<p><strong>三大核心不變量：</strong>在每一輪迭代完畢後，<mark class="mark-invariant">佇列中的索引嚴格遞增；所有索引皆保證落在目前的視窗 [i − k + 1, i] 之內；且這些索引所對應的數值由頭至尾呈現「嚴格單調遞減」</mark>。每當右端讀入新位置 i 時，演算法分為三步：首先，檢查頭端 candidates[0]，若其索引 ≤ i − k 則代表已滑出視窗過期，執行 popleft()；其次，檢查尾端，若尾端候選的數值 ≤ 當前新值 values[i]，代表它們已被新值徹底支配，從尾端執行 pop()；最後將 i 壓入尾端。當視窗形成滿 k 個元素後，佇列的頭端 candidates[0] 所指的永遠是當前視窗的絕對最大值！</p>
 <pre><code class="language-python">from collections import deque
 
 def sliding_maximum(values, k):
@@ -154,16 +154,15 @@ def sliding_maximum(values, k):
 <text x="34" y="190" fill="#66758c">之前候選 [0:4, 2:3]</text><path d="M249 184 H310" stroke="#66758c" stroke-width="3" marker-end="url(#c05-arrow-c)"/><text x="328" y="190" fill="#66758c">移除 0（過期）與 2（被新 3 支配）</text>
 <rect x="270" y="214" width="230" height="46" rx="8" fill="#d8f3e8" stroke="#387b64"/><text x="291" y="244">候選 [3:3]，最大值 3</text>
 </g></svg><figcaption>保留較新的同值元素，能得到相同最大值，且較晚過期。如果要回傳最早最大值索引，平手時的選擇規則就必須改變。</figcaption></figure>
-<div class="example"><h4>逐步例三：視窗候選如何變小</h4><table><thead><tr><th>i／值</th><th>過期移除</th><th>尾端淘汰</th><th>deque：索引:值</th><th>輸出</th></tr></thead><tbody>
-<tr><td>0／4</td><td>無</td><td>無</td><td>[0:4]</td><td>未滿</td></tr><tr><td>1／1</td><td>無</td><td>無</td><td>[0:4, 1:1]</td><td>未滿</td></tr><tr><td>2／3</td><td>無</td><td>1:1</td><td>[0:4, 2:3]</td><td>4</td></tr><tr><td>3／3</td><td>0:4</td><td>2:3</td><td>[3:3]</td><td>3</td></tr><tr><td>4／0</td><td>無</td><td>無</td><td>[3:3, 4:0]</td><td>3</td></tr><tr><td>5／5</td><td>無</td><td>4:0、3:3</td><td>[5:5]</td><td>5</td></tr>
+<div class="example"><h4>逐步追蹤範例三：輸入 values = [4, 1, 3, 3, 0, 5]，k = 3</h4><table><thead><tr><th>當前 i／值</th><th>頭端過期移除</th><th>尾端被支配淘汰</th><th>deque 當前狀態（索引:數值）</th><th>當前視窗產出最大值</th></tr></thead><tbody>
+<tr><td>0／4</td><td>無</td><td>無</td><td>[0:4]</td><td>視窗未滿 3</td></tr><tr><td>1／1</td><td>無</td><td>無</td><td>[0:4, 1:1]</td><td>視窗未滿 3</td></tr><tr><td>2／3</td><td>無</td><td>淘汰 1:1（因 1 ≤ 3）</td><td>[0:4, 2:3]</td><td>4（取頭端）</td></tr><tr><td>3／3</td><td>移除 0:4（因 0 ≤ 3 − 3）</td><td>淘汰 2:3（因 2 號值 3 ≤ 當前 3）</td><td>[3:3]</td><td>3（取頭端）</td></tr><tr><td>4／0</td><td>無</td><td>無</td><td>[3:3, 4:0]</td><td>3（取頭端）</td></tr><tr><td>5／5</td><td>無</td><td>依序淘汰 4:0 與 3:3</td><td>[5:5]</td><td>5（取頭端）</td></tr>
 </tbody></table></div>
-<p>刪除尾端的正確性來自「支配關係」：若較新的 i 之值不小於舊 j，<mark>任何之後仍包含 j 的視窗也包含 i，而且 i 不會更早過期</mark>，所以 j 永遠不再必要。這個推理說明了為什麼可以安全刪除 j；只檢查「維持遞減」，還不足以證明不會漏掉答案。</p>
-<p class="complexity">每個索引加入一次，從某一端離開至多一次，因此時間 O(n)，候選空間 O(k)，輸出空間 O(n − k + 1)。本例要求 1 ≤ k ≤ n；空資料沒有合法的視窗長度。</p>
-<div class="warning">不要把所有位置只存成值：重複值會讓「哪一個已過期」難以區分。也不要從一般 list 做 pop(0)；雖然結果可能仍正確，複雜度卻可能變成 O(nk)。</div>
+<p><strong>淘汰尾端的支配性定理：</strong>為什麼只要 values[j] ≤ values[i]（其中 j &lt; i），舊候選 j 就可以被永久且安全地丟棄？思考視窗的移動過程：在未來任何同時包含 j 的視窗中，因為 i 在 j 的右側，該視窗必然也同時包含 i；而在數值上 i 至少跟 j 一樣大，在存活時限上 i 甚至比 j 更加年輕、更晚過期。換句話說，只要有 i 的存在，舊元素 j 永遠不可能成為任何未來視窗的唯一最大值！這種「數值更大且壽命更長」的壓倒性優勢稱為支配關係（Dominance）。唯有透過嚴密的支配邏輯，我們才能在刪除候選時百分之百確保絕不漏解。</p>
+<p class="complexity">每個索引只會入隊一次，且最多從頭端或尾端出隊一次，總時間複雜度為平攤 O(n)；候選佇列空間至多為 O(k)，輸出空間為 O(n − k + 1)。請特別記住：在佇列中必須存放「索引」而非純數值，否則面對重複元素時將無從判斷哪一個已經過期；同時絕不能拿普通 list 來當佇列呼叫 pop(0)，那會讓演算法直接退化回 O(nk)。</p>
 
 <h3 id="c05-practice">6. 練習與解答</h3>
 
-<section class="exercise"><h4>練習 A：讓括號檢查器指出位置</h4><p>對 ([)] 回傳第一個失配閉括號的索引 2。若沒有失配閉括號但仍有未關閉括號，回傳最早未關閉位置；完全合法則回傳 None。假設輸入只含括號。</p><details><summary>參考解答</summary><p>stack 改存 (括號, 索引)。關閉時只檢查頂端種類，失配就回傳目前位置；掃完若 stack 非空，回傳 stack[0] 的索引。</p><pre><code class="language-python">def first_bracket_error(text):
+<section class="exercise"><h4>練習 A：讓括號檢查器精準指出錯誤位置</h4><p>面對失配字串 "([)]"，請回傳第一個無法配對的閉括號索引 2。若字串中沒有失配的閉括號，但最後仍殘留未閉合的開括號，回傳最早未閉合開括號的索引；若完全合法配對則回傳 None。假設輸入字串僅含六種括號。</p><details><summary>參考解答</summary><p>將堆疊存放的項目由純字元改為 (括號字元, 索引位置) 的元組。遇到閉括號時，若堆疊為空或與頂端不符，直接回傳當前索引 i；當字串掃描完畢後若堆疊非空，則回傳 stack[0][1]（即堆疊底部的最早未閉合索引）；若堆疊淨空則回傳 None。</p><pre><code class="language-python">def first_bracket_error(text):
     &quot;&quot;&quot;只接受括號；回傳第一個無法配對的關閉位置，否則最早未關閉位置。&quot;&quot;&quot;
     partner = {&quot;)&quot;: &quot;(&quot;, &quot;]&quot;: &quot;[&quot;, &quot;}&quot;: &quot;{&quot;}
     stack = []
@@ -176,11 +175,12 @@ def sliding_maximum(values, k):
             stack.pop()
         else:
             raise ValueError(&quot;輸入只能包含括號&quot;)
-    return stack[0][1] if stack else None</code></pre><p>時間 O(n)，空間 O(n)。測試至少包含空字串、第一個字元就是閉括號、巢狀失配、只有未關閉開括號四類。</p></details></section>
-<section class="exercise"><h4>練習 B：下一個嚴格較小值的等待距離</h4><p>輸入 [5, 5, 2, 4, 1]，希望輸出 [2, 1, 2, 1, 0]，0 表示右側找不到更小值。請指出原模板要改的三處。</p><details><summary>參考解答</summary><p>答案初值由 −1 改為 0；while 條件改為 values[stack[-1]] &gt; value；pop 出 j 時記 answer[j] = i − j。stack 的值改成非遞減，相等仍然不移除。每個索引只進出一次，所以 O(n) 時間、O(n) 空間。索引 0、1 都等到值 2，距離分別為 2、1。</p></details></section>
+    return stack[0][1] if stack else None</code></pre><p>時間複雜度為 O(n)，空間複雜度為 O(n)。測試覆蓋應包含：空字串、第一位就是閉括號、交錯失配以及全是開括號的情境。</p></details></section>
 
-<section class="exercise"><h4>練習 C：視窗最大值要回傳最早的索引</h4><p>對 [3, 3, 2]、k = 2，最大值位置要回傳 [0, 1]。原程式保留較新的相同值，如何調整才能符合要求？</p><details><summary>參考解答</summary><p><mark>尾端淘汰條件由 ≤ 改為 &lt;，保留所有相同值</mark>，deque 的值不再嚴格遞減，而是非遞增。輸出 candidates[0] 本身，而不是對應值。索引依舊遞增，因此頭端是仍在視窗內的最早最大值。空間仍不超過 O(k)，時間仍 O(n)。</p></details></section>
+<section class="exercise"><h4>練習 B：尋找下一個嚴格較小值的等待跨度</h4><p>給定輸入陣列 [5, 5, 2, 4, 1]，希望輸出各位置到右側第一個更小元素的步數差距 [2, 1, 2, 1, 0]（0 代表右側無更小值）。請說明如何修改原本的單調堆疊模板。</p><details><summary>參考解答</summary><p>主要進行三處關鍵調整：第一，answer 陣列的預設無解初值由 −1 改為 0；第二，while 迴圈的彈出條件由 values[stack[-1]] &lt; value 改為 values[stack[-1]] &gt; value（堆疊改為維護數值非遞減）；第三，當彈出索引 j 時，記錄的差距值計算為 answer[j] = i − j。對於相同數值依然不觸發彈出以滿足嚴格較小的定義。每個元素進出堆疊各一次，時間複雜度為穩定的 O(n)，空間為 O(n)。</p></details></section>
+
+<section class="exercise"><h4>練習 C：滑動視窗最大值改為回傳「最早出現的索引」</h4><p>對於輸入 [3, 3, 2]、k = 2，每個視窗的最大值位置希望回傳 [0, 1]。原本的程式碼會用較新的 3 淘汰較舊的 3，該如何修改以滿足要求？</p><details><summary>參考解答</summary><p><mark>將尾端淘汰條件由 ≤ 改為嚴格的 &lt;</mark>。這樣一來，當遇到數值相同的新元素時，舊元素不會被淘汰，佇列中數值呈現非遞增而非嚴格遞減。在輸出時，直接 append(candidates[0]) 輸出索引而非數值。由於佇列索引天生由小到大排列，頭端永遠會保留目前視窗內最早出現的最大值索引。空間複雜度仍為 O(k)，時間複雜度仍為 O(n)。</p></details></section>
 
 <h3 id="c05-summary">7. 決策小結</h3>
-<ul><li>最近開啟、尚未結束的事情：stack。配對、解析、DFS 的手動呼叫框架都屬此類。</li><li>按加入順序處理：deque + append／popleft。避免 list.pop(0)。</li><li>要找下一個較大／較小位置：單調 stack，先確定嚴格性與輸出是值、索引還是距離。</li><li>視窗隨時間前進且求最大／最小：單調 deque，分開處理過期與被支配。</li><li>看見巢狀迴圈先數「每個元素能被處理幾次」，不要只數程式縮排層數。</li><li><mark>候選結構只刪永遠不需要的資訊</mark>；若需求改成第 k 大或中位數，通常不能沿用同一套支配規則。</li></ul>
+<ul><li>面對「最近開啟、尚未結束的事件」或具有嚴密階層嵌套結構：毫不猶豫選擇堆疊（Stack）。括號配對、算式求值、以及遞迴轉手動迭代皆屬此類。</li><li>面對「嚴格按照到達先後、先來先服務」的排隊場景：使用 collections.deque 配合 append 與 popleft，堅決避免使用低效的 list.pop(0)。</li><li>尋找「下一個更大／更小元素」：構建單調堆疊，明確定義是嚴格大小還是允許相等，並搞清楚輸出要的是數值、目標索引還是距離差。</li><li>滑動視窗動態維護區間極值：構建單調雙端佇列（Monotonic Deque），頭端專職過濾超時過期元素，尾端專職淘汰被支配候選。</li><li>分析巢狀迴圈時：擺脫肉眼看縮排的誤區，聚焦追蹤「每個元素一生到底會被處理並彈出幾次」，以平攤分析證明真正的線性效能。</li><li><mark>單調候選結構的核心是剪除永遠不可能成為解答的資訊</mark>；如果業務需求改為動態查詢「視窗中位數」或「第 k 大元素」，由於歷史元素隨時可能重返候選，單調佇列的支配前提便不再成立，必須改用雙堆（Two Heaps）或平衡樹。</li></ul>
 </article>

@@ -1,15 +1,18 @@
 <article id="chapter-09" data-title="二分搜尋：邊界、不變量與答案空間">
 <h2>09　二分搜尋：找一個永遠不會被丟掉的邊界</h2>
-<p>二分搜尋可以處理「有序陣列找數字」，也能用來找由 False 轉為 True 的分界。每次觀察中間一點，就排除不可能包含答案的一半。實作時先說清楚 lo、hi 各代表什麼，以及哪些位置已經確定，才能決定如何更新這兩個變數。</p>
-<div class="callout"><strong>本章約定：</strong>陣列為非遞減排序，允許重複值。陣列索引搜尋採半開區間 [lo, hi)；整數容量的答案搜尋採閉區間 [lo, hi]。兩套寫法都正確，但初始化、更新及停止條件必須成套使用。</div>
+<p>在許多人的第一印象中，二分搜尋（Binary Search）似乎只是「在排序陣列裡找某個數字在哪裡」的基礎技巧。然而在實戰工程與進階演算法中，二分搜尋真正的強大之處在於：<mark>在具備單調性（Monotonicity）的空間中，以對數級時間精確鎖定 True 與 False 的交界點</mark>。每一次觀察中點，我們都能藉由單調性質一口氣捨棄掉整整一半不可能包含答案的候選區間。寫二分搜尋最常見的挫折，莫過於在 <code>lo &lt; hi</code> 還是 <code>lo &lt;= hi</code>、<code>mid + 1</code> 還是 <code>mid</code> 之間迷失方向，最終陷入無窮迴圈或陣列越界。要徹底擺脫「隨機試錯憑運氣」的寫法，唯一的法門就是在動筆前先說清楚：<code>lo</code> 與 <code>hi</code> 分別代表什麼語意？未知的探查區間是什麼？迴圈的不變量又是如何被嚴格維持的？</p>
+<div class="callout"><strong>本章設計慣例：</strong>針對陣列索引的搜尋，本章統一採用邏輯最為嚴謹、不容易出錯的「半開區間 $[lo, hi)$」模型；而在數值答案空間的連續整數搜尋中，則採用「閉區間 $[lo, hi]$」模板。這兩套寫法在數學上皆完全正確，但其初始化邊界、中點計算、端點更新與停止條件必須成套搭配，切忌東拼西湊。</div>
+
 <h3 id="c09-boundary">1. 把找值改成找邊界</h3>
 <p class="problem-source">插入位置：<a href="https://leetcode.com/problems/search-insert-position/">LeetCode 35 · Search Insert Position</a>；重複值範圍：<a href="https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/">LeetCode 34 · Find First and Last Position of Element in Sorted Array</a>。本節 lower_bound 支援空陣列與重複值。第 34 題的含尾範圍由 [lower,upper−1] 得到，無命中時回傳 [-1,-1]。</p>
-<p>在 [2,4,4,4,9] 搜尋 4，任意一個 4 的索引都能回答「有沒有」。若題目問第一個、最後一個、出現幾次，找到任意一個後就停止，仍無法回答這些問題。定義 <mark>lower_bound(x) 為第一個值 ≥ x 的位置</mark>；若不存在，回傳 n。upper_bound(x) 則找第一個值 &gt; x 的位置。</p>
+<p>假設給定一個已排序陣列 <code>[2, 4, 4, 4, 9]</code>，要在其中尋找數值 4。傳統的寫法只要撞見任何一個 4 就興奮地回傳其索引；但如果題目進一步追問：「4 出現的第一個位置在哪裡？」、「4 的最後一個位置在哪裡？」或是「4 總共重複了幾次？」，隨機命中任一個 4 的傳統寫法便顯得無能為力。更具普適性的思考方式，是將「找特定數值」昇華為「找劃分邊界」：</p>
+<ul><li><strong>lower_bound(x)：</strong>尋找第一個數值 $\ge x$ 的元素索引。換句話說，它把陣列精確切分成兩半：左邊所有元素都嚴格小於 $x$，右邊所有元素（包含自己）都大於等於 $x$。若所有元素都小於 $x$，則回傳陣列長度 $n$。</li><li><strong>upper_bound(x)：</strong>尋找第一個數值 $> x$ 的元素索引。左邊所有元素皆 $\le x$，右邊所有元素皆 $> x$。</li></ul>
 <figure class="diagram"><svg role="img" aria-label="lower bound 將陣列切成小於與不小於兩部分" viewBox="0 0 780 280" xmlns="http://www.w3.org/2000/svg"><title>lower bound 將陣列切成小於與不小於兩部分</title><rect width="780" height="280" rx="16" fill="#f3f7fc"/><g font-family="system-ui, sans-serif" font-size="18" fill="#132b45"><text x="25" y="35" font-weight="bold">搜尋第一個 ≥ 4 的位置：答案是邊界，不一定是值</text><rect x="155" y="72" width="94" height="52" fill="#d98745" rx="6"/><text x="193" y="105" fill="white" font-size="24">2</text><text x="193" y="148">0</text><rect x="259" y="72" width="94" height="52" fill="#256e61" rx="6"/><text x="297" y="105" fill="white" font-size="24">4</text><text x="297" y="148">1</text><rect x="363" y="72" width="94" height="52" fill="#256e61" rx="6"/><text x="401" y="105" fill="white" font-size="24">4</text><text x="401" y="148">2</text><rect x="467" y="72" width="94" height="52" fill="#256e61" rx="6"/><text x="505" y="105" fill="white" font-size="24">4</text><text x="505" y="148">3</text><rect x="571" y="72" width="94" height="52" fill="#256e61" rx="6"/><text x="609" y="105" fill="white" font-size="24">9</text><text x="609" y="148">4</text><text x="700" y="148">5</text><text x="687" y="179">尾端</text><line x1="253" y1="58" x2="253" y2="170" stroke="#132b45" stroke-width="3"/><text x="140" y="206">[0, q) 都 &lt; 4</text><text x="352" y="206">[q, n) 都 ≥ 4</text><text x="220" y="247">q = 1；找不到時 q = n，禁止讀 values[n]</text></g></svg><figcaption>lower bound 將陣列切成小於與不小於兩部分</figcaption></figure>
-<p>邊界 q 可以是 0，也可以是 n。q 表示分界位置，該位置不一定有元素，因此搜尋結束後不能直接存取 values[q]。判斷目標存在的完整條件是 <mark class="mark-pitfall">q &lt; len(values) 且 values[q] == target</mark>。先檢查範圍，再讀元素。</p>
+<p>請特別留意：回傳的切分點 $q$ 是一個「插入位置邊界」，它的合法數值範圍是 $[0, n]$。當 $q = n$ 時，代表陣列中根本沒有任何元素 $\ge x$；此時直接拿 $q$ 去存取 <code>values[q]</code> 會立刻觸發 <code>IndexError</code>。因此，要判定目標值是否存在，必須嚴格先檢查範圍：<mark class="mark-pitfall">q &lt; len(values) 且 values[q] == target</mark>，這兩者順序絕對不能顛倒。</p>
+
 <h3 id="c09-invariant">2. 半開模板：未知的是索引，答案是分界</h3>
-<p>初始化 lo=0、hi=n。每次迴圈開始時保持：</p>
-<ul><li>0 ≤ lo ≤ hi ≤ n。</li><li>所有 i &lt; lo 都滿足 values[i] &lt; target。</li><li>所有 i ≥ hi 的合法索引都滿足 values[i] ≥ target。</li><li><mark class="mark-invariant">待判斷的陣列索引是 [lo, hi)，而邊界 q 仍在閉範圍 [lo, hi]</mark>。</li></ul>
+<p>在半開區間 $[lo, hi)$ 的設計中，我們將區間初始化為 <code>lo = 0</code>、<code>hi = len(values)</code>。整個演算法運作期間，始終嚴格維持以下迴圈不變量：</p>
+<ul><li>數值界限：$0 \le lo \le hi \le n$ 永遠成立。</li><li>左側已知區：所有索引 $i &lt; lo$ 的元素，皆已確定滿足 <code>values[i] &lt; target</code>。</li><li>右側已知區：所有索引 $i \ge hi$ 的合法元素，皆已確定滿足 <code>values[i] &ge; target</code>。</li><li><mark class="mark-invariant">中間未知區：當前尚待探查的索引區間恰好是半開區間 [lo, hi)，而真正的分界點必落在閉區間 [lo, hi] 之中</mark>。</li></ul>
 <figure class="diagram"><svg role="img" aria-label="未知索引區間與已知左右區域" viewBox="0 0 780 300" xmlns="http://www.w3.org/2000/svg"><title>未知索引區間與已知左右區域</title><rect width="780" height="300" rx="16" fill="#f3f7fc"/><g font-family="system-ui, sans-serif" font-size="18" fill="#132b45"><text x="25" y="35" font-weight="bold">半開區間的不變量：只探查未知索引 [lo, hi)</text><rect x="45" y="76" width="175" height="56" fill="#d98745"/><rect x="220" y="76" width="310" height="56" fill="#ceddf0"/><rect x="530" y="76" width="205" height="56" fill="#256e61"/><text x="88" y="110" fill="white">一定 &lt; x</text><text x="308" y="110">仍未知</text><text x="570" y="110" fill="white">一定 ≥ x</text><text x="40" y="159">0</text><text x="205" y="159">lo</text><text x="515" y="159">hi</text><text x="724" y="159">n</text><text x="60" y="204">values[mid] &lt; x → lo = mid + 1</text><text x="60" y="237">values[mid] ≥ x → hi = mid</text><text x="60" y="273">未知區縮短至空時，lo = hi = 唯一分界。</text></g></svg><figcaption>未知索引區間與已知左右區域</figcaption></figure><pre><code class="language-python">def lower_bound(values, target):
     lo, hi = 0, len(values)
     while lo &lt; hi:
@@ -19,10 +22,11 @@
         else:
             hi = mid
     return lo</code></pre>
-<p>若 values[mid] &lt; target，因為已排序，mid 及更左側都不可能是第一個 ≥ target 的位置，所以 lo=mid+1。否則 mid 有可能就是第一個，不能跳過；設 hi=mid，讓 mid 成為已知右側的一部分。<mark>每次 hi−lo 都嚴格縮短</mark>。當 lo=hi 時，這個位置同時符合左右區域的性質，就是唯一的分界。</p>
-<div class="warning"><strong>常見混搭：</strong>半開模板用了 while lo ≤ hi，可能碰到 values[n]；判斷小於後寫 lo=mid，可能在長度一或二時停不下來；判斷不小於後寫 hi=mid−1，則可能刪掉真正邊界。先寫不變量，再決定加減一。</div>
+<p>讓我們仔細體會端點更新的微觀邏輯：當 <code>values[mid] &lt; target</code> 時，根據排序單調性，<code>mid</code> 以及它左邊的所有元素都不可能成為「第一個 $\ge target$」的位置，因此將 <code>lo</code> 推進至 <code>mid + 1</code>；反之，若 <code>values[mid] &ge; target</code>，則 <code>mid</code> 本身極有可能就是我們要找的第一個滿足條件者，絕對不能將它隨意排除！因此我們將上界收斂為 <code>hi = mid</code>，讓 <code>mid</code> 納入右側已知合格區。<mark>每次迴圈執行後，待探查長度 hi - lo 都必然嚴格縮小</mark>。當 <code>lo == hi</code> 時，未知區間長度收縮為 0，此時 <code>lo</code>（亦即 <code>hi</code>）正好就是兩大區域唯一的黃金交界點！</p>
+<div class="warning"><strong>常見寫法混用的致命傷：</strong>在半開區間框架下，如果隨意改寫成 <code>while lo &lt;= hi</code>，在找不到數值時可能會導致 <code>mid == n</code> 進而存取越界；若在 <code>values[mid] &lt; target</code> 後寫 <code>lo = mid</code>，在長度為 1 或 2 時會導致區間長度永遠無法縮短，直接陷入無窮迴圈；若在 <code>else</code> 後隨便寫 <code>hi = mid - 1</code>，則會粗暴地把真正的答案直接抹殺。千萬不要靠運氣增減 1，一切以不變量為準繩。</div>
+
 <h3 id="c09-example-bounds">3. 逐步範例：同一份資料找兩個邊界</h3>
-<div class="example"><p>values=[2,4,4,4,9]，target=4。以下每列記錄本輪探查前的區間。</p><table><thead><tr><th>搜尋</th><th>lo</th><th>hi</th><th>mid / 值</th><th>更新</th></tr></thead><tbody><tr><td>lower</td><td>0</td><td>5</td><td>2 / 4</td><td>hi=2</td></tr><tr><td>lower</td><td>0</td><td>2</td><td>1 / 4</td><td>hi=1</td></tr><tr><td>lower</td><td>0</td><td>1</td><td>0 / 2</td><td>lo=1，停止</td></tr><tr><td>upper</td><td>0</td><td>5</td><td>2 / 4</td><td>lo=3</td></tr><tr><td>upper</td><td>3</td><td>5</td><td>4 / 9</td><td>hi=4</td></tr><tr><td>upper</td><td>3</td><td>4</td><td>3 / 4</td><td>lo=4，停止</td></tr></tbody></table><p>lower=1，upper=4，所以 4 佔據半開索引 [1,4)，共 4−1=3 次，最後一次在 upper−1=3。<mark>如果 lower==upper，代表沒有命中</mark>，此時不能把 upper−1 當成目標的最後位置。</p></div>
+<div class="example"><p>給定陣列 <code>values = [2, 4, 4, 4, 9]</code>，目標 <code>target = 4</code>。我們分別追蹤 <code>lower_bound</code> 與 <code>upper_bound</code> 的每一步收斂過程：</p><table><thead><tr><th>搜尋</th><th>lo</th><th>hi</th><th>mid / 值</th><th>更新</th></tr></thead><tbody><tr><td>lower</td><td>0</td><td>5</td><td>2 / 4</td><td>hi=2</td></tr><tr><td>lower</td><td>0</td><td>2</td><td>1 / 4</td><td>hi=1</td></tr><tr><td>lower</td><td>0</td><td>1</td><td>0 / 2</td><td>lo=1，停止</td></tr><tr><td>upper</td><td>0</td><td>5</td><td>2 / 4</td><td>lo=3</td></tr><tr><td>upper</td><td>3</td><td>5</td><td>4 / 9</td><td>hi=4</td></tr><tr><td>upper</td><td>3</td><td>4</td><td>3 / 4</td><td>lo=4，停止</td></tr></tbody></table><p>追蹤結束後，我們得到 <code>lower = 1</code>，<code>upper = 4</code>。這代表所有等於 4 的元素精準座落在半開索引區間 $[1, 4)$ 之中！其出現總次數為 $4 - 1 = 3$ 次，最後一次出現的索引則為 <code>upper - 1 = 3</code>。<mark>若 lower == upper，則代表目標數值在陣列中完全不存在</mark>；此時切勿直接存取 <code>upper - 1</code>，必須先驗證命中性。</p></div>
 <pre><code class="language-python">def upper_bound(values, target):
     lo, hi = 0, len(values)
     while lo &lt; hi:
@@ -32,8 +36,10 @@
         else:
             hi = mid
     return lo</code></pre>
-<p class="complexity">對支援 O(1) 隨機存取的 Python list，每次探查 O(1)，共 O(log(n+1)) 時間、O(1) 額外空間；n=0 時不探查。若用鏈結串列，尋找中點不再是 O(1)，不能照搬這個成本分析。若一開始才為單次查詢排序，總成本是 O(n log n)，未必比直接掃描更好。</p>
+<p class="complexity">複雜度分析：在支援 $O(1)$ 隨機存取的陣列（如 Python <code>list</code>）中，每次折半只需常數次比較，總時間複雜度為對數級的 $O(\log n)$，額外空間為極致的 $O(1)$。但如果面對的是單向鏈結串列，因為移動到中點需花費線性時間，二分搜尋的時間複雜度會退化為 $O(n)$，完全失去優勢。另外請注意：如果面對未排序陣列，為了單次查詢而先呼叫排序（耗時 $O(n \log n)$）往往得不償失，直接進行一次 $O(n)$ 的線性掃描才是明智之舉。</p>
+
 <h3 id="c09-python">4. Python 實務：用 bisect 查詢排序資料</h3>
+<p>在日常生產開發中，除非面試有特殊要求，否則應優先採用 Python 內建且經過 C 語言極致優化的 <code>bisect</code> 模組。<code>bisect_left</code> 即為 <code>lower_bound</code>，而 <code>bisect_right</code> 即為 <code>upper_bound</code>：</p>
 <pre><code class="language-python">from bisect import bisect_left, bisect_right
 
 values = [2, 4, 4, 4, 9]
@@ -51,20 +57,20 @@ inside = bisect_left(values, b) - bisect_left(values, a)  # 3</code></pre>
 <tr><td>最後一個 &lt; x</td><td>lower_bound(values, x) − 1</td><td>索引 ≥ 0</td></tr>
 <tr><td>最後一個 ≤ x</td><td>upper_bound(values, x) − 1</td><td>索引 ≥ 0</td></tr>
 </tbody></table>
-<p>查詢紀錄中的某個欄位時，Python 3.10 起的 <a href="https://docs.python.org/3/library/bisect.html">bisect key 參數</a>可直接抽出排序鍵。<mark>資料須先依同一個 key 排好；搜尋目標 x 直接傳入鍵值</mark>：</p>
+<p>從 Python 3.10 開始，<code>bisect</code> 家族函式全面支援 <code>key</code> 參數，這讓我們可以直接對結構化字典或元組資料進行二分搜尋，而不需要手動抽取清單。<mark>前提是原始資料本身必須已經依照該 key 函式的標準排序完畢</mark>：</p>
 <pre><code class="language-python">records = [("Ada", 70), ("Lin", 85), ("Wei", 85), ("Yu", 92)]
 position = bisect_left(records, 85, key=lambda row: row[1])
 assert position == 1
 assert records[position] == ("Lin", 85)</code></pre>
-<p>key 作用於 records 中的元素，因此查分數時傳入 85。多次查詢且 key 計算昂貴時，可先建立 keys=[key(record) for record in records]，再對 keys 做二分。</p>
-<p>標準庫 bisect 不會替你檢查或重新排序。使用 insort 插入雖然找位置是 O(log n)，<mark class="mark-pitfall">list 移動後續元素仍是 O(n)</mark>。迴圈中寫 values[:mid] 會複製子串列，破壞 O(1) 空間與簡單的成本分析；保留索引即可。Python 整數不會固定寬度溢位，但 lo+(hi−lo)//2 的形式更容易移植到固定寬度語言。</p>
+<p>需要特別提醒的是：標準庫的 <code>bisect.insort</code> 雖然能在 $O(\log n)$ 內找到插入點，但隨後的陣列元素後移在底層依然需要 $O(n)$ 時間；頻繁呼叫 <code>insort</code> 維護大清單的總成本高達 $O(n^2)$。此外，切勿在二分搜尋迴圈中使用切片語法 <code>values[:mid]</code>，這會在每次折半時進行記憶體淺拷貝，直接將空間複雜度炸成 $O(n)$。在數值計算上，雖然 Python 整數具備任意精度不會發生 32-bit 整數溢位，但養成使用 <code>lo + (hi - lo) // 2</code> 的好習慣，能讓你的程式邏輯無縫跨語言移植。</p>
+
 <h3 id="c09-predicate">5. 用 first_true 搜尋單調判斷的分界</h3>
 <p class="problem-source"><a href="https://leetcode.com/problems/first-bad-version/">LeetCode 278 · First Bad Version</a> 搜尋版本 1…n 的第一個錯誤版本。本節 first_true 搜尋 [0,n)，全 False 時回傳 n。</p>
-<p>如果 predicate(i) 在索引 [0,n) 呈現 False、False、…、True、True，就可以直接找第一個 True，不需要存出整個布林陣列。若全 False，回傳 n；若全 True，回傳 0；n=0 也回傳 0，且不呼叫 predicate。</p>
+<p>二分搜尋的精髓遠不限於查詢靜態陣列！設想一個抽象函式 <code>predicate(i)</code>，它在索引區間 $[0, n)$ 上呈現單調性：前段全為 <code>False</code>，從某一處開始後段全變為 <code>True</code>（例如：系統負載在某一臨界值之後開始逾時、產品版本從某一版開始引入 Bug）。我們完全不需要把這些布林值預先計算並儲存成一個巨型陣列，直接在虛擬索引空間上呼叫判定函式進行二分即可：</p>
 <pre><code class="language-python">def first_true(n, predicate):
-    &quot;&quot;&quot;predicate 在 [0, n) 先 False 後 True；全 False 回傳 n。&quot;&quot;&quot;
+    """predicate 在 [0, n) 先 False 後 True；全 False 回傳 n。"""
     if n &lt; 0:
-        raise ValueError(&quot;搜尋範圍長度不可為負&quot;)
+        raise ValueError("搜尋範圍長度不可為負")
     lo, hi = 0, n
     while lo &lt; hi:
         mid = (lo + hi) // 2
@@ -73,20 +79,22 @@ assert records[position] == ("Lin", 85)</code></pre>
         else:
             lo = mid + 1
     return lo</code></pre>
-<p>n 必須是非負整數；負值拋 ValueError。<mark class="mark-invariant">predicate 在搜尋期間須保持一致且具單調性</mark>。如果輸出是 False、True、False，就不能使用這個模板。找最後 True 的問題若呈現 True→False，可以搜尋第一個 False 再減一，並處理全部為 False 時的 −1 哨兵。改寫函式時，要一併確認判斷方向，不能只換名稱。</p>
-<p class="complexity"><mark>若一次 predicate 的成本是 T，二分成本是 O(T log(n+1))</mark>；分析時必須計入每次判斷的成本。空間包含 predicate 自己需要的記憶體。這裡的 first_true 不會呼叫 predicate(n)，所以即使 n 是「不存在」的哨兵也安全。</p>
+<p>這段邏輯的不變量十分明確：任何時候，我們都確信真正的第一個 True 必存在於 $[lo, hi]$ 之間。<mark class="mark-invariant">使用此模板的唯一前提是：predicate 函式必須在定義域內保持嚴格的單調性</mark>。如果判定結果呈現交替震盪（如 <code>False, True, False, True</code>），二分搜尋將直接失去方向感。若面對的是「先 True 後 False」並想找最後一個 True，只需將目標轉化為「尋找第一個 False」再將索引減 1 即可。</p>
+<p class="complexity">特別提醒複雜度分析：<mark>若單次執行 predicate(mid) 的時間成本為 T，則二分搜尋的總時間複雜度為 O(T log(n + 1))</mark>。在面試或工程評估中，千萬不要只看到二分搜尋就脫口而出 $O(\log n)$，必須嚴格將判定器內部的運算時間納入考量。</p>
+
 <h3 id="c09-answer-space">6. 答案二分：最低每日運送容量</h3>
 <p class="problem-source"><a href="https://leetcode.com/problems/capacity-to-ship-packages-within-d-days/">LeetCode 1011 · Capacity To Ship Packages Within D Days</a>。本節另定義空貨箱清單的容量為 0，並允許天數超過貨箱數量。</p>
-<p>有依序到達的貨箱，重量為正整數。每天最多運送容量 C；不能拆箱、不能改順序，同一天運走一段連續貨箱。求在至多 D 天完成的最小整數 C。例子 weights=[3,2,4,1,3]，D=3。</p>
-<ol><li><strong>下界：</strong>最重貨箱不可拆，所以 C ≥ max(weights)。</li><li><strong>上界：</strong>sum(weights) 能一天運完，對 D ≥ 1 一定可行。</li><li><strong>判斷：</strong>給 C 後，每天依序放到下一箱會超重才換天，計算需要幾天。</li><li><strong>單調：</strong><mark class="mark-invariant">如果 C 可行，更大的 C 可以直接沿用原分組，因此一定可行</mark>。搜尋第一個可行 C。</li></ol>
+<p>這是演算法設計中最優雅、威力也最龐大的模式之一——「對答案空間進行二分（Binary Search on Answer Space）」。有些最佳化問題，直接從正面推導最優配置極其困難，但如果反過來問：「假設答案是某個固定值 $C$，這套配置是否合法可行？」，判定可行性往往只需一次簡單的貪心或線性掃描！</p>
+<p>以貨物運送為例：有一批貨箱必須按固定順序由傳送帶送達，我們必須在最多 $D$ 天內將所有貨箱全數運出。貨箱不可拆分，每天只能載運連續的一段貨物。問題是：船隻每天最低必須具備多少運載容量 $C$？</p>
+<ol><li><strong>定義可行域下界：</strong>任何單一貨箱都不能被拆開，所以容量 $C$ 絕對不能小於所有貨箱中的最大重量，即 $lo = \max(weights)$。</li><li><strong>定義可行域上界：</strong>若船隻容量一口氣大到能裝下所有貨箱總重，那麼一天之內就能運完，對任意 $D \ge 1$ 絕對足夠，故安全上界可設為 $hi = \sum weights$。</li><li><strong>證明單調性：</strong><mark class="mark-invariant">若每天運力 C 足以在 D 天內運完，那麼當運力提升至 C + 1 時，沿用原本的每日分組方案顯然依然安全，因此也必然可行</mark>！這保證了可行性答案空間呈現「前段 False、後段 True」的完美單調階梯。</li><li><strong>設計線性判定器：</strong>對於任意給定的容量 $C$，我們只需使用貪心法由左至右裝箱——只要當天還能塞下下一箱就繼續塞，直到超重才被迫換天。</li></ol>
 <figure class="diagram"><svg role="img" aria-label="運送容量形成 False 到 True 的單調答案空間" viewBox="0 0 780 300" xmlns="http://www.w3.org/2000/svg"><title>運送容量形成 False 到 True 的單調答案空間</title><rect width="780" height="300" rx="16" fill="#f3f7fc"/><g font-family="system-ui, sans-serif" font-size="18" fill="#132b45"><text x="25" y="34" font-weight="bold">固定順序、最多 3 天：容量增加只會讓限制放寬</text><rect x="54" y="72" width="86" height="49" fill="#a44944" rx="6"/><text x="87" y="104" fill="white">4</text><text x="64" y="152">False</text><rect x="152" y="72" width="86" height="49" fill="#256e61" rx="6"/><text x="185" y="104" fill="white">5</text><text x="162" y="152">True</text><rect x="250" y="72" width="86" height="49" fill="#256e61" rx="6"/><text x="283" y="104" fill="white">6</text><text x="260" y="152">True</text><rect x="348" y="72" width="86" height="49" fill="#256e61" rx="6"/><text x="381" y="104" fill="white">7</text><text x="358" y="152">True</text><rect x="446" y="72" width="86" height="49" fill="#256e61" rx="6"/><text x="479" y="104" fill="white">8</text><text x="456" y="152">True</text><rect x="544" y="72" width="86" height="49" fill="#256e61" rx="6"/><text x="577" y="104" fill="white">9</text><text x="554" y="152">True</text><rect x="642" y="72" width="86" height="49" fill="#256e61" rx="6"/><text x="675" y="104" fill="white">10</text><text x="652" y="152">True</text><line x1="146" y1="59" x2="146" y2="170" stroke="#132b45" stroke-width="3"/><text x="35" y="207">容量 4： [3] [2] [4] [1,3]，需要 4 天</text><text x="35" y="240">容量 5： [3,2] [4,1] [3]，需要 3 天</text><text x="35" y="273">第一個 True 就是最低可行容量 5。</text></g></svg><figcaption>運送容量形成 False 到 True 的單調答案空間</figcaption></figure>
-<p><strong>判斷器為何正確？</strong>固定 C，每一天貪心放入最大的可行前綴。任何合法分組的第一天都不可能放得比這個前綴更多。以天數歸納：若貪心在 d−1 天後已不比另一分組落後，第 d 天若尚未到達對方當天終點，只需運送對方第 d 天貨箱的某個後綴，重量不會更多，因此貪心仍不落後。因此，貪心分組使用的天數最少，能正確判斷這個容量是否可行。</p>
+<p><strong>為什麼貪心裝箱判定是正確的？</strong>設想在固定容量 $C$ 下，貪心策略每一天都盡可能塞入最多數量的貨物。顯然，任何其他可行的合法調度方案，其第一天所運送的貨物量都不可能超越貪心策略。透過歸納法可知：貪心策略在第 $d$ 天結束時所覆蓋的貨箱進度，永遠不會落後於任何其他排程方式。因此，貪心裝箱所耗費的總天數必然是所有可行分組中的理論最小值，若連貪心裝箱都超時，該容量就必定宣告不可行。</p>
 <pre><code class="language-python">def minimum_capacity(weights, days):
-    &quot;&quot;&quot;依序運送正整數重量；每天裝入一段，可使用少於 days 天。&quot;&quot;&quot;
+    """依序運送正整數重量；每天裝入一段，可使用少於 days 天。"""
     if days &lt;= 0:
-        raise ValueError(&quot;天數必須為正整數&quot;)
+        raise ValueError("天數必須為正整數")
     if any(weight &lt;= 0 for weight in weights):
-        raise ValueError(&quot;重量必須為正整數&quot;)
+        raise ValueError("重量必須為正整數")
     if not weights:
         return 0
 
@@ -109,22 +117,26 @@ assert records[position] == ("Lin", 85)</code></pre>
         else:
             lo = mid + 1
     return lo</code></pre>
-<p>此處改用閉區間 [lo,hi]：<mark class="mark-invariant">最小答案一直保留在區間內，而且 hi 一定可行</mark>。mid 可行時保留它，令 hi=mid；不可行時排除它及更小值，令 lo=mid+1。lo=hi 時就是最小答案。搜尋下界是 max(weights)，因此每次判斷都能放入單一貨箱。使用天數一旦超過 days 就提前回傳 False，略過後續掃描。</p>
+<p>在數值答案空間中，我們維持閉區間 $[lo, hi]$：<mark class="mark-invariant">最優解永遠被鎖定在區間內，且 hi 始終代表一個已知的可行安全值</mark>。當中點 <code>mid</code> 可行時，它有可能是最終最佳解，因此令 <code>hi = mid</code> 收縮右界；當 <code>mid</code> 不可行時，代表它以及所有更小的容量全數陣亡，因此果斷令 <code>lo = mid + 1</code>。當 <code>lo == hi</code> 時，迴圈終止，該點即為理論上的最小可行容量。</p>
+
 <h3 id="c09-example-capacity">7. 逐步範例：用判斷器縮小整數答案</h3>
-<div class="example"><table><thead><tr><th>lo</th><th>hi</th><th>mid</th><th>按順序分組</th><th>結果與更新</th></tr></thead><tbody><tr><td>4</td><td>13</td><td>8</td><td>[3,2]｜[4,1,3]</td><td>2 天，可行，hi=8</td></tr><tr><td>4</td><td>8</td><td>6</td><td>[3,2]｜[4,1]｜[3]</td><td>3 天，可行，hi=6</td></tr><tr><td>4</td><td>6</td><td>5</td><td>[3,2]｜[4,1]｜[3]</td><td>3 天，可行，hi=5</td></tr><tr><td>4</td><td>5</td><td>4</td><td>[3]｜[2]｜[4]｜[1,3]</td><td>4 天，不可行，lo=5</td></tr></tbody></table><p>最後 lo=hi=5。<mark>確認 5 可行還不夠；4 不可行才證明它是最小值</mark>。若 D=1，答案是總重量 13；若 D≥貨箱數，每天最多一箱就好，答案是最重的 4。</p></div>
-<p class="complexity">令 n 為貨箱數，L=max(weights)、U=sum(weights)。初始化 O(n)，每次判斷 O(n)，總時間 O(n log(U−L+2))，額外空間 O(1)。<mark>二分輪數由數值範圍 U−L 決定</mark>。此分析將整數加總與比較視為 O(1)。</p>
+<div class="example"><p>給定貨箱 <code>weights = [3, 2, 4, 1, 3]</code>，限制天數 <code>days = 3</code>。初始邊界 $lo = 4$，$hi = 13$：</p><table><thead><tr><th>lo</th><th>hi</th><th>mid</th><th>按順序分組</th><th>結果與更新</th></tr></thead><tbody><tr><td>4</td><td>13</td><td>8</td><td>[3,2]｜[4,1,3]</td><td>2 天，可行，hi=8</td></tr><tr><td>4</td><td>8</td><td>6</td><td>[3,2]｜[4,1]｜[3]</td><td>3 天，可行，hi=6</td></tr><tr><td>4</td><td>6</td><td>5</td><td>[3,2]｜[4,1]｜[3]</td><td>3 天，可行，hi=5</td></tr><tr><td>4</td><td>5</td><td>4</td><td>[3]｜[2]｜[4]｜[1,3]</td><td>4 天，不可行，lo=5</td></tr></tbody></table><p>演算法最終收斂至 <code>lo = hi = 5</code>。請特別注意最後一步的關鍵意義：<mark>光是驗證容量 5 可行還不夠，唯有同時證明容量 4 確實不可行，5 才能被嚴格奉為全域最小值</mark>。若天數寬限為極端值（如 $D=1$），答案自然為總和 13；若 $D \ge 5$，每天載運一箱即可，答案就是最大單箱重 4。</p></div>
+<p class="complexity">效能分析：設貨箱總數為 $n$，單箱最大重為 $L$，總重為 $U$。每次判定耗時 $O(n)$，二分搜尋的次數取決於答案空間寬度 $\log(U - L + 1)$，整體時間複雜度為 $O(n \log(U - L + 1))$，空間複雜度為極其精簡的 $O(1)$。這種時間隨數值範圍對數增長的特質，使得即便資料總量或重量高達數十億，二分搜尋也能在數十微秒內瞬間完成！</p>
+
 <h3 id="c09-pitfalls">8. 何時不要急著二分</h3>
-<ul><li><strong>單調性不成立：</strong>某個容量可行，下一個卻不可行，就必須重新定義判斷。<mark>單調性必須從原本的限制推得</mark>，不能只根據幾個樣本判斷。</li><li><strong>答案不在界內：</strong>hi 必須能覆蓋答案或代表合法的不存在哨兵，不能隨意填一個大數。</li><li><strong>「至多」變「恰好」：</strong>若允許空天、貨箱可再切成更多非空天，以及 D 是否大於 n，都會影響問題。本文只求至多 D 天。</li><li><strong>浮點答案：</strong>實數區間沒有 mid+1 這種操作，常需誤差門檻或固定次數；不能直接套整數停止條件。</li><li><strong>旋轉陣列：</strong>原始值並非整段排序，必須另外辨識有序半邊。重複值可能使單次無法排除一半，最壞情況也可能退化。</li></ul>
-<p><strong>手動追蹤時：</strong>先畫出所有可能的分界位置，而不是只畫元素。<mark>長度五的陣列有六個可能邊界</mark>，包含最前面與最尾端。每次更新後，重新檢查被排除的部分是否符合已知條件。修改端點前，先寫出保留與排除該端點的理由。最後記錄停止當下 lo、hi 的值，再翻譯成「不存在」、「第一個位置」或「最小可行容量」等題目需要的語意。這樣能把區間定義、端點更新與回傳值一起核對，減少混用不同模板的機會。</p>
+<p>二分搜尋固然強大，但在動手實作前，必須警惕以下常見的失效陷阱：</p>
+<ul><li><strong>單調性不成立：</strong>如果在某個參數下系統可行，調大或調小後卻忽好忽壞，代表問題背後並不具備單調結構。請記住：單調性必須從問題的物理或數學約束中推導出來，切勿單憑幾組局部測試數據就一廂情願地假設。</li><li><strong>邊界設定不安全：</strong>上界 <code>hi</code> 必須在數學上百分之百保證「一定可行」，若隨意設定一個不夠大的魔術數字，可能導致最優解直接被遺漏在搜尋範圍之外。</li><li><strong>問題約束從「至多」變為「恰好」：</strong>若題目要求天數必須「恰好為 D 天」且禁止空車，原本「容量越大越容易成功」的單調性可能會被完全打破，此時問題往往會昇華為動態規劃或 NP-Complete 分割問題。</li><li><strong>浮點數精度陷阱：</strong>面對連續實數空間的二分搜尋，不存在 <code>mid + 1</code> 的整數跳躍，端點更新應為 <code>lo = mid</code> 與 <code>hi = mid</code>，且終止條件必須改為誤差門檻（如 <code>hi - lo &gt; 1e-7</code>）或固定執行 60~100 次折半。</li><li><strong>旋轉排序陣列（Rotated Sorted Array）：</strong>陣列被局部分割成兩段遞增區間。此時每次折半必須先判斷哪一側是嚴格單調區間；若陣列中包含大量重複元素，最壞情況下將退化為 $O(n)$ 線性掃描。</li></ul>
+
 <h3 id="c09-practice">9. 練習：把停止條件寫進答案</h3>
 <section class="exercise"><h4>練習一：重複值與空範圍</h4>
-<p>對 [1,1,3,5,5]，求 target=1、2、5、8 的 lower、upper 及出現次數。</p><details><summary>參考解答</summary><p>1 → (0,2)，兩次；2 → (2,2)，零次；5 → (3,5)，兩次；8 → (5,5)，零次。回傳 n=5 合法，但不是可以讀取的索引。</p></details></section>
+<p>給定已排序陣列 [1, 1, 3, 5, 5]，請手算推導當 target 分別為 1、2、5、8 時，<code>lower_bound</code> 與 <code>upper_bound</code> 的回傳索引，並計算其出現次數。</p><details><summary>參考解答</summary><p>針對 1：lower=0, upper=2，出現 $2 - 0 = 2$ 次；針對 2：lower=2, upper=2，出現 $2 - 2 = 0$ 次；針對 5：lower=3, upper=5，出現 $5 - 3 = 2$ 次；針對 8：lower=5, upper=5，出現 $5 - 5 = 0$ 次。請注意：回傳值為長度 5 是合法的邊界哨兵，代表「所有元素皆小於目標」，切勿嘗試以 5 作為索引存取陣列。</p></details></section>
 <section class="exercise"><h4>練習二：第一個 True 不存在</h4>
-<p>n=6，predicate 全為 False。追蹤 first_true，指出它有沒有讀到索引 6。</p><details><summary>參考解答</summary><p>(lo,hi)=(0,6)，mid=3 後 lo=4；mid=5 後 lo=6；停止並回傳 6。實際只探查 3、5，沒有呼叫 predicate(6)。這也是用 n 作哨兵的理由。</p></details></section>
+<p>若搜尋長度 $n=6$，且判定器 <code>predicate</code> 對所有索引皆恆為 <code>False</code>。請追蹤 <code>first_true</code> 的執行步驟，並確認它是否會存取到非法索引 6。</p><details><summary>參考解答</summary><p>初始區間為 (0, 6)。第一輪中點 mid=3，判定為 False，更新 lo=4；第二輪區間 (4, 6)，中點 mid=5，判定為 False，更新 lo=6。此時 lo==hi==6，迴圈終止並回傳 6。整個過程中判定器僅探查了合法索引 3 與 5，完全沒有存取索引 6。這證明了半開區間將 $n$ 作為安全哨兵的卓越自洽性。</p></details></section>
 <section class="exercise"><h4>練習三：找最小生產時間</h4>
-<p class="problem-source"><a href="https://leetcode.com/problems/minimum-time-to-complete-trips/">LeetCode 2187 · Minimum Time to Complete Trips</a> 用巴士趟數表示產出；本題以機器製品表示，每台獨立連續工作。</p><p>機器分別每 3、5 單位時間完成一件產品，從時間 0 同時開始。要至少 7 件，最少整數時間是多少？給出單調判斷與安全上界。</p><details><summary>參考解答</summary><p>predicate(t) 為 t//3+t//5 ≥ 7，隨 t 不減。下界 0，上界 3×7=21，因最快的機器單獨就能完成。t=14 產出 4+2=6 件，t=15 產出 5+3=8 件，因此答案 15。產品數可能一次跳過 7，<mark class="mark-pitfall">條件必須是「至少」，不能用相等</mark>。m 台機器的每次判斷 O(m)。</p></details></section>
+<p class="problem-source"><a href="https://leetcode.com/problems/minimum-time-to-complete-trips/">LeetCode 2187 · Minimum Time to Complete Trips</a> 用巴士趟數表示產出；本題以機器製品表示，每台獨立連續工作。</p><p>有兩台獨立機台，各自生產一件產品分別需要 3 與 5 單位時間，從時間 0 開始並行生產。若我們需要累積至少 7 件產品，所需的最小整數時間是多少？請寫出單調判定式與安全上界。</p><details><summary>參考解答</summary><p>單調判定式為：在時間 $t$ 內兩台機台累積的產出總量 $f(t) = (t // 3) + (t // 5) \ge 7$。因為 $f(t)$ 隨時間單調不減，此題可對時間二分。安全下界為 0，安全上界可假設只靠最快的機台獨自生產，即 $3 \times 7 = 21$。手算驗證：$t=14$ 時產出為 $4 + 2 = 6$（不足）；$t=15$ 時產出為 $5 + 3 = 8 \ge 7$（達標）。因此最小整數時間為 15。<mark class="mark-pitfall">請注意條件必須寫「至少 7 件」，因為產出可能直接跳過 7 變成 8，寫等號會永遠找不到解答</mark>。</p></details></section>
 <section class="exercise"><h4>練習四：診斷無窮迴圈</h4>
-<p>在閉區間 [4,5] 找第一個可行答案 5，使用 mid=(lo+hi)//2，mid 不可行後設 lo=mid。發生什麼事？</p><details><summary>參考解答</summary><p>mid 永遠為 4，lo 仍為 4，區間不變。mid 已證明不可行，應 lo=mid+1。每輪都檢查候選範圍是否嚴格縮小，是最快的人工檢查法。</p></details></section>
+<p>在閉區間 [4, 5] 中尋找第一個滿足條件的答案 5。若中點公式採用 <code>mid = (lo + hi) // 2</code>，且在 mid 判定不可行後寫下 <code>lo = mid</code>。請問程式會發生什麼問題？</p><details><summary>參考解答</summary><p>在 $lo=4, hi=5$ 時，整數除法算出 $mid = 4$。若判定 4 不可行後執行 <code>lo = mid</code>，則 <code>lo</code> 依然被設為 4，區間維持 $[4, 5]$ 完全沒有縮小，下一輪依然算出 $mid = 4$，直接墜入無窮迴圈！正確做法：既然已經明確證明 4 是不可行的無效解，就必須大膽寫下 <code>lo = mid + 1</code> 將其排除，促使搜尋範圍嚴格收縮至 $[5, 5]$。</p></details></section>
+
 <h3 id="c09-checklist">10. 章末決策卡</h3>
-<p>先問：我找的是元素，還是邊界？邊界兩側的條件是什麼？為什麼單調？採閉區間還是半開區間？答案可不存在嗎？每步是否嚴格縮小？最後怎麼解讀哨兵？答案二分額外問：判斷器本身是否正確，成本多少？</p>
+<p>當你著手設計二分搜尋時，請依序完成以下檢查清單：先辨明「尋找的是具體元素還是邊界分割點」→ 明確列出邊界左右兩側各自滿足的嚴格定義 → 證明判定函式是否具備絕對的單調性 → 決定採用半開區間 $[lo, hi)$ 還是閉區間 $[lo, hi]$ 並維持整套不變量 → 驗證每次折半是否保證區間長度嚴格縮減 → 審慎處理回傳哨兵的邊界語意。如果是答案二分，務必評估單次判定器的時間複雜度是否划算！</p>
 </article>

@@ -1,16 +1,16 @@
 <article id="chapter-01" data-title="基礎：成本、遞迴與學習方法">
 <h2>01｜基礎：先說清楚，再把程式寫對</h2>
-<p>資料結構決定資料如何存放，演算法則描述處理資料的步驟。學習時，除了認出題型，還要能回答三件事：現在知道什麼、下一步為何安全、總共要付出多少成本。後續各章都會用到本章的成本分析與正確性推理。</p>
-<div class="callout"><p><strong>成本模型：</strong>範例使用 Python 3.10 以上。n 表示記憶體中的元素數；一般加減、比較與索引視為 O(1)。分析長字串、大整數或列出所有答案時，再加入字元數、位元數與輸出量。</p></div>
+<p>資料結構決定了資料在記憶體中如何組織，而演算法則是處理與轉換這些資料的具體步驟。學習演算法時，光是死記題型或背誦模板往往很難應付變化；真正重要的是在實作每一步時，都能清楚回答三件事：我們目前掌握了什麼資訊？下一步的推進為什麼是安全且正確的？以及整個過程到底要付出多少計算成本？本章建立的成本模型與正確性推理，將會貫穿後續的所有章節。</p>
+<div class="callout"><p><strong>成本模型約定：</strong>本書範例皆以 Python 3.10+ 為基準。通常我們用 n 代表記憶體中的元素數量，並將一般的整數加減、比較與索引操作視為 O(1)。但若遇到超長字串、大整數運算或需要列舉所有答案的情境，就必須把字元長度、位元數以及輸出規模一併納入複雜度分析。</p></div>
 
 <h3 id="c01-contract">1. 從輸入與輸出合約開始</h3>
-<p>拿到問題先寫出資料範圍與輸出定義。例如「找最大值」仍有空集合怎麼辦、是否允許修改輸入、同分選哪一個等歧義。實作前確定這些條件，往往比提早選資料結構更有效。本文以 n 表示元素個數；若還有 m 個查詢，就保留 n 與 m 兩個變數，除非題目真的保證它們相等。</p>
-<ol><li><strong>輸入：</strong>有序嗎？有負數、重複值、空值嗎？資料是一次拿到，還是持續到達？</li><li><strong>輸出：</strong>要存在性、個數、索引、實際內容，還是所有答案？<mark>「任何一組」和「最早一組」是不同合約</mark>。</li><li><strong>限制：</strong>能改原陣列嗎？是否要求保留順序？額外記憶體與時間的取捨是什麼？</li><li><strong>基準解：</strong>先有一定正確的小規模方法，之後用它檢查優化版本。</li></ol>
-<p>一個常見陷阱是把回傳索引改成回傳數值，或先排序後忘了索引已經改變。演算法就算很快，只要違反合約，仍然不是解答。</p>
+<p>拿到題目的第一步，千萬別急著直接敲鍵盤寫程式，而是先釐清資料範圍與輸出規格。以看似最簡單的「找最大值」為例：如果輸入是空集合該如何處理？是否允許直接修改原始陣列？若有多個最大值同分，是要回傳哪一個？在動筆前先把這些邊界條件敲定，往往比過早糾結於該選哪種資料結構更有價值。此外，在設定變數時也要保持誠實：如果題目給了 n 個元素與 m 次查詢，分析時就該明確保留 n 與 m 兩個變數，除非題目明確保證兩者等價，否則不要直接混為一談。</p>
+<ol><li><strong>輸入特性：</strong>資料是否已經排序？會不會出現負數、重複值或空值？資料是一次性全量給齊，還是像串流一樣陸續抵達？</li><li><strong>輸出規格：</strong>要的是存在性（布林值）、統計個數、特定索引，還是具體的元素內容？甚至需要列出所有合法組合？請特別注意：<mark>「找出任意一組解」和「找出最早出現的一組解」是完全不同的合約</mark>。</li><li><strong>限制與代價：</strong>是否允許原地修改原陣列？是否必須維持原本的相對順序？時間與額外記憶體之間的取捨權重為何？</li><li><strong>基準解（Baseline）：</strong>先寫出一個邏輯絕對正確的小規模暴力解。它不僅能幫助你徹底想通題意，更是後續檢驗優化版本是否出錯的最佳對照組。</li></ol>
+<p>新手最常踩的坑之一，就是題目要求回傳索引，程式卻回傳了數值；或是為了方便處理而先排了序，卻忘記排序後元素的原有索引已經全被打亂。就算演算法跑得再快，只要輸出違反了合約規格，它就不是正確的解答。</p>
 
 <h3 id="c01-big-o">2. Big O：把工作量寫成成長率</h3>
-<p>令 T(n) 是某種明確操作的次數。T(n) = O(f(n)) 表示當 n 夠大時，存在固定常數 C，使 T(n) ≤ C × f(n)。它是漸近上界；<mark>Θ(f(n)) 表示上下界同階</mark>，Ω(f(n)) 是下界。面試常把「O(n)」當作緊的量級描述，但嚴格說 O(n²) 也能包含線性函式，所以分析時應盡量給出有資訊量的界。</p>
-<p>3n + 20 是 Θ(n)，n² + 5n 是 Θ(n²)。去掉低階項是為了聚焦輸入放大後的趨勢，實際執行仍包含那些操作。O(1) 表示操作次數不隨輸入規模增加；做固定 10,000 次仍是常數。兩個 O(n) 程式可能有不同執行時間，實測則還受到 Python 版本、資料分布與硬體影響。</p>
+<p>假設 T(n) 代表演算法在規模為 n 時執行的關鍵操作次數。數學上，T(n) = O(f(n)) 表示當 n 充分大時，存在一個固定的正常數 C，使得 T(n) ≤ C × f(n)。這代表 f(n) 是 T(n) 的漸近上界；而 <mark>Θ(f(n)) 則表示上下界緊密同階</mark>，Ω(f(n)) 代表漸近下界。雖然在面試與日常討論中，大家常習慣用「O(n)」來代指緊密的成長量級，但嚴格來說，線性函式在數學上同樣落在 O(n²) 的範圍內。因此在進行效能分析時，我們應該盡可能給出最緊確、最具資訊量的界。</p>
+<p>舉例來說，3n + 20 屬於 Θ(n)，而 n² + 5n 則屬於 Θ(n²)。去掉低階項與常數係數，是為了將焦點放在輸入規模被放大時的工作量成長趨勢；但請記住，程式在實際執行時，那些低階操作依然真實存在。O(1) 表示操作次數不會隨著輸入規模膨脹；哪怕每次都固定做 10,000 次操作，在漸近意義上依然是常數時間。此外，兩個同樣被標記為 O(n) 的程式，實際執行時間可能大不相同，因為真實效能還會受到 Python 直譯器版本、記憶體配置、快取命中率與硬體架構的影響。</p>
 <div class="diagram">
 <svg role="img" aria-labelledby="c01-growth-title" viewBox="0 0 680 270" width="680" style="max-width:100%;background:#f8fafc;border-radius:12px;font-family:system-ui,sans-serif">
 <title id="c01-growth-title">輸入從三十二倍增到六十四，不同成長模型的操作次數比較</title>
@@ -18,12 +18,12 @@
 <g stroke="#cbd5e1"><path d="M24 82H656M24 122H656M24 162H656M24 202H656M24 242H656"/></g>
 <g fill="#0f172a" font-size="17"><text x="30" y="110">log₂ n</text><text x="235" y="110">5</text><text x="397" y="110">6</text><text x="551" y="110">1.2 ×</text><text x="30" y="150">n</text><text x="230" y="150">32</text><text x="390" y="150">64</text><text x="551" y="150">2 ×</text><text x="30" y="190">n log₂ n</text><text x="225" y="190">160</text><text x="385" y="190">384</text><text x="551" y="190">2.4 ×</text><text x="30" y="230">n²</text><text x="219" y="230">1,024</text><text x="380" y="230">4,096</text><text x="551" y="230">4 ×</text></g>
 </svg>
-<p>輸入倍增時，線性模型的工作量變為兩倍，平方模型變為四倍。對數的底數只差常數倍，因此通常寫 O(log n)。</p></div>
-<p>還要說清楚是哪一種情況：線性搜尋第一格就命中是最佳 O(1)，完全找不到是最壞 O(n)；平均時間需要明確的輸入分布假設。<strong>攤銷</strong>則是<mark>在一串操作中分攤偶發的大成本</mark>，並不是假設幸運輸入。list.append 的單次擴容可能搬移很多參照，但連續追加的平均攤銷成本通常是 O(1)。</p>
+<p>當輸入規模倍增時，線性模型的工作量只會跟著翻成兩倍，但平方模型卻會膨脹為四倍。對數的底數在漸近分析中只差一個常數倍率，因此實務上通常統一寫成 O(log n)。</p></div>
+<p>討論時間複雜度時，還必須講清楚指的是哪一種場景：線性搜尋在第一格就命中是最佳情況 O(1)，完全找不到一路掃到底則是最壞情況 O(n)；如果討論平均時間，就必須明確給出輸入資料的機率分布假設。而<strong>攤銷時間</strong>則是<mark>把一連串連續操作中偶發的高昂成本，平均分攤到每一次操作上</mark>，它建立在嚴謹的總成本保證上，而不是僥倖假設遇到好運的輸入。例如 Python 的 list.append 在觸發動態擴容時雖然需要複製並搬移大量指標，但在連續追加的情境下，平均每次 append 的攤銷成本依然是穩定的 O(1)。</p>
 
 <h3 id="c01-count">3. 逐步範例：巢狀迴圈不靠外觀判定</h3>
 <p class="problem-context">題意：輸入非負整數 n，回傳所有符合 0 ≤ j &lt; i &lt; n 的位置對數量；只回傳個數，不列出位置對。n 為負數時拋 ValueError。</p>
-<p>以下程式計算所有 j &lt; i 的位置對，只累加個數，不建立答案清單。外層第 i 輪執行 i 次內層，因此總次數為 0 + 1 + … + (n − 1) = n(n − 1)/2。</p>
+<p>下面的程式用來計算所有滿足 j &lt; i 的位置對。我們只做累加計數，不建立任何暫存清單。外層迴圈在第 i 輪時，內層迴圈會剛好執行 i 次，因此整體的總執行次數為 0 + 1 + 2 + … + (n − 1) = n(n − 1)/2。</p>
 <pre><code class="language-python">def count_position_pairs(n: int) -&gt; int:
     &quot;&quot;&quot;計算 0 &lt;= j &lt; i &lt; n 的位置對數，不儲存所有位置對。&quot;&quot;&quot;
     if n &lt; 0:
@@ -33,7 +33,7 @@
         for j in range(i):
             pairs += 1
     return pairs</code></pre>
-<div class="example"><p><strong>手算 n = 4：</strong></p><table><thead><tr><th>i</th><th>本輪 j</th><th>新增次數</th><th>累計 pairs</th></tr></thead><tbody><tr><td>0</td><td>無</td><td>0</td><td>0</td></tr><tr><td>1</td><td>0</td><td>1</td><td>1</td></tr><tr><td>2</td><td>0、1</td><td>2</td><td>3</td></tr><tr><td>3</td><td>0、1、2</td><td>3</td><td>6</td></tr></tbody></table></div>
+<div class="example"><p><strong>手算追蹤 n = 4 的狀態變化：</strong></p><table><thead><tr><th>i</th><th>本輪 j 的範圍</th><th>新增次數</th><th>累計 pairs</th></tr></thead><tbody><tr><td>0</td><td>無（不執行內層）</td><td>0</td><td>0</td></tr><tr><td>1</td><td>0</td><td>1</td><td>1</td></tr><tr><td>2</td><td>0、1</td><td>2</td><td>3</td></tr><tr><td>3</td><td>0、1、2</td><td>3</td><td>6</td></tr></tbody></table></div>
 <div class="diagram">
 <svg role="img" aria-labelledby="c01-triangle-title" viewBox="0 0 680 260" width="680" style="max-width:100%;background:#f8fafc;border-radius:12px;font-family:system-ui,sans-serif">
 <title id="c01-triangle-title">四乘四位置格中，只有對角線左下方的六格滿足 j 小於 i</title>
@@ -41,27 +41,27 @@
 <g fill="#e2e8f0" stroke="#94a3b8"><rect x="135" y="75" width="48" height="36"/><rect x="189" y="75" width="48" height="36"/><rect x="243" y="75" width="48" height="36"/><rect x="297" y="75" width="48" height="36"/><rect x="189" y="120" width="48" height="36"/><rect x="243" y="120" width="48" height="36"/><rect x="297" y="120" width="48" height="36"/><rect x="243" y="165" width="48" height="36"/><rect x="297" y="165" width="48" height="36"/><rect x="297" y="210" width="48" height="36"/></g>
 <g fill="#bfdbfe" stroke="#2563eb"><rect x="135" y="120" width="48" height="36"/><rect x="135" y="165" width="48" height="36"/><rect x="189" y="165" width="48" height="36"/><rect x="135" y="210" width="48" height="36"/><rect x="189" y="210" width="48" height="36"/><rect x="243" y="210" width="48" height="36"/></g>
 <g fill="#0f172a" font-size="17"><text x="390" y="108">藍格：j &lt; i</text><text x="390" y="145">灰格：不執行</text><text x="390" y="193">0 + 1 + 2 + 3 = 6</text><text x="390" y="230">約一半的 n²，仍為 Θ(n²)</text></g></svg></div>
-<p><strong>不變量：</strong>外層開始第 i 輪時，<mark class="mark-invariant">pairs 已算完索引 0 到 i − 1 之間的所有配對</mark>，等於 i(i − 1)/2。本輪將位置 i 分別與前面 i 個位置配對，因此增加 i；終止時便算完全部 n 個位置。這是「描述已完成部分，再證明本輪擴張」的證明方式。</p>
-<div class="complexity"><p>時間 Θ(n²)，輔助空間 O(1)。如果改成把每一對加入 list，時間仍為 Θ(n²)，但<strong>輸出空間</strong>變成 Θ(n²)。兩個相鄰的線性迴圈是 O(n + n) = O(n)，<mark>不同變數的巢狀掃描可能是 O(nm)</mark>；不能只憑兩個 for 就判定為 O(n²)。</p></div>
+<p><strong>迴圈不變量：</strong>在外層迴圈開始第 i 輪時，<mark class="mark-invariant">pairs 已經精確算完了索引 0 到 i − 1 之間的所有合法配對</mark>，數值剛好等於 i(i − 1)/2。在本輪中，我們把目前的位置 i 分別與前面的 i 個位置進行配對，因此 pairs 恰好增加 i；當整個迴圈結束時，便不重不漏地算完全部 n 個位置。這種「先定義已完成的狀態，再證明當前推進步驟保持正確」的思維，是演算法正確性證明的核心方法。</p>
+<div class="complexity"><p>本演算法的時間複雜度為 Θ(n²)，輔助空間為 O(1)。但請注意：如果題目要求把每一對結果都存進清單回傳，雖然計算時間依然是 Θ(n²)，但<strong>輸出空間</strong>就會直接暴增為 Θ(n²)。此外，兩個前後依序執行的單層迴圈是 O(n + n) = O(n)，而針對不同變數的雙層巢狀迴圈則可能是 O(nm)。絕不能一看到兩層 for 就直覺斷定它是 O(n²)，必須仔細檢視內部指標真正的步進次數。</p></div>
 
 <h3 id="c01-python-cost">4. Python 常用操作的成本</h3>
 <table><thead><tr><th>常用動作</th><th>通常成本</th><th>注意事項</th></tr></thead><tbody>
-<tr><td>list 索引、len(list)</td><td>O(1)</td><td>list 連續保存物件參照，索引直接定位該參照</td></tr>
-<tr><td>list.append、尾端 pop()</td><td>攤銷 O(1)</td><td>擴容或縮容可能搬移參照；成本分攤到一串操作</td></tr>
-<tr><td>list.pop(0)、前端 insert</td><td>O(n)</td><td><mark class="mark-pitfall">後續元素參照需要移位</mark>；佇列通常改用 deque</td></tr>
-<tr><td>x in list</td><td>O(n)</td><td>假設每次相等比較 O(1)</td></tr>
-<tr><td>list[l:r]、複製 list</td><td>O(k)，k 為複製長度</td><td>同時需要 O(k) 新參照空間，屬淺複製</td></tr>
-<tr><td>dict / set 查找</td><td>平均 O(1)</td><td>假設良好雜湊分布與短鍵；最壞可線性，詳見第 03 章</td></tr>
-<tr><td>sorted(items)</td><td>最壞 O(n log n)</td><td>建立新 list；比較與 key 計算若昂貴需另加成本</td></tr>
-<tr><td>''.join(parts)</td><td>O(片段數 + 總字元數)</td><td>結果字串也佔空間；逐次串接應保守估計複製成本</td></tr>
+<tr><td>list 索引、len(list)</td><td>O(1)</td><td>Python 的 list 在底層是連續存放物件參照的陣列，透過索引可直接計算位址定位</td></tr>
+<tr><td>list.append、尾端 pop()</td><td>攤銷 O(1)</td><td>底層空間不足時會觸發擴容或縮容搬移；但平均分攤至連續操作時仍是 O(1)</td></tr>
+<tr><td>list.pop(0)、前端 insert</td><td>O(n)</td><td><mark class="mark-pitfall">移除或插入前端元素時，後續所有元素參照都必須整批往前或往後搬移</mark>；若需頻繁操作雙端，應改用 collections.deque</td></tr>
+<tr><td>x in list</td><td>O(n)</td><td>底層需進行線性掃描逐一比對（假設每次相等比對耗時 O(1)）</td></tr>
+<tr><td>list[l:r]、複製 list</td><td>O(k)，k 為切片長度</td><td>切片操作會建立一個全新 list，需要分配 O(k) 的記憶體空間來存放參照，屬於淺複製</td></tr>
+<tr><td>dict / set 查找</td><td>平均 O(1)</td><td>依賴良好的雜湊函式分布與較短的鍵值；若發生嚴重雜湊碰撞，最壞情況可能退化為線性，詳見第 03 章</td></tr>
+<tr><td>sorted(items)</td><td>最壞 O(n log n)</td><td>會建立並回傳全新排序後的 list；如果 key 函式本身耗時或元素比較成本高，需額外加成計算</td></tr>
+<tr><td>''.join(parts)</td><td>O(片段數 + 總字元數)</td><td>產生新字串需要分配對應記憶體；若在迴圈中逐次用 + 串接字串，很容易導致嚴重的重複複製成本</td></tr>
 </tbody></table>
-<p>上表採 CPython 常用容器的成本模型。兩個 b 位元整數相加需 O(b)；比較兩個長字串時，可能一路掃過共同前綴。分析每行程式時，把這些操作的內部工作一起算入。</p>
-<p>容易忽略的空間還包括：<mark>排序暫存、集合中的鍵、切片、遞迴呼叫堆疊</mark>，以及 generator 尚未釋放的狀態。說「原地」也不自動等於 O(1) 空間，例如某些原地排序仍需輔助工作區。</p>
+<p>上表是以 CPython 最常見的容器實作為基準。請記得：成本分析不能只看外表函式呼叫，兩個長度為 b 位元的超大整數相加需要 O(b)；比較兩個很長的字串時，底層也必須逐字元比對共同前綴。在分析每一行程式碼時，都必須把背後隱藏的工作量一併算進去。</p>
+<p>另一個新手極易忽略的盲點是額外空間的消耗：<mark>排序時產生的臨時緩衝區、集合中儲存的鍵值、清單切片、遞迴呼叫時佔用的呼叫堆疊（Call Stack）</mark>，以及 generator 尚未釋放的狀態，全都會佔用記憶體。宣稱演算法是「原地（in-place）」操作，並不代表額外空間就自動等於 O(1)，例如某些原地排序演算法依然需要對數級別的輔助呼叫堆疊。</p>
 
 <h3 id="c01-recursion">5. 遞迴：縮小問題，也保留回來的位置</h3>
-<p class="problem-context">題意：輸入整數清單 nums，分別用線性掃描與遞迴回傳元素總和；空清單回傳 0，兩個版本都不修改輸入。</p>
-<p>一個可靠的遞迴函式必須具備：清楚的參數含義、直接可解的基本情況、<mark>嚴格縮小的子問題</mark>，以及把子答案合成答案的規則。呼叫者會停在原地等待子呼叫回傳，尚未完成的呼叫記錄存於堆疊。Python 不應假設尾端遞迴會被自動消除；長鏈狀遞迴可能遇到深度限制。</p>
-<p>下面兩種方法都把整數加總。線性版的迴圈不變量是「total 等於目前已讀元素總和」。遞迴版的函式合約是「total(lo, hi) 回傳 nums[lo:hi] 的和」，但實作只傳邊界，不真的切片。</p>
+<p class="problem-context">題意：輸入整數清單 nums，分別用線性掃描與遞迴分治回傳元素總和；空清單回傳 0，兩個版本都不修改原始輸入。</p>
+<p>一個設計嚴謹且可靠的遞迴函式，必須同時具備四個關鍵要素：明確的參數定義、直接回傳的基本情況（Base Case）、<mark>每一步都嚴格縮小規模的子問題</mark>，以及將子問題答案正確合併的組合規則。在程式執行時，呼叫端會暫停在目前的執行點，等待子呼叫完成並回傳結果；所有尚未完成的函式狀態都會暫存在記憶體的呼叫堆疊中。在 Python 中，千萬不要依賴尾端遞迴最佳化（CPython 原生並不支援），鏈狀過深的遞迴很容易直接撞上遞迴深度上限（RecursionError）。</p>
+<p>下面我們透過兩種不同的寫法來計算清單總和。線性版本依靠「total 始終等於目前已遍歷元素總和」的迴圈不變量；而遞迴版本則建立在「total(lo, hi) 回傳 nums[lo:hi] 區間和」的函式合約上。請特別注意：實作時我們只傳遞索引邊界，絕不真的在遞迴中進行清單切片。</p>
 <pre><code class="language-python">def linear_total(nums: list[int]) -&gt; int:
     total = 0
     for value in nums:
@@ -89,28 +89,28 @@ def recursive_total(nums: list[int]) -&gt; int:
 <g fill="#dbeafe" stroke="#2563eb"><rect x="250" y="30" width="180" height="45" rx="8"/><rect x="100" y="113" width="160" height="44" rx="8"/><rect x="420" y="113" width="160" height="44" rx="8"/></g>
 <g fill="#dcfce7" stroke="#16a34a"><rect x="28" y="204" width="125" height="43" rx="8"/><rect x="187" y="204" width="125" height="43" rx="8"/><rect x="368" y="204" width="125" height="43" rx="8"/><rect x="527" y="204" width="125" height="43" rx="8"/></g>
 <g fill="#0f172a" text-anchor="middle" font-size="16"><text x="340" y="59">[0, 4) → 14</text><text x="180" y="141">[0, 2) → 5</text><text x="500" y="141">[2, 4) → 9</text><text x="90" y="232">[0, 1) → 7</text><text x="250" y="232">[1, 2) → −2</text><text x="430" y="232">[2, 3) → 5</text><text x="590" y="232">[3, 4) → 4</text><text x="340" y="280">共 7 次呼叫；同時存在的最深路徑只有 3 層</text></g></svg></div>
-<div class="example"><p><strong>逐步追蹤 nums = [7, −2, 5, 4]：</strong></p><table><thead><tr><th>階段</th><th>正在等待的呼叫</th><th>得到的子結果</th></tr></thead><tbody><tr><td>向左深入</td><td>[0,4) → [0,2) → [0,1)</td><td>基本情況回傳 7</td></tr><tr><td>完成左半</td><td>[0,4) → [0,2)</td><td>再得 −2，合為 5</td></tr><tr><td>完成右半</td><td>[0,4) → [2,4)</td><td>5 與 4 合為 9</td></tr><tr><td>完成根節點</td><td>[0,4)</td><td>5 + 9 = 14</td></tr></tbody></table></div>
-<p><strong>正確性：</strong>長度 0 與 1 直接正確。若所有更短區間都算對，左右子區間互斥且剛好覆蓋原區間，相加便得到原答案。長度大於 1 時，兩個子區間都更短，因此一定到達基本情況。這是對區間長度的歸納證明。</p>
-<div class="complexity"><p>非空輸入有 n 個葉節點，每個非葉節點恰有兩個子節點，所以總呼叫數為 2n − 1，時間 Θ(n)。<mark>同時存活的是一條深度 O(log n) 的呼叫路徑</mark>，輔助堆疊為 O(log n)；空輸入為 O(1)。線性版同樣需要 Θ(n) 時間，但只用 O(1) 額外空間。</p></div>
-<div class="warning"><p>若改成每次切出左右兩半，每層總複製量為 O(n)，共 O(log n) 層，時間便增至 O(n log n)。深度優先執行時，同時存活的切片大小沿路徑形成 n + n/2 + n/4 + …，峰值仍為 O(n)。時間累計全部操作；空間計算同一時刻的最大用量。</p></div>
+<div class="example"><p><strong>逐步追蹤 nums = [7, −2, 5, 4] 的呼叫與回傳過程：</strong></p><table><thead><tr><th>執行階段</th><th>當前堆疊中等待中的呼叫</th><th>子呼叫回傳的結果</th></tr></thead><tbody><tr><td>向左深入探底</td><td>[0,4) → [0,2) → [0,1)</td><td>抵達基本情況，回傳 7</td></tr><tr><td>完成左半部分</td><td>[0,4) → [0,2)</td><td>取得右子 [1,2) 的 −2，相加合為 5</td></tr><tr><td>完成右半部分</td><td>[0,4) → [2,4)</td><td>分別取得 5 與 4，相加合為 9</td></tr><tr><td>完成根節點匯總</td><td>[0,4)</td><td>左半 5 + 右半 9 = 14</td></tr></tbody></table></div>
+<p><strong>正確性證明：</strong>當區間長度為 0 或 1 時，程式直接由基本情況回傳正確結果。若假設所有長度更短的子區間都能正確計算，由於左右子區間彼此互斥且完整覆蓋了原區間，兩者相加必然等於原區間的總和。又因為只要長度大於 1，切分出的兩個子區間長度都嚴格小於原長度，因此保證遞迴必定能收斂至基本情況而終止。這是標準基於區間長度的數學歸納法證明。</p>
+<div class="complexity"><p>對於包含 n 個元素的非空輸入，遞迴樹共有 n 個葉節點，且每個內部節點都恰有兩個子節點，因此總呼叫次數剛好為 2n − 1，時間複雜度為 Θ(n)。在空間方面，<mark>任何時刻同時存活於記憶體中的，只有一條從根節點到葉節點的路徑</mark>，其深度為 O(log n)，因此輔助呼叫堆疊空間為 O(log n)；對於空輸入則是 O(1)。相較之下，前面的線性迴圈版同樣需要 Θ(n) 時間，但輔助空間只需要極致的 O(1)。</p></div>
+<div class="warning"><p>如果我們在每次遞迴時都貪圖方便寫出 nums[:mid] 與 nums[mid:] 進行陣列切片，那麼每一層所有切片的複製總長度都會達到 O(n)；在總共 O(log n) 層的遞迴樹下，整體時間複雜度就會從原本漂亮的 O(n) 惡化成 O(n log n)。而在深度優先搜尋的執行過程中，記憶體中同時存活的切片大小沿著呼叫路徑累計為 n + n/2 + n/4 + …，峰值空間同樣會膨脹到 O(n)。請時刻提醒自己：時間複雜度是累計全程的所有操作總和，而空間複雜度衡量的是同一時刻記憶體佔用的最大峰值。</p></div>
 
 <h3 id="c01-practice">6. 練習與解答</h3>
-<div class="exercise"><p><strong>練習 1：</strong>count_position_pairs(5) 回傳什麼？若只需要個數，如何把兩層迴圈改成常數次算術？新的時間分析有什麼前提？</p><details><summary>參考解答</summary><p>回傳 10。對非負 n，回傳 n * (n − 1) // 2 即可。在固定字長算術模型下是 O(1) 時間、O(1) 輔助空間；若 n 有任意多位元，乘法成本要依位數分析，不能宣稱與所有輸入大小都無關。</p></details></div>
-<div class="exercise"><p><strong>練習 2：</strong>以下函式對 n = 13 會做幾輪？緊確的時間界為何是 Θ(log n)？n = 0 又如何？</p><pre><code class="language-python">def halving_steps(n: int) -&gt; int:
+<div class="exercise"><p><strong>練習 1：</strong>count_position_pairs(5) 的回傳值是什麼？若題目只需要回傳總配對數，如何將原本的兩層迴圈簡化為常數次算術運算？這項改進在時間分析上有什麼先決假設？</p><details><summary>參考解答</summary><p>回傳值為 10。對於任意非負整數 n，直接回傳 n * (n − 1) // 2 即可。在固定字長的標準算術模型下，這種做法可以在 O(1) 時間與 O(1) 輔助空間內完成；但若 n 是位元數無上限的大整數，乘法運算的實際耗時就必須依位元長度重新分析，不能無條件宣稱與輸入大小完全無關。</p></details></div>
+<div class="exercise"><p><strong>練習 2：</strong>以下函式在輸入 n = 13 時會執行幾輪迴圈？為什麼緊確的時間複雜度是 Θ(log n)？當 n = 0 時的行為又是如何？</p><pre><code class="language-python">def halving_steps(n: int) -&gt; int:
     if n &lt; 0:
         raise ValueError(&quot;n 必須非負&quot;)
     steps = 0
     while n &gt; 0:
         n //= 2
         steps += 1
-    return steps</code></pre><details><summary>參考解答</summary><p>狀態為 13 → 6 → 3 → 1 → 0，共 4 輪。n &gt; 0 時輪數為 floor(log₂ n) + 1，因此在固定成本整數模型下是 Θ(log n) 時間、O(1) 空間。n = 0 不進入迴圈，回傳 0。每次嚴格縮小非負 n 是終止理由。</p></details></div>
-<div class="exercise"><p><strong>練習 3：</strong>要把 k 個文字片段接成一個總長 L 的字串，為什麼反覆 result = result + part 不是可靠的線性成本寫法？</p><details><summary>參考解答</summary><p>字串不可變，應保守估計每次串接都可能複製目前內容；若每個片段長度固定，累計可能達 Θ(k²)。某些實作會優化特定情況，不能把優化當成演算法保證。使用 join 可清楚表達一次建構結果，<mark>時間 O(k + L)</mark>，結果空間 O(L)，實際編碼寬度視字元而定。</p><pre><code class="language-python">def join_tokens(tokens: list[str]) -&gt; str:
+    return steps</code></pre><details><summary>參考解答</summary><p>變數 n 的數值變化依序為 13 → 6 → 3 → 1 → 0，總共執行 4 輪。當 n &gt; 0 時，迴圈執行的總輪數剛好為 floor(log₂ n) + 1，因此在固定操作成本的整數模型下，時間複雜度為緊確的 Θ(log n)，空間複雜度為 O(1)。當 n = 0 時，條件不成立直接略過迴圈，回傳 0。由於每次迭代都使非負整數 n 嚴格減半，這就是演算法必定會終止的有力保證。</p></details></div>
+<div class="exercise"><p><strong>練習 3：</strong>如果要將 k 個文字片段拼接成一個總長度為 L 的完整字串，為什麼反覆執行 result = result + part 不是一個具有線性時間保證的好寫法？</p><details><summary>參考解答</summary><p>在 Python 中字串屬於不可變物件（immutable），我們必須保守地假設每次進行加號拼接時，系統都可能需要重新配置記憶體並完整複製既有的字串內容；若每個文字片段的長度相近，累計下來的複製成本很容易惡化到 Θ(k²)。雖然某些直譯器版本在特定情境下會有原地追加的私有最佳化，但我們絕不能將實作細節的巧合當成演算法的漸近保證。使用 "".join(tokens) 能夠明確向系統表達一次性建構的需求，<mark>時間複雜度為穩定的 O(k + L)</mark>，結果字串所需空間為 O(L)，底層實際編碼寬度則視字元內容而定。</p><pre><code class="language-python">def join_tokens(tokens: list[str]) -&gt; str:
     return &quot;&quot;.join(tokens)</code></pre></details></div>
-<div class="exercise"><p><strong>練習 4：</strong>有人說「這個遞迴有 n 個葉節點，所以堆疊空間是 O(n)」。請用本章加總程式反駁，並說出什麼遞迴真的需要線性堆疊。</p><details><summary>參考解答</summary><p>堆疊計算的是尚未返回的一條呼叫路徑。平衡二分深度只有 O(log n)。若每次只把問題從 n 減成 n − 1，且父呼叫要等待子呼叫，最深可累積 n 層，才是 O(n) 堆疊。總工作量與同時存活空間是不同問題。</p></details></div>
+<div class="exercise"><p><strong>練習 4：</strong>有人認為「既然這個遞迴樹最終會拆解出 n 個葉節點，那麼呼叫堆疊的空間複雜度必然就是 O(n)」。請以本章的分治加總程式為例進行反駁，並說明在什麼情況下的遞迴才會真正需要線性等級的呼叫堆疊空間。</p><details><summary>參考解答</summary><p>呼叫堆疊衡量的是程式執行期間，同一時間在記憶體中尚未返回的「單一條最深呼叫路徑」，而不是全樹所有節點的加總。在平衡二分的情況下，這條路徑的深度僅有 O(log n)。只有當遞迴結構退化成線性單鏈——例如每次呼叫僅把規模由 n 減少為 n − 1，且外層呼叫必須停留在原地等待內層呼叫完成時，堆疊才會層層堆疊達 n 層，此時空間複雜度才會是 O(n)。千萬不要把「全程累積的工作總量」與「同一瞬間並存的記憶體空間」混為一談。</p></details></div>
 
 <h3 id="c01-workflow">7. 練習流程與驗證方法</h3>
-<p>建議每題走一次完整循環：用自己的話重述合約 → 畫三到五個元素 → 寫暴力解 → 找重複工作 → 定義狀態與不變量 → 推導優化 → <mark>用反例嘗試推翻</mark> → 寫程式與測試 → 隔天不用筆記重做。理解「為什麼左邊能丟掉」，才能把推理用在其他題目；變數叫 l 還是 left 並不影響這件事。</p>
-<p>至少測空輸入、單一元素、全部相同、已排序、反序、負數與答案不存在。適合窮舉的小規模問題，讓優化解和暴力解自動比較，通常比只跑幾個範例更容易找到錯誤。</p>
-<div class="callout"><p><strong>章末決策：</strong>先選輸入規模變數，再數實際工作；遇到隱藏切片、比較或輸出就展開成本；寫遞迴先確認基本情況與嚴格縮小；說空間時區分輸入、輸出與額外工作區。下一章分析雙指標與滑動視窗時，會用「每個元素最多處理幾次」來計算工作量。</p></div>
-<p>延伸閱讀：<a href="https://docs.python.org/3/library/stdtypes.html#sequence-types-list-tuple-range" target="_blank" rel="noopener">Python 序列型別</a>、<a href="https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str" target="_blank" rel="noopener">文字序列與字串</a>、<a href="https://github.com/python/cpython/blob/3.14/Objects/listobject.c" target="_blank" rel="noopener">CPython list 實作</a>。</p>
+<p>在面對任何演算法題目時，建議大家養成一套嚴謹的解題循環：首先用自己的話精準重述題目的輸入輸出合約 → 在紙上畫出三到五個具體的小規模測資 → 先寫出無腦但邏輯絕對正確的暴力解 → 觀察運算過程中到底浪費了哪些重複工作 → 明確定出狀態定義與關鍵不變量 → 推導出漸近複雜度更好的優化方案 → <mark>嘗試設計刁鑽的反例來質疑自己的想法</mark> → 動手寫出乾淨的實作並跑通測試 → 隔天不看任何筆記重新自己默寫一次。唯有徹底想通「為什麼某些分支或元素可以被安全排除」，這套推理能力才能真正遷移到其他未曾見過的題目上；變數名稱寫作 l 還是 left 只是個人習慣，背後的邏輯不變量才是真正的精髓。</p>
+<p>在測試階段，請務必養成主動覆蓋極端案例的習慣：空輸入、單一元素、所有元素皆相同、已經完全排好序、完全逆序、包含負數，以及預期答案不存在的情況。對於可以窮舉的小規模問題，撰寫一段自動化腳本，將優化解與暴力解的輸出進行對照驗證（Stress Testing），通常比手動肉眼盯著幾個幸運範例測試，更能及早揪出那些致命的邊界邏輯錯誤。</p>
+<div class="callout"><p><strong>章末思考與決策：</strong>解題分析時，先明確定義代表輸入規模的變數，再仔細計算底層的真實工作量；遇到看似簡潔的切片、字串拼接或比較操作時，務必在腦中將它們背後的隱藏成本展開；撰寫遞迴時，永遠第一時間確認基本情況與嚴格縮小的推進規則；討論空間複雜度時，要清晰切分輸入資料、最終輸出與額外輔助空間。在接下來的第二章中，我們將進入雙指標與滑動視窗的世界，屆時我們會廣泛運用「每個元素最多被指針造訪幾次」來證明演算法具備優秀的線性時間複雜度。</p></div>
+<p>延伸閱讀：<a href="https://docs.python.org/3/library/stdtypes.html#sequence-types-list-tuple-range" target="_blank" rel="noopener">Python 序列型別官方文件</a>、<a href="https://docs.python.org/3/library/stdtypes.html#text-sequence-type-str" target="_blank" rel="noopener">文字序列與字串型別</a>、<a href="https://github.com/python/cpython/blob/3.14/Objects/listobject.c" target="_blank" rel="noopener">CPython list 底層 C 原始碼實作</a>。</p>
 </article>

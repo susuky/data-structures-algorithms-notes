@@ -1,10 +1,10 @@
 <article id="chapter-04" data-title="鏈結串列：讓指標維持正確的關係">
-<h2>04　鏈結串列：讓指標維持正確的關係</h2>
-<p>陣列用位置找元素；鏈結串列用「下一個是誰」把節點串起來。每次修改連結前，先說清楚哪些節點已處理、哪些尚未處理，以及通往剩餘資料的入口有沒有保住。本章會用這些關係檢查反轉、刪除、合併與快慢指標的每一步。</p>
-<div class="callout">除環偵測外，輸入皆為有限、無環的單向串列；head 可為 None。反轉、刪除與合併會原地重接節點。n 表示節點數，節點值的比較視為 O(1)。</div>
+<h2>04｜鏈結串列：讓指標維持正確的關係</h2>
+<p>陣列依靠連續記憶體位址進行快速隨機存取，而鏈結串列（Linked List）則是透過一條條指標「誰指向下一個節點」動態串聯而成。在操作鏈結串列時，工程師最容易犯的錯誤就是指標斷鏈或記憶體迷航；因此在動手修改任何 next 指標之前，心中一定要隨時清楚三件事：哪些節點已經處理完畢？哪些節點尚待處理？以及通往尚未處理區域的入口參照有沒有被妥善保存？本章將透過反轉、刪除、合併與快慢指標等經典場景，帶領大家建立起精確維護指標關係的直覺不變量。</p>
+<div class="callout"><p>前置約定：除環偵測一節外，本章所有輸入皆保證為有限長度且無環的單向鏈結串列；head 可以為 None（代表空串列）。反轉、刪除與合併操作皆要求原地重接節點參照。以 n 表示節點總數，節點值的比較視為 O(1)。</p></div>
 
 <h3 id="c04-model">1. 節點、參照與操作成本</h3>
-<p>節點包含 value 與 next。head 是指向第一個節點的參照，None 代表沒有節點。兩個節點可以剛好裝著相同的值，卻仍是不同物件。因此「是否走回同一節點」應用 <mark>is 比較身分</mark>，而不是比較 value。Python 變數賦值通常複製參照；寫 cur = cur.next 只移動游標，不會移動或複製節點。</p>
+<p>在單向鏈結串列中，每個節點實體包含兩個欄位：存放資料的 value，以及通向下一個節點的指標 next。head 變數只是指向串列第一個節點的普通參照，當 head 為 None 時代表整個串列為空。請牢記：記憶體中兩個不同的節點物件，哪怕它們的 value 剛好裝著一模一樣的值，在實體身分上依然是完全獨立的個體。因此，在判斷「指標是否走到了同一個節點」或「串列是否有環」時，必須嚴格使用 <mark>is 運算子比對物件記憶體身分</mark>，而不能草率地使用 == 比較數值。在 Python 中，變數賦值通常只是複製物件參照；當我們寫下 cur = cur.next 時，僅僅是將本地變數游標向前移動一格，完全不會在記憶體中搬移或深拷貝節點本體。</p>
 <figure class="diagram">
 <svg role="img" aria-labelledby="c04-identity-title" viewBox="0 0 760 200" xmlns="http://www.w3.org/2000/svg">
 <title id="c04-identity-title">兩個值相同的節點仍有不同身分；head 沿 next 逐一走訪</title>
@@ -18,14 +18,14 @@
 </g></svg>
 <figcaption>每條 next 都保存一個參照。相同數值不代表同一節點，節點可以分散在記憶體中。</figcaption>
 </figure>
-<table><caption>單向串列與 Python list 的差異</caption><thead><tr><th>操作</th><th>單向串列</th><th>Python list</th></tr></thead><tbody>
-<tr><td>讀索引 i 的元素</td><td>O(i + 1)，最壞 O(n)</td><td>O(1)</td></tr>
-<tr><td>頭部插入</td><td>O(1)</td><td>O(n)，需搬動參照</td></tr>
-<tr><td>已知前驅後插入／刪除</td><td>O(1)</td><td>通常 O(n)</td></tr>
-<tr><td>尋找某個值</td><td>O(n)</td><td>O(n)</td></tr>
-<tr><td>尾部插入</td><td>有 tail 為 O(1)，否則 O(n)</td><td>攤銷 O(1)</td></tr>
+<table><caption>單向鏈結串列與 Python 原生 list 的效能特徵比較</caption><thead><tr><th>操作情境</th><th>單向鏈結串列</th><th>Python 原生 list</th></tr></thead><tbody>
+<tr><td>讀取指定索引 i 的元素</td><td>O(i + 1)，最壞需 O(n) 從頭尋訪</td><td>O(1) 瞬時隨機存取</td></tr>
+<tr><td>在開頭插入新元素</td><td>O(1) 僅需重接指標</td><td>O(n) 後續元素參照必須整批後移</td></tr>
+<tr><td>已持有前驅節點時進行插入／刪除</td><td>O(1) 瞬間完成剪接</td><td>通常需 O(n) 搬移元素</td></tr>
+<tr><td>按值尋找特定節點</td><td>O(n) 依序尋訪</td><td>O(n) 線性掃描</td></tr>
+<tr><td>在末端追加新元素</td><td>持有 tail 時 O(1)，否則需 O(n) 走到尾端</td><td>攤銷 O(1) 動態陣列擴容</td></tr>
 </tbody></table>
-<p><mark>已持有前驅時，刪除只需重接一次 next</mark>，成本 O(1)；只有目標值時，還要先花 O(n) 尋找。Python 節點各自配置物件與參照，沿 next 掃描還會跨越不同記憶體位置。需要大量順序掃描或隨機索引時，通常優先考慮 list。</p>
+<p><mark>當我們已經精確持有目標節點的前驅節點（Predecessor）時，刪除操作只需要修改一次 next 指向</mark>，代價僅為 O(1)；但如果手頭上只有目標數值，就必須先花費 O(n) 的時間沿鏈尋找其前驅。此外，Python 的各個 Node 節點是由直譯器獨立分散配置在堆積記憶體（Heap）中的，沿著 next 遍歷往往會引發嚴重的快取未命中（Cache Miss）；因此在工程實踐中，若系統需要頻繁進行循序掃描或下標隨機存取，優先選用連續記憶體的 list 往往能獲得更優異的實際執行效能。</p>
 <pre><code class="language-python">from dataclasses import dataclass
 from typing import Optional
 
@@ -49,12 +49,12 @@ def to_values(head):
         result.append(head.value)
         head = head.next
     return result</code></pre>
-<p>eq=False 讓 dataclass 保留物件身分語意，避免遞迴比較整條 next 鏈。from_values 與 to_values 是建構、觀察範例的工具；後者會配置 O(n) 輸出空間，而且不可用來列印未知是否有環的串列。</p>
+<p>在上面的定義中，dataclass(eq=False) 使得節點類別嚴格保留原生依賴記憶體位址的物件身分比對語意，避免 Python 自動生成會遞迴比對整條串列的 == 函式。輔助函式 from_values 與 to_values 是為了方便撰寫單元測試與觀察演算法狀態的測試工具；請特別留意：to_values 會建立長度為 n 的全新清單，絕不能拿來列印未知是否有環的惡意串列，否則會陷入無窮迴圈。</p>
 
 <h3 id="c04-reverse">2. 反轉：保住尚未處理的入口</h3>
-<p class="problem-context">題意：給定無環單向串列的 head，原地反轉所有 next，回傳新的頭節點；空串列回傳 None。下方的 6 → 2 → 9 反轉後為 9 → 2 → 6。</p>
+<p class="problem-context">題意：給定無環單向鏈結串列的頭節點 head，請原地反轉所有節點的 next 指標，並回傳反轉後的新頭節點；若輸入為空串列則回傳 None。例如輸入 6 → 2 → 9，反轉後應變為 9 → 2 → 6。</p>
 <p class="problem-link"><a href="https://leetcode.com/problems/reverse-linked-list/" target="_blank" rel="noopener">LeetCode 206 · Reverse Linked List</a></p>
-<p>每次迴圈開始，<mark class="mark-invariant">prev 指向已反轉的前段，cur 指向尚未處理的後段</mark>。兩段互不重疊，而且合起來恰好是全部原節點。下一步必須<mark class="mark-pitfall">先保存 cur.next，再把 cur.next 指回 prev</mark>。若先改 next，原本的後段就可能再也找不到。</p>
+<p>在每次迴圈迭代開始時，指標的語意必須劃分得涇渭分明：<mark class="mark-invariant">prev 指向已經完成反轉的前半段串列，而 cur 則指向尚未處理的後半段串列</mark>。這兩條鏈此時是互不相交的獨立片段，兩者所含的節點加總剛好完整覆蓋原串列的所有節點。下一步的重接邏輯至關重要：<mark class="mark-pitfall">在修改 cur.next 之前，必須先用暫存變數 following 把 cur.next 的原始位址保存下來，才能安心執行 cur.next = prev</mark>。如果沒有事先保存就貿然轉向，原串列通往剩餘節點的唯一入口就會瞬間遺失，導致後續節點全部斷鏈蒸發。</p>
 <pre><code class="language-python">def reverse(head):
     prev, cur = None, head
     while cur is not None:
@@ -74,20 +74,19 @@ def to_values(head):
 <path d="M396 40 V194" stroke="#9aa7b8" stroke-dasharray="6 5"/>
 </g></svg><figcaption>示意為第二輪完成後。下一輪先保存 9 的 next，再令 9 指向 2。</figcaption>
 </figure>
-<div class="example"><h4>逐步例一：6 → 2 → 9</h4>
-<table><thead><tr><th>時刻</th><th>prev 指向的鏈</th><th>cur 指向的鏈</th><th>這輪保存的 following</th></tr></thead><tbody>
-<tr><td>開始</td><td>None</td><td>6 → 2 → 9</td><td>尚未保存</td></tr>
-<tr><td>處理 6 後</td><td>6 → None</td><td>2 → 9</td><td>2</td></tr>
-<tr><td>處理 2 後</td><td>2 → 6 → None</td><td>9</td><td>9</td></tr>
-<tr><td>處理 9 後</td><td>9 → 2 → 6 → None</td><td>None</td><td>None</td></tr>
+<div class="example"><h4>逐步追蹤範例一：輸入 6 → 2 → 9</h4>
+<table><thead><tr><th>迭代時機點</th><th>prev 所引領的已反轉鏈</th><th>cur 所指向的未處理鏈</th><th>本輪預先保存的 following</th></tr></thead><tbody>
+<tr><td>初始開始前</td><td>None</td><td>6 → 2 → 9</td><td>尚未保存</td></tr>
+<tr><td>處理完節點 6 後</td><td>6 → None</td><td>2 → 9</td><td>節點 2</td></tr>
+<tr><td>處理完節點 2 後</td><td>2 → 6 → None</td><td>9</td><td>節點 9</td></tr>
+<tr><td>處理完節點 9 後</td><td>9 → 2 → 6 → None</td><td>None（全部完成）</td><td>None</td></tr>
 </tbody></table></div>
-<p>正確性分三段說：初始化時已反轉段為空，不變量成立；每輪把 cur 的首節點搬到 prev 前方，保留其餘後段，因此不變量繼續成立；終止時 cur 為 None，全部節點都在 prev 中，順序恰好與原本相反。每輪未處理節點數減一，所以有限無環串列必定終止。</p>
-<p class="complexity">時間 O(n)，演算法額外空間 O(1)。遞迴反轉也可行，但 Python 會消耗 O(n) 呼叫堆疊，且長串列可能超過遞迴深度限制。這裡的 O(1) 不包含既有 n 個節點。</p>
-<div class="warning">反轉回傳的是新 head。呼叫時要寫 head = reverse(head)；舊 head 已變成尾端。若串列有環，以上終止與兩段不重疊的推理失效，不能直接套用。</div>
+<p>正確性歸納證明：初始狀態下 prev 為 None，已反轉鏈為空，不變量成立；在後續每一步中，我們將 cur 的首個節點摘下並插在 prev 前方作為新頭，同時順暢地把 cur 指向預先保存好的 following，因此不變量在每一步皆嚴格維持；當 cur 最終抵達 None 時迴圈終止，所有原始節點都已被完整納入 prev 中，且順序剛好與原本完全相反。每走一步未處理節點數必定減 1，因此有限長度的無環串列必定能在 n 步內終止。</p>
+<p class="complexity">本演算法時間複雜度為 O(n)，輔助空間僅需 O(1)。雖然反轉也可以用遞迴實現，但 Python 的直譯器需要消耗 O(n) 的呼叫堆疊空間，當面對超長串列時容易觸發 RecursionError 崩潰，因此工程上強烈推薦迭代寫法。請特別留意：函式結束時回傳的是新的頭節點，呼叫端必須寫作 head = reverse(head)；原本的 head 在反轉結束後已經退化成了最後一個尾節點。</p>
 
 <h3 id="c04-fast-slow">3. 快慢指標：中點與環</h3>
 <p class="problem-link"><a href="https://leetcode.com/problems/middle-of-the-linked-list/" target="_blank" rel="noopener">LeetCode 876 · Middle of the Linked List</a>：本節沿用偶數長度取第二個中點的規則，並接受空串列。</p>
-<p>找中點時，slow 每輪走一步，fast 每輪走兩步；走了 t 輪後，slow 在第 t 個索引，fast 已走 2t 步或離開串列。先檢查 fast，再檢查 fast.next，才能安全讀 fast.next.next。以下約定偶數長度回傳第二個中點：4 個節點的索引 0、1、2、3，回傳索引 2。</p>
+<p>在單向鏈結串列中，由於無法直接用長度計算下標除以二，尋找中央節點通常採用快慢雙指標技巧：slow 指標每輪前進 1 步，fast 指標每輪前進 2 步；當迭代進行了 t 輪後，slow 剛好來到索引 t 的位置，而 fast 則已經狂奔了 2t 步並抵達或越過串列尾端。在迴圈條件中，必須嚴格「先確認 fast 是否為 None，再確認 fast.next 是否為 None」，確認兩者皆安全後才能合法讀取 fast.next.next。在偶數長度下（例如長度為 4，索引 0、1、2、3），以下演算法會精準回傳第二個中點（即索引 2 的節點）。</p>
 <pre><code class="language-python">def middle_second(head):
     &quot;&quot;&quot;偶數長度時回傳第二個中點；空串列回傳 None。&quot;&quot;&quot;
     slow = fast = head
@@ -95,9 +94,9 @@ def to_values(head):
         slow = slow.next
         fast = fast.next.next
     return slow</code></pre>
-<p class="problem-context">環入口題意：輸入 head，沿 next 判斷是否有環；有環時回傳入口節點本身，無環回傳 None，不修改原串列。</p>
+<p class="problem-context">環入口題意：輸入串列的頭節點 head，判斷串列中是否存在循環環路；若有環，回傳環的入口節點本身；若無環則回傳 None。全程不得修改原始串列結構。</p>
 <p class="problem-link"><a href="https://leetcode.com/problems/linked-list-cycle-ii/" target="_blank" rel="noopener">LeetCode 142 · Linked List Cycle II</a>：原題的 pos 是測試資料標記，函式只接收 head。</p>
-<p>找環不能只看「數值重複」：6 → 6 → None 沒有環。Floyd 方法讓兩個指標從 head 出發，<mark>先移動，再比較身分</mark>。無環時 fast 會碰到 None；有環時，兩者進入同一個環後，相對距離每輪縮短一格（模環長），因此最多再經一個環長便相遇。</p>
+<p>偵測環路時，絕不能只看「節點數值是否重複出現」：例如 6 → 6 → None 完全是合法的無環串列。Floyd 判圈演算法（龜兔賽跑）讓快慢指標同時從 head 出發，並恪守<mark>「先讓指標各走一步與兩步，然後再用 is 比對物件身分」</mark>的原則。若串列無環，跑得快的 fast 必然會在有限步內撞上 None 終止；若串列存在環路，當快慢指標雙雙進入環內後，fast 相對於 slow 每輪淨縮小 1 步的距離（在模環長的意義下），因此兩者必定會在至多一個環長的步數內相遇。</p>
 <figure class="diagram">
 <svg role="img" aria-labelledby="c04-cycle-title" viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg">
 <title id="c04-cycle-title">四指向環入口七，環內七、九、二形成長度三的循環</title>
@@ -120,14 +119,14 @@ def to_values(head):
                 slow = slow.next
             return seeker
     return None</code></pre>
-<p>為什麼第二階段能找入口？設入口距離為 μ、環長為 L，第一次相遇時 slow 共走 t 步、fast 走 2t 步，所以 <mark class="mark-invariant">t 是 L 的倍數</mark>。相遇點相對入口的位置是 (t − μ) mod L。讓 seeker 從 head 出發，兩個指標再各走 μ 步：seeker 到入口，slow 的位置則是 t mod L，也正是入口。在 seeker 到入口之前，它仍在環外，兩者不可能提前相遇。</p>
-<p class="complexity">中點與環入口皆為 O(n) 時間、O(1) 額外空間；有環時 n 指可從 head 抵達的不同節點數。雜湊集合記錄節點也能找重訪點，但多用 O(n) 空間，優點是容易延伸記錄路徑。</p>
+<p>為什麼相遇後啟動 seeker 就能精準鎖定環入口？背後的數論原理非常優美：設從 head 到環入口的步數為 μ，環的長度為 L。當兩者在環內第一次相遇時，假設 slow 總共走了 t 步，那麼 fast 必定剛好走了 2t 步；因為 fast 比 slow 整整多跑了幾圈環長，所以兩者步數之差 2t − t = t 必然是環長 L 的整數倍（即 <mark class="mark-invariant">t 是 L 的倍數</mark>）。此時 slow 所在的位置，距離環入口剛好前進了 (t − μ) 步。現在，我們讓一個全新的 seeker 指標從 head 出發，同時讓 slow 留在相遇點，兩者皆以每輪 1 步的等速同步向前走。當 seeker 剛好走了 μ 步抵達環入口時，slow 累積走過的總步數剛好是 t 步；又因為 t 是 L 的整倍數，slow 在環內繞完整數圈後，此時也必定精確停在環入口！由於 seeker 在抵達入口前始終處於環外，兩者絕不可能在環外提前相遇，因此它們第一次碰撞的點必定就是環的入口節點。</p>
+<p class="complexity">找中點與環入口演算法的時間複雜度皆為 O(n)，輔助空間為極致的 O(1)。若使用 set 來記錄已走訪的節點指標雖然也能找環，但需要 O(n) 的額外空間，其唯一的優勢是程式碼直觀且易於記錄路徑細節。</p>
 
 <h3 id="c04-dummy-gap">4. Dummy 節點與固定間距：刪倒數第 k 個</h3>
-<p class="problem-context">題意：輸入無環串列的 head 與正整數 k，刪除倒數第 k 個節點並回傳新 head；空串列或 k 超界時拋 ValueError，且不修改原串列。</p>
+<p class="problem-context">題意：輸入無環單向串列的 head 與正整數 k，請刪除串列中倒數第 k 個節點並回傳新串列的頭節點；若串列為空或 k 超出串列長度，應拋出 ValueError，且不得破壞或修改原始串列。</p>
 <p class="problem-link"><a href="https://leetcode.com/problems/remove-nth-node-from-end-of-list/" target="_blank" rel="noopener">LeetCode 19 · Remove Nth Node From End of List</a>：原題用 n 表示倒數位置，本節用 k 並檢查超界。</p>
-<p>刪除節點時，要「讓前驅跨過它」。頭節點沒有前驅，所以在 head 前方放一個 dummy（虛擬前驅），就能把刪頭與刪中間統一。dummy.value 沒有資料意義，最後回傳 dummy.next。</p>
-<p>令 slow、fast 從 dummy 出發，先讓 fast 前進 k 步，再同步移動直到 fast 是尾節點。此時 <mark class="mark-invariant">fast 與 slow 恰好相距 k 條邊</mark>，因此 slow 是倒數第 k 個節點的前驅。注意<mark class="mark-pitfall">停止條件是 fast.next 為 None</mark>；若改成 fast 為 None，slow 的位置也要跟著重新推導。</p>
+<p>在鏈結串列中刪除節點的本質，是「將待刪節點的前驅節點的 next，直接跨接指到待刪節點的下下個節點（prev.next = prev.next.next）」。然而，如果被刪除的剛好是整個串列的第一個節點（頭節點），它本身是沒有前驅的，這往往迫使工程師寫出大量醜陋的 if 特判。解決之道是引入一個虛擬前驅——<strong>Dummy 節點</strong>：在真正的 head 前方掛上一個 dummy 節點（令 dummy.next = head），這樣一來，頭節點就擁有了現成的前驅，所有的刪除邏輯便得到了完全統一的優雅處理。dummy 節點的 value 沒有實質意義，函式最後只需安心回傳 dummy.next 即可。</p>
+<p>要在一趟遍歷內找出倒數第 k 個節點的前驅，我們可以建立「固定間距的雙指標」：讓 slow 與 fast 同時從 dummy 出發，先讓 fast 單獨向前預先推進 k 步；此時 <mark class="mark-invariant">fast 與 slow 之間剛好建立了長度為 k 的安全間距</mark>。接著，讓兩者以相同速度同步前進，直到 fast 抵達最後一個實體節點（即 <mark class="mark-pitfall">fast.next 為 None</mark>）時停止。因為此時 fast 位於尾端，而 slow 與它相距 k 個節點，slow 所停駐的位址剛好就是「倒數第 k 個節點的正前方前驅」！</p>
 <pre><code class="language-python">def remove_from_end(head, k):
     &quot;&quot;&quot;移除倒數第 k 個節點；k 無效時拋 ValueError 且不修改串列。&quot;&quot;&quot;
     if k &lt;= 0:
@@ -143,21 +142,21 @@ def to_values(head):
         fast = fast.next
     slow.next = slow.next.next
     return dummy.next</code></pre>
-<div class="example"><h4>逐步例二：6 → 2 → 9，刪倒數第 2 個</h4>
-<table><thead><tr><th>步驟</th><th>slow</th><th>fast</th><th>理由／結果</th></tr></thead><tbody>
-<tr><td>初始化</td><td>dummy</td><td>dummy</td><td>相距 0</td></tr>
-<tr><td>fast 先走第 1 步</td><td>dummy</td><td>6</td><td>相距 1</td></tr>
-<tr><td>fast 先走第 2 步</td><td>dummy</td><td>2</td><td>建立固定間距 2</td></tr>
-<tr><td>同步走一輪</td><td>6</td><td>9</td><td>fast 已是尾端</td></tr>
-<tr><td>slow.next 跨過 2</td><td>6</td><td>9</td><td>結果 6 → 9</td></tr>
+<div class="example"><h4>逐步追蹤範例二：輸入 6 → 2 → 9，刪除倒數第 2 個節點（即節點 2）</h4>
+<table><thead><tr><th>執行步驟</th><th>slow 所指位置</th><th>fast 所指位置</th><th>幾何間距與狀態說明</th></tr></thead><tbody>
+<tr><td>初始化</td><td>dummy</td><td>dummy</td><td>兩者重疊，間距為 0</td></tr>
+<tr><td>fast 先走第 1 步</td><td>dummy</td><td>6</td><td>間距建立為 1</td></tr>
+<tr><td>fast 先走第 2 步</td><td>dummy</td><td>2</td><td>成功建立固定目標間距 k = 2</td></tr>
+<tr><td>雙指針同步走一輪</td><td>6</td><td>9</td><td>此時 fast.next 為 None，fast 抵達尾端</td></tr>
+<tr><td>執行指標跨接</td><td>6</td><td>9</td><td>slow.next = slow.next.next，串列化為 6 → 9</td></tr>
 </tbody></table></div>
-<p>k = n 時，fast 的預走剛好到尾端，slow 仍在 dummy，因此會刪除 head。k = 1 時，slow 最後停在倒數第二個位置。程式先完整驗證 k 的範圍，才改 next；空串列或 k 超界會拋 ValueError，保留原串列。</p>
-<p class="complexity">時間 O(n)、額外空間 O(1)。dummy 只有一個節點；移除操作把目標節點從這條鏈上跳過，其他參照仍可持有該節點。</p>
+<p>邊界情況全面覆蓋：當 k = n 時，fast 在預走階段剛好抵達原串列尾端，此時 slow 依舊停在 dummy，接下來直接執行跨接剛好將原頭節點刪除；當 k = 1 時，slow 最終精準停在倒數第二個節點上，將原本的最後一個節點安全移除。程式在動手修改任何指標前，會完整走完 k 步驗證；若中途 fast 提前撞見 None，會立即拋出異常，絕不玷污原始輸入串列。</p>
+<p class="complexity">本演算法的時間複雜度為 O(n)，額外空間僅需 O(1)（僅配置單一 dummy 節點）。在垃圾回收機制下，被跨接跳過的原節點若沒有其他外部參照持有，將會被記憶體自動釋放。</p>
 
 <h3 id="c04-merge">5. 合併已排序串列：維持輸出邊界</h3>
-<p class="problem-context">題意：輸入兩條非遞減、無環且不共享節點的單向串列，沿用原節點合併，回傳排序後的新 head。允許空串列；兩條都為空時回傳 None。</p>
+<p class="problem-context">題意：輸入兩條已依非遞減順序排序、無環且互不共享節點的單向鏈結串列 a 與 b，請沿用原始節點將它們合併為一條全新的排序串列，並回傳新串列的頭節點。輸入允許為空串列，若兩者皆為空則回傳 None。</p>
 <p class="problem-link"><a href="https://leetcode.com/problems/merge-two-sorted-lists/" target="_blank" rel="noopener">LeetCode 21 · Merge Two Sorted Lists</a></p>
-<p>對兩條遞增串列，a 與 b 各是尚未輸出的最小元素。選較小者接到 tail 後方，再移動被選串列的入口。每輪完成後，<mark class="mark-invariant">dummy.next 到 tail 是已確定的排序前綴</mark>；a 與 b 是剩餘輸入。相等時先取 a，讓第一條串列的同值元素優先，形成穩定的合併規則。</p>
+<p>對於兩條遞增排好序的串列，指針 a 與 b 分別代表兩條串列目前尚未被接駁的最小節點。我們藉助一個 dummy 哨兵節點，並用 tail 指針隨時緊盯「已合併鏈條的最後一個尾節點」。在每一輪比對中，選取 a.value 與 b.value 中較小的一方掛載到 tail.next 上，並將對應的輸入指針向前推一步。每輪結束後，<mark class="mark-invariant">從 dummy.next 一路到 tail 的部分永遠是已確定且排好序的前綴</mark>。當兩者數值相等時，我們優先選取 a，這種穩定的 tie-breaking 規則能完美維持第一條串列元素的相對原始順序。</p>
 <pre><code class="language-python">def merge_sorted(a, b):
     &quot;&quot;&quot;兩串列必須無環、遞增（可重複），且不能共享任何節點。&quot;&quot;&quot;
     dummy = Node(0)
@@ -170,16 +169,16 @@ def to_values(head):
         tail = tail.next
     tail.next = a if a is not None else b
     return dummy.next</code></pre>
-<p>一側耗盡後，另一側已排序且都不小於既有輸出尾值，可直接接上整段。tail 之後的暫時連線還不一定是最終答案，不變量只保證到 tail 為止。<mark class="mark-pitfall">兩條輸入必須節點互不重疊</mark>：若它們共享尾段，重接時可能把節點接回自己而造成環。</p>
-<p class="complexity">兩串列長 m、n，時間 O(m + n)，額外空間 O(1)，沿用原節點。若要求不更改輸入，就必須建立新節點，輸出空間為 O(m + n)。</p>
+<p>當其中一條串列先行耗盡時，因為另一條串列本身就已經是排好序的，而且其剩餘的所有元素必然都大於或等於當前 tail 的數值，所以我們完全不需要繼續跑迴圈，只需要在 O(1) 內直接將尚未耗盡的整條剩餘鏈條接在 tail.next 上即可。<mark class="mark-pitfall">重要前置假設：兩條輸入串列在實體記憶體中必須互不相交</mark>；如果兩條串列在末端共享了某些節點，重接操作可能會不小心把某個節點接回自己身上，從而在合併後的串列中意外製造出死循環環路。</p>
+<p class="complexity">設兩條串列的長度分別為 m 與 n，本演算法的時間複雜度為 O(m + n)，輔助空間為極致的 O(1)。若規格要求不得更動原本兩條輸入串列的指向關係，就必須在迴圈中配置全新 Node 節點進行深拷貝，此時輸出空間為 O(m + n)。</p>
 
 <h3 id="c04-practice">6. 練習與邊界檢查</h3>
 
-<section class="exercise"><h4>練習 A：偶數長度改回傳第一個中點</h4><p>目前 8 → 3 → 5 → 1 回傳 5。若規格改回傳 3，要如何初始化快慢指標？空串列仍回傳 None。</p><details><summary>參考解答</summary><p>先處理 head is None；其餘令 slow = head、fast = head.next，再保留原來的 while fast is not None and fast.next is not None。fast 少了最後一輪可走的空間：n = 2 時 slow 不動，n = 4 時走一輪，落在索引 (n − 1) // 2。奇數長度的中點不變。仍為 O(n) 時間、O(1) 空間。</p></details></section>
+<section class="exercise"><h4>練習 A：偶數長度改為回傳「第一個中點」</h4><p>在目前實作中，面對輸入 8 → 3 → 5 → 1 會回傳第二個中點 5。如果規格要求改為回傳第一個中點 3，我們該如何調整快慢指標的初始化起點？空串列同樣需回傳 None。</p><details><summary>參考解答</summary><p>先對 head is None 進行特判回傳 None；對於非空情況，初始化時令 slow = head，而讓 fast = head.next，隨後保留原有的 while fast is not None and fast.next is not None 迴圈不變。透過讓 fast 預先多搶跑一步，fast 能前進的總輪數剛好減少了一次：當 n = 2 時 slow 停在原地索引 0，當 n = 4 時 slow 僅前進 1 步停在索引 1（對應 (n − 1) // 2）。而對於奇數長度串列，中點依然穩穩停在正中央。演算法時間複雜度仍為 O(n)，空間複雜度為 O(1)。</p></details></section>
 <p class="problem-link"><a href="https://leetcode.com/problems/delete-node-in-a-linked-list/" target="_blank" rel="noopener">LeetCode 237 · Delete Node in a Linked List</a>：原題保證給定節點非尾節點，並以刪除後的值與順序定義結果。</p>
-<section class="exercise"><h4>練習 B：只有待刪節點，真的能 O(1) 刪除嗎？</h4><p>你只拿到串列中某個節點 target，沒有 head 或前驅。有人建議把下一個節點的值複製過來，再跳過下一個節點。這個方法在哪些規格下不成立？</p><details><summary>參考解答</summary><p>target 是尾節點時沒有下一個可複製。即使有下一個節點，這個方法<mark class="mark-pitfall">實際移除的也是下一個節點</mark>，改寫的則是 target 的值。如果外界靠節點身分保存參照、節點包含不可任意複製的資源，或規格要求真的移除 target，方法就不符合需求。一般單向串列仍需前驅才能正常 O(1) 重接。</p></details></section>
+<section class="exercise"><h4>練習 B：只給待刪節點，真的能實現真正的 O(1) 刪除嗎？</h4><p>假設你只拿到串列中的某個實體節點 target，完全沒有拿到 head 也沒有前驅節點。面試中有人建議「把下一個節點的 value 複製到 target，然後把下一個節點跳過刪除」。這個取巧的方法在哪些軟體工程規格下會徹底失效？</p><details><summary>參考解答</summary><p>首先，如果 target 剛好是整條串列的最後一個尾節點，它身後根本沒有下一個節點可供拷貝，該方法瞬間失效。更深刻的系統層面問題在於：<mark class="mark-pitfall">這個手法實質上是抹殺了下一個節點的生命週期，並竄改了當前節點的數值</mark>。如果外部其他系統模組依賴節點物件的記憶體身分來綁定觀察者模式、如果節點內部包含不可任意淺拷貝的昂貴資源（如檔案控制代碼或網路 Socket），或者合約規格嚴格要求「必須釋放 target 本身的記憶體」，這項欺騙直譯器的手法就會引發嚴重的系統副作用。在正規的單向鏈結串列中，要安全乾淨地移除一個節點，依然必須掌握其前驅指標。</p></details></section>
 <p class="problem-link"><a href="https://leetcode.com/problems/palindrome-linked-list/" target="_blank" rel="noopener">LeetCode 234 · Palindrome Linked List</a>：本節另要求檢查後還原串列。</p>
-<section class="exercise"><h4>練習 C：回文串列，額外空間 O(1)</h4><p>判斷 3 → 8 → 8 → 3 是否左右對稱，並要求函式結束後輸入結構不變。請描述可行步驟與要特別處理的邊界。</p><details><summary>參考解答</summary><p>先找前半段尾端，再反轉後半段。從兩端逐一比較到後半段耗盡，最後將後半段反轉回去並接回；<mark>遇到不同值時先記下結果，仍執行還原</mark>。</p><pre><code class="language-python">def is_palindrome(head):
+<section class="exercise"><h4>練習 C：原地判斷回文串列，並維持額外空間 O(1)</h4><p>請判斷鏈結串列 3 → 8 → 8 → 3 是否為左右對稱的回文結構，並強烈要求函式返回前必須將原本的串列結構「原封不動完整還原」。請說明演算法步驟與核心邊界。</p><details><summary>參考解答</summary><p>標準做法分為四步：首先用快慢指標定位到前半段的尾端節點；其次將後半段串列進行原地反轉；第三步從 head 與反轉後的後半段頭部同步向內推進比對數值；最後也是最關鍵的——<mark>即便途中發現數值不符判定非回文，也絕不能草率直接 return，必須先用一個布林變數 matched 記錄結果，並堅持將後半段再次反轉還原接回原位</mark>。</p><pre><code class="language-python">def is_palindrome(head):
     &quot;&quot;&quot;判斷無環串列是否為回文，結束前還原所有 next。&quot;&quot;&quot;
     if head is None or head.next is None:
         return True
@@ -198,9 +197,9 @@ def to_values(head):
         left, right = left.next, right.next
 
     first_half_end.next = reverse(second_half)
-    return matched</code></pre><p>偶數長度時 first_half_end 停在第一個中點；奇數長度時停在中央節點，中央值無須比較。兩種情況都最多比較 n // 2 對，時間 O(n)、額外空間 O(1)。回傳結果前，每個節點的 next 都恢復為原來的節點參照。</p></details></section>
-<div class="callout"><strong>邊界檢查：</strong>空／單節點、偶數與奇數長度、反轉兩次的節點身分、合法與超界 k、各個環入口、自環、合併重複值，以及回文／非回文判斷後每條 next 是否還原。</div>
+    return matched</code></pre><p>在偶數長度下，first_half_end 恰好停在第一個中點；在奇數長度下，它停在正中央節點，後半段從其下一個節點開始反轉，中央元素天然不影響回文。全過程至多比對 n // 2 對節點，時間複雜度為 O(n)，輔助空間為極致的 O(1)。在離開函式前，每一根 next 指標都完美物歸原主。</p></details></section>
+<div class="callout"><p><strong>鏈結串列的必備邊界檢查清單：</strong>空串列與單一節點、長度為偶數與奇數、反轉兩次後的節點身分是否原樣保持、合法與越界的 k 值、各類帶環拓樸、原地自環（節點指向自己）、合併時出現相同數值，以及回文檢驗後整條鏈的指標是否百分之百無損還原。</p></div>
 
 <h3 id="c04-summary">7. 決策小結</h3>
-<ul><li>需要直接讀第 i 個元素：先考慮陣列，鏈結串列沒有隨機存取優勢。</li><li>要改 next：先畫改線前後，寫下還需要的入口並保存它。</li><li>頭節點常要特殊處理：先試 dummy，把邊界轉成一般前驅操作。</li><li>一趟找中點、尾端距離或環：考慮不同速度或固定間距的雙指標。</li><li>比較「是不是同一節點」用身分；比較排序或回文內容才用 value。</li><li>報告空間前，分清楚原節點、測試轉陣列、輸出新節點與遞迴堆疊。</li></ul>
+<ul><li>需要按索引頻繁存取第 i 個元素：毫不猶豫優先選用陣列，單向鏈結串列完全沒有隨機存取的物理優勢。</li><li>動手修改 next 指標前：務必在紙上畫出指標斷開前後的拓樸，並先用臨時變數牢牢保住通往未處理區域的唯一入口。</li><li>頭節點涉及頻繁新增、刪除或換頭：第一時間引入 Dummy 虛擬前驅，把邊界特例徹底轉化為標準的前驅重接操作。</li><li>一趟遍歷定位中點、倒數第 k 個或偵測環：善用「不同步速」或「固定幾何間距」的雙指標設計模式。</li><li>比較「是否走回同一節點」時嚴格使用 is 比對記憶體身分；只有在比對業務內容或排序時才使用 value。</li><li>在空間複雜度評估中，務必嚴格切分：原始既有節點、測試輔助轉換陣列、新配置的輸出節點以及遞迴呼叫堆疊。</li></ul>
 </article>

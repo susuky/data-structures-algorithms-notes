@@ -1,12 +1,12 @@
 <article id="chapter-06" data-title="樹與圖：走訪、狀態與相依順序">
 <h2>06｜樹與圖：走訪、狀態與相依順序</h2>
-<p>樹與圖的題目在選演算法之前，往往要先說清楚「什麼是一個狀態、哪些狀態相鄰、什麼時候算走過」。本章從二元樹談到迷宮，以待處理集合與不變量為共同線索，說明 DFS、BFS、BST 與隱式圖。</p>
-<div class="callout"><strong>學完要能做到：</strong>依需要選擇 DFS 或 BFS；分清一般二元樹與二元搜尋樹；把「找得到」與「最短」分開；知道 visited 應在何時標記，以及它的鍵應包含哪些資訊；用拓樸排序安排相依工作。先備：第 01 章遞迴、第 05 章堆疊與佇列。</div>
+<p>在面對樹（Tree）與圖（Graph）的題目時，許多人容易急著套用 DFS 或 BFS 的模板程式碼，但真正決定解法成敗的關鍵，往往是在動筆前先精準回答三個核心問題：「在當前問題中，什麼才算是一個完整的狀態？」、「哪些狀態彼此相鄰且能合法轉移？」、以及「在什麼時機點才能宣告一個狀態已經造訪過（Visited）？」本章將以待處理集合（Worklist）與狀態不變量為貫穿全篇的核心線索，從經典的二元樹出發，逐步推展至一般圖的遍歷、二元搜尋樹（BST）的嚴謹驗證、迷宮隱式圖的狀態空間擴展，以及任務排程必備的拓樸排序。</p>
+<div class="callout"><p>學習目標：能根據問題本質精準取捨 DFS 或 BFS；徹底分清一般二元樹與二元搜尋樹的結構差異；將「連通性存在（是否可達）」與「代價最優（最短路徑）」的思維截然分開；掌握 visited 集合應該在何時標記、以及它的複合鍵該收錄哪些維度；並能熟練運用入度拓樸排序來解決複雜的前置相依問題。前置知識：第 01 章遞迴分析、第 05 章堆疊與佇列。</p></div>
 
 <h3 id="c06-model">一、寫走訪程式前，先確認資料結構</h3>
-<p>圖由頂點與邊構成。無向邊表示雙向連結，有向邊表示只能沿箭頭走。簡單無向樹是連通且無環的圖；選一個根之後，除了根以外，每個節點都有一個父節點。二元樹進一步限制每個節點最多兩個孩子，而且左右位置有意義。</p>
-<p>本章二元樹假設沒有環，也沒有被兩個父節點共用的孩子；走訪有環或共用節點的物件圖時，<mark>需以節點身分記錄 visited</mark>；不同節點可以有相同的值。圖範例則把頂點編號為 0 到 V−1，鄰居編號都必須有效。</p>
-<ul><li>深度：從根到節點的邊數；根深度為 0。</li><li>高度：從節點到最深葉子的邊數；葉子高度為 0。本章約定空樹高度為 −1。</li><li>n 是樹的節點數，h 是高度，w 是最寬一層的節點數；圖使用 V、E 表示頂點與邊數。</li></ul>
+<p>從數學結構來看，圖是由一組頂點（Vertices, V）與連接頂點的邊（Edges, E）所構成。無向邊代表雙向皆可自由通行，有向邊則限定只能沿著箭頭單向推進。而無向樹本質上就是一種「連通且保證無任何環路」的極簡特殊圖；當我們指定某個頂點為根節點（Root）之後，除了根節點之外，樹上的每個節點都恰好只擁有唯一的父節點。二元樹（Binary Tree）則進一步限制每個節點最多只能擁有兩個子節點，並且在幾何與語意上嚴格區分「左子節點」與「右子節點」。</p>
+<p>本章的二元樹範例皆保證結構無環，且不存在被多個父節點共享的子樹。但在遍歷包含環路或共享節點的一般物件參照圖時，<mark>必須嚴格以物件身分記錄 visited 集合</mark>，因為不同節點物件完全可能裝載著相同的數值。在一般圖的實作中，我們統一將頂點編號為 0 到 V − 1，所有相鄰邊的端點編號都必須合法有效。</p>
+<ul><li>節點深度（Depth）：從根節點沿著樹枝走訪至該節點所經過的邊數；根節點本身的深度定義為 0。</li><li>節點高度（Height）：從該節點向下尋訪至其最深葉節點所經過的最大邊數；葉節點自身的高度定義為 0。本書依業界慣例，約定空樹的高度為 −1。</li><li>在複雜度分析中，n 代表樹的節點總數，h 代表樹的高度，w 代表單層節點數最多的那一層寬度；在圖結構中，則標準使用 V 與 E 分別代表頂點數與邊數。</li></ul>
 <figure class="diagram">
 <svg role="img" aria-labelledby="c06-tree-title" viewBox="0 0 760 310" width="760" height="310">
 <title id="c06-tree-title">六節點二元樹：根為十二，左子樹五、二、九，右子樹十八、二十一；深度分成三層</title>
@@ -24,10 +24,12 @@ from dataclasses import dataclass
 class Node:
     value: int
     left: Node | None = None
-    right: Node | None = None</code></pre><h3 id="c06-dfs">二、二元樹 DFS：把「做事時機」放在正確位置</h3>
+    right: Node | None = None</code></pre>
+
+<h3 id="c06-dfs">二、二元樹 DFS：把「做事時機」放在正確位置</h3>
 <p class="problem-source">前序與中序走訪：<a href="https://leetcode.com/problems/binary-tree-preorder-traversal/">LeetCode 144 · Binary Tree Preorder Traversal</a>、<a href="https://leetcode.com/problems/binary-tree-inorder-traversal/">LeetCode 94 · Binary Tree Inorder Traversal</a>。輸出依指定次序排列的節點值，空樹回傳 []。</p><p class="problem-source"><a href="https://leetcode.com/problems/maximum-depth-of-binary-tree/">LeetCode 104 · Maximum Depth of Binary Tree</a> 以路徑的節點數計深度；tree_height 以邊數計高度。因此上圖分別是 3 與 2，空樹分別是 0 與 −1。</p>
-<p>DFS 是先深入某個分支，再回來處理尚未完成的分支。以遞迴 visit(node) 為例，進入函式時處理 node 是前序；左子樹回來後處理是中序；左右子樹都回來後處理是後序。三種次序共用同一個走訪架構，差別在於何時處理節點。</p>
-<ul><li>前序：根、左、右。適合在往下走時帶入路徑資訊。</li><li>中序：左、根、右。嚴格 BST 的中序值會嚴格遞增；一般二元樹沒有這個保證。</li><li>後序：左、右、根。適合等孩子的答案都算好後，組合高度、大小或子樹結果。</li></ul>
+<p>深度優先搜尋（DFS）的本質，是沿著單一條路徑不斷向深處探底，直到無路可走再回溯並處理其他尚未完成的分支。以遞迴函式 visit(node) 為例：在剛踏入函式時立刻處理 node 稱為「前序走訪（Preorder）」；在左子樹完整遞迴完畢、正準備進入右子樹前處理 node 稱為「中序走訪（Inorder）」；而在左右兩側子樹皆已探訪完畢並成功返回後才處理 node 則稱為「後序走訪（Postorder）」。這三種走訪共用完全一致的尋訪拓樸骨架，唯一的根本區別只在於：你究竟選擇在哪個時機點停下來收集或處理該節點。</p>
+<ul><li>前序走訪（根 → 左 → 右）：非常適合「由上而下」的場景，例如在向下深入時將祖先路徑的上下文資訊一層層傳遞給子孫節點。</li><li>中序走訪（左 → 根 → 右）：在嚴格二元搜尋樹（BST）中，中序走訪輸出的數值序列天然保證嚴格單調遞增；但在一般無序二元樹中則無此性質。</li><li>後序走訪（左 → 右 → 根）：非常適合「由下而上」的資訊匯總，例如必須等待左右子樹各自的高度、節點數或子問題解計算完畢後，再組合產出當前父節點的解答。</li></ul>
 <pre><code class="language-python">def preorder(root: Node | None) -&gt; list[int]:
     if root is None:
         return []
@@ -59,16 +61,17 @@ def tree_height(root: Node | None) -&gt; int:
     # Height is measured in edges: empty = -1, leaf = 0.
     if root is None:
         return -1
-    return 1 + max(tree_height(root.left), tree_height(root.right))</code></pre><div class="example"><strong>逐步例子 A：顯式堆疊的前序 DFS</strong><p>堆疊右端是頂端。<mark>要先訪問左孩子，就必須先推右、再推左</mark>。本例的節點數字剛好互異，表格因此用數字表示節點；堆疊實際存放的是節點物件。</p>
-<table><thead><tr><th>動作</th><th>處理後堆疊（底 → 頂）</th><th>輸出</th></tr></thead><tbody>
-<tr><td>初始化</td><td>[12]</td><td>[]</td></tr><tr><td>彈出 12；推 18、5</td><td>[18, 5]</td><td>[12]</td></tr><tr><td>彈出 5；推 9、2</td><td>[18, 9, 2]</td><td>[12, 5]</td></tr><tr><td>彈出 2</td><td>[18, 9]</td><td>[12, 5, 2]</td></tr><tr><td>彈出 9</td><td>[18]</td><td>[12, 5, 2, 9]</td></tr><tr><td>彈出 18；推 21</td><td>[21]</td><td>[12, 5, 2, 9, 18]</td></tr><tr><td>彈出 21</td><td>[]</td><td>[12, 5, 2, 9, 18, 21]</td></tr></tbody></table></div>
-<p><strong>不變量與正確性：</strong><mark class="mark-invariant">堆疊存著已發現、尚未處理的子樹根</mark>。每次取出一個根，只把它的孩子各放入一次；依照「先右後左」安排，左子樹的待處理節點都位於右子樹的待處理節點上方。因此每個節點恰好輸出一次，且符合根、左、右。高度函式則用結構歸納：空樹的 −1 是基底；假設兩個孩子回傳正確高度，較深孩子的高度加一，就是父節點高度。</p>
-<div class="complexity">三個函式都走訪 n 個節點，時間 O(n)。遞迴或二元樹 DFS 堆疊輔助空間最壞 O(h+1)，退化成鏈時可達 O(n)；有輸出清單的版本另需 O(n) 結果空間。不要把一般 n 叉樹一次推入所有孩子的堆疊也一概寫成 O(h)。Python 的執行環境限制了遞迴深度。輸入深度未知或極深時，優先改用顯式堆疊，以免正確的演算法仍因超過深度限制而失敗。</div>
-<div class="warning">遞迴中反覆使用「左清單 + [根] + 右清單」會複製清單；在退化樹可能累積 O(n²) 時間。上面的中序版本把值 append 到同一個結果清單，避免這個成本。</div>
+    return 1 + max(tree_height(root.left), tree_height(root.right))</code></pre>
+<div class="example"><strong>逐步追蹤範例 A：使用顯式堆疊模擬前序 DFS</strong><p>堆疊內部遵循後進先出（LIFO）。<mark>如果希望下一個彈出的是左子節點，就必須在程式碼中「先將右子節點推入堆疊，再將左子節點推入堆疊」</mark>。本例各節點數值剛好互不相同，為便於閱讀，表格中以數值代表節點物件；堆疊底層實際存放的是 Node 的記憶體參照。</p>
+<table><thead><tr><th>當前步驟與動作</th><th>處理後 stack 內部狀態（由底至頂）</th><th>累計輸出清單 result</th></tr></thead><tbody>
+<tr><td>初始化</td><td>[12]</td><td>[]</td></tr><tr><td>彈出 12 輸出；先推 18、再推 5</td><td>[18, 5]</td><td>[12]</td></tr><tr><td>彈出 5 輸出；先推 9、再推 2</td><td>[18, 9, 2]</td><td>[12, 5]</td></tr><tr><td>彈出 2 輸出（葉節點無孩子）</td><td>[18, 9]</td><td>[12, 5, 2]</td></tr><tr><td>彈出 9 輸出（葉節點無孩子）</td><td>[18]</td><td>[12, 5, 2, 9]</td></tr><tr><td>彈出 18 輸出；右孩子 21 推入</td><td>[21]</td><td>[12, 5, 2, 9, 18]</td></tr><tr><td>彈出 21 輸出（葉節點無孩子）</td><td>[]（堆疊淨空）</td><td>[12, 5, 2, 9, 18, 21]</td></tr></tbody></table></div>
+<p><strong>核心不變量與正確性歸納：</strong>在顯式堆疊實作中，<mark class="mark-invariant">stack 中始終存放著所有已被發現、但其內部子樹尚未被完整展開的子樹根節點</mark>。每次彈出一個節點時，我們將其子節點依照「先右後左」順序入棧，這保證了左子樹的所有節點必定在堆疊中高於右子樹的節點，進而確保了左邊必定先於右邊被處理，嚴格滿足「根 → 左 → 右」的前序定義。在計算高度的 tree_height 中，則利用結構歸納法：空樹回傳 −1 作為基底；當左右兩側子樹的高度正確算出時，父節點高度顯然等於兩側最大高度加 1。</p>
+<div class="complexity"><p>上述三個演算法都恰好造訪每個節點常數次，時間複雜度皆為 O(n)。在空間方面，二元樹 DFS 在遞迴或顯式堆疊上的記憶體佔用取決於樹的高度，最壞情況下為 O(h + 1)；若樹不幸退化成單鏈，高度將達到 O(n)。值得注意的是：Python 直譯器對呼叫堆疊設有嚴格的預設深度上限（通常為 1000 層左右）；當輸入資料深度未知或極深時，應優先採用顯式堆疊寫法，防止程式在遞迴中意外崩潰。</p></div>
+<div class="warning"><p>在撰寫中序或前序走訪時，許多初學者喜歡寫出 return visit(node.left) + [node.value] + visit(node.right) 的遞迴拼接語法。請務必警惕：清單加法每次都會複製產生新陣列，在退化樹上會導致時間複雜度急遽膨脹至 O(n²)！標準做法是像範例那樣，將所有數值直接 append 進入同一個共用的結果清單中，以確保純粹的 O(n) 線性效能。</p></div>
 
 <h3 id="c06-tree-bfs">三、二元樹 BFS：一輪處理一整層</h3>
-<p class="problem-source"><a href="https://leetcode.com/problems/binary-tree-level-order-traversal/">LeetCode 102 · Binary Tree Level Order Traversal</a>：按深度由淺至深回傳各層，同層由左到右；空樹回傳 []。上圖得到 [[12],[5,18],[2,9,21]]。</p>
-<p>BFS 使用先進先出的佇列。若只是想訪問全部節點，DFS 與 BFS 都行；若答案跟深度、層數或同一層有關，BFS 通常更直接。<mark>每一輪開始時要先固定這一層的大小</mark>，否則這一輪中新加入的孩子也可能被算進本層。</p>
+<p class="problem-source"><a href="https://leetcode.com/problems/binary-tree-level-order-traversal/">LeetCode 102 · Binary Tree Level Order Traversal</a>：按深度由淺至深回傳各層，同層由左到右；空樹回傳 []。上圖範例樹應得到 [[12], [5, 18], [2, 9, 21]]。</p>
+<p>廣度優先搜尋（BFS）藉由 FIFO 佇列的特性，以波浪擴散的方式逐層向外推進。如果題目只關心「所有節點是否全部被造訪」，那麼 DFS 與 BFS 皆可勝任；但如果題目的輸出或計算邏輯與「節點所在的深度、層數、或是同一水平層的左右關係」高度相關，BFS 絕對是首選。在實現層序遍歷時，最精妙的技巧在於：<mark>在每一輪外部迴圈開始時，先鎖定當前層的佇列長度（len(queue)）</mark>，否則在該輪中剛加入的新生代孩子節點就會與本層的節點混淆。</p>
 <pre><code class="language-python">def level_order(root: Node | None) -&gt; list[list[int]]:
     if root is None:
         return []
@@ -83,14 +86,15 @@ def tree_height(root: Node | None) -&gt; int:
             if node.right is not None:
                 queue.append(node.right)
         result.append(level)
-    return result</code></pre><p>上圖依序形成 [12]、[5, 18]、[2, 9, 21]。第二輪開始時 len(queue)=2；彈出 5 後即使已加入 2、9，這一輪也只剩下一個原本的節點 18 要處理。Python 的 range(len(queue)) 在建立 range 時就固定了次數。</p>
-<p><strong>不變量：</strong><mark class="mark-invariant">每輪開始時佇列恰好是同一深度的所有節點，且由左至右排列</mark>。依序取出它們並依左右順序加入孩子，恰好建立下一層，所以分層結果正確。</p>
-<div class="complexity">時間 O(n)，輔助佇列空間 O(w)，結果另外占 O(n)。佇列在一輪中可能同時含兩層的部分節點，但仍是 O(w)。使用 deque.popleft()，不要用 list.pop(0)，後者會搬動其餘元素。</div>
+    return result</code></pre>
+<p>追蹤細節：在上圖中，第一輪開始時佇列只有 [12]，長度為 1，輸出第一層 [12]，並將孩子 5 與 18 入隊；第二輪開始時長度鎖定為 len(queue) = 2，內部迴圈只會精確執行 2 次，因此即便彈出 5 時將 2 與 9 塞入佇列，這兩個新孩子也不會干擾本層對 18 的處理，順利將第二層結算為 [5, 18]。在 Python 中，for _ in range(len(queue)) 在迴圈啟動瞬間就已經將迭代次數固定為靜態整數，語法上極為安全。</p>
+<p><strong>核心不變量：</strong><mark class="mark-invariant">在每一輪外部 while 迴圈開始時，佇列中恰好精確收錄了屬於同一深度的所有節點，且嚴格按照由左至右的次序排列</mark>。依序將它們全數彈出並將各自的左右孩子排入隊尾，便能嚴絲合縫地建構出下一層的完整集合。</p>
+<div class="complexity"><p>演算法的時間複雜度為 O(n)；輔助佇列空間取決於樹的最大寬度，為 O(w)，最終分層結果清單另佔 O(n)。在佇列操作上，必須使用 collections.deque 的 popleft()；絕對不可使用 list.pop(0)，否則每次出隊都會導致 O(len) 的記憶體平移，將演算法拖慢成平方時間。</p></div>
 
 <h3 id="c06-bst">四、BST：大小條件適用於整棵子樹</h3>
 <p class="problem-source">搜尋與驗證：<a href="https://leetcode.com/problems/search-in-a-binary-search-tree/">LeetCode 700 · Search in a Binary Search Tree</a>、<a href="https://leetcode.com/problems/validate-binary-search-tree/">LeetCode 98 · Validate Binary Search Tree</a>。搜尋回傳目標節點，找不到回傳 None；驗證回傳布林值。在上圖搜尋 5，會得到以 5 為根、孩子為 2 與 9 的子樹。</p>
-<p>本章採用<strong>嚴格 BST</strong>：<mark>左子樹每個值都小於根，右子樹每個值都大於根</mark>，不接受重複值。其他題目可能允許重複鍵，並指定重複鍵要放哪一側；必須先確認規則，再決定能否沿用這個驗證式。</p>
-<p>搜尋時，比根小就往左，比根大就往右；被捨棄的整個子樹都不可能有答案。這個推理依賴輸入已經是 BST，不能拿搜尋函式順便「驗證」它。搜尋只走一條根到葉的路徑，時間 O(h+1)、空間 O(1)；平衡時 h 為 O(log n)，未平衡時可以是 n−1。</p>
+<p>本書採用嚴格標準的<strong>二元搜尋樹（Binary Search Tree, BST）</strong>定義：<mark>對於樹中任意節點，其左子樹中的所有節點數值都必須嚴格小於該節點數值，而其右子樹中的所有節點數值都必須嚴格大於該節點數值</mark>，全樹不允許任何重複鍵值。在部分競賽題中可能允許重複鍵，並規定重複鍵固定放在左側或右側；遇到此類題目時必須先確認規則，再微調比較運算子。</p>
+<p>在合格的 BST 中搜尋極為高效：比當前根節點小就果斷向左走，比當前根節點大就果斷向右走；被排除的整半邊子樹在數學上被證明絕不可能包含目標值。搜尋過程只會沿著單一條路徑由根下探至葉子，時間複雜度為 O(h + 1)，輔助空間為 O(1)；當樹維持平衡時高度 h 為 O(log n)，但在最壞退化情況下高度可達 n − 1。</p>
 <pre><code class="language-python">def bst_search(root: Node | None, target: int) -&gt; Node | None:
     while root is not None:
         if root.value == target:
@@ -111,7 +115,8 @@ def is_valid_bst(root: Node | None) -&gt; bool:
             return False
         stack.append((node.right, node.value, upper))
         stack.append((node.left, lower, node.value))
-    return True</code></pre><figure class="diagram"><svg role="img" aria-labelledby="c06-bst-title" viewBox="0 0 760 280" width="760" height="280">
+    return True</code></pre>
+<figure class="diagram"><svg role="img" aria-labelledby="c06-bst-title" viewBox="0 0 760 280" width="760" height="280">
 <title id="c06-bst-title">BST 反例：十二的右孩子十八，十八的左孩子九，九雖小於十八卻違反大於十二的祖先限制</title>
 <rect width="760" height="280" rx="12" fill="#fff"/>
 <path d="M240 55 L140 140 M240 55 L360 140 M360 140 L290 225" stroke="#64748b" stroke-width="3" fill="none"/>
@@ -119,12 +124,12 @@ def is_valid_bst(root: Node | None) -&gt; bool:
 <g text-anchor="middle" font-size="21" fill="#172554" font-family="sans-serif"><text x="240" y="63">12</text><text x="140" y="148">5</text><text x="360" y="148">18</text><text x="290" y="233">9</text></g>
 <g fill="#334155" font-size="18" font-family="sans-serif"><text x="420" y="85">右子樹繼承下界 12</text><text x="420" y="133">18 的左子樹再加入上界 18</text><text x="420" y="181">合法範圍：(12, 18)</text><text x="420" y="227" fill="#b91c1c">9 不在範圍內，因此不是 BST</text></g>
 </svg><figcaption>只檢查父子大小會漏掉祖先限制；上下界必須一路傳遞。</figcaption></figure>
-<p><strong>驗證不變量：</strong>每個待處理項目的 <mark class="mark-invariant">lower、upper，是所有祖先對這棵子樹的共同限制</mark>。往左保留下界、收緊上界；往右保留上界、收緊下界。如果每個節點都在嚴格開區間內，所有祖先的左右子樹要求就都成立。時間 O(n)，二元樹顯式堆疊 O(h+1)；用 None 表示無界，避免把合法整數值誤當哨兵。</p>
+<p><strong>驗證 BST 的經典陷阱：</strong>許多新手會直覺寫出「只檢查左孩子小於根、右孩子大於根」的遞迴，這是徹底錯誤的！看上方的反例圖：根節點是 12，右孩子是 18，18 的左孩子是 9。單獨看 18 與 9，9 確實小於 18，父子關係完全吻合；但 9 位於 12 的右子樹中，它違反了「整棵右子樹所有節點都必須大於 12」的祖先約束！因此，正確的驗證演算法必須<mark class="mark-invariant">將所有祖先施加的上下邊界 (lower, upper) 一路向下傳遞收緊</mark>：往左子樹走時，繼承既有下界、收緊上界為當前節點值；往右子樹走時，繼承既有上界、收緊下界為當前節點值。使用 None 代表無邊界限制，時間複雜度為 O(n)，顯式堆疊空間為 O(h + 1)。</p>
 
 <h3 id="c06-graph-dfs">五、一般圖 DFS：環、重複路徑與不連通分量</h3>
 <p class="problem-source">輸入鄰接清單與有效起點，回傳可達頂點集合。<a href="https://leetcode.com/problems/find-if-path-exists-in-graph/">LeetCode 1971 · Find if Path Exists in Graph</a> 改以無向邊清單輸入，判斷指定起終點是否連通。</p>
-<p>一般圖的同一頂點可能經由不同路徑到達。菱形中的兩條路可能在同一頂點會合，無向圖還能沿同一條邊走回去。因此，除了待處理集合，還需要 seen 記錄已經發現的頂點。</p>
-<p>鄰接清單 graph[u] 列出 u 能走到的鄰居。無向邊 (u,v) 通常存兩次，一次放在 graph[u]、一次放在 graph[v]；有向邊只放指定方向。這個表示法儲存 O(V+E) 個項目，無向邊的兩份不改變漸近量級。</p>
+<p>與樹結構最大的不同在於：一般圖中完全可能存在環路，同一個頂點也可能經由多條不同路徑重複抵達；在無向圖中，甚至可以沿著同一條邊立刻原路折返。因此在圖的走訪中，必須引入 seen 集合，負責記錄哪些節點已經被發現過，防止演算法陷入無窮死循環或進行無意義的重複探索。</p>
+<p>在記憶體表示法中，鄰接清單（Adjacency List）graph[u] 列出所有從頂點 u 可以一步抵達的鄰居。對於無向邊 (u, v)，我們在 graph[u] 放入 v，同時也在 graph[v] 放入 u；對於有向邊則僅按指定方向儲存。這種結構佔用的記憶體空間為極其經濟的 O(V + E)。</p>
 <pre><code class="language-python">def dfs_reachable(graph: list[list[int]], start: int) -&gt; set[int]:
     seen, stack = {start}, [start]
     while stack:
@@ -133,13 +138,14 @@ def is_valid_bst(root: Node | None) -&gt; bool:
             if neighbor not in seen:
                 seen.add(neighbor)  # Mark before pushing.
                 stack.append(neighbor)
-    return seen</code></pre><p><strong>在推入堆疊時就標記。</strong>這使<mark class="mark-invariant">每個頂點最多進入待處理集合一次</mark>。若等彈出才標記，多個鄰居可能在它還沒處理之前把它重複推入；若沒有進一步跳過已訪問節點，甚至會重做大量工作。本函式回傳可達集合；若需要與遞迴 DFS 相同的訪問順序或完成時間，須另外維護堆疊狀態與進出節點的時機。</p>
-<p>從起點出發只能得到該起點可達的部分。無向圖若想數連通分量，要再用一個外層迴圈掃過所有頂點，遇到未見過的起點才啟動走訪。<strong>有向圖不能把這個外層技巧直接稱為強連通分量演算法</strong>；沿有向邊到得了對方，不代表對方也到得了自己。</p>
-<div class="complexity">單次走訪的時間為 O(Vᵣ+Eᵣ)，其中 Vᵣ、Eᵣ 是可達部分的頂點與相鄰邊數；整張圖完整掃描為 O(V+E)。seen 與堆疊至多 O(V)。以上採 Python set/dict 平均 O(1) 的查找成本。</div>
+    return seen</code></pre>
+<p><strong>至關重要的工程實踐：在推入堆疊前就立刻標記 seen。</strong>這項防護確保了：<mark class="mark-invariant">整張圖中的每一個頂點，在全過程中最多只會被推進待處理堆疊一次</mark>。如果偷懶改成「等從堆疊彈出時才標記」，那麼一個有多個相鄰節點的熱門頂點，就可能在還沒來得及被處理前，被各個鄰居重複狂塞入棧數次，引發記憶體與計算時間的不必要膨脹。</p>
+<p>請留意：單次 DFS 只能探訪從 start 出發可達的連通區塊。如果要求解無向圖的所有連通分量（Connected Components），外層必須配合一個從 0 到 V − 1 的迴圈，只有當發現頂點尚未出現在全局 seen 時才啟動新一輪 DFS。但請特別警惕：<strong>這套外層迴圈技巧在有向圖中絕不能直接拿來算強連通分量（SCC）</strong>，因為在有向圖中「我能走到你」並不等價於「你也能走回我」（有向圖強連通需使用 Tarjan 或 Kosaraju 演算法）。</p>
+<div class="complexity"><p>走訪從 start 可達區域的時間為 O(Vᵣ + Eᵣ)；若遍歷全圖所有頂點與邊，總時間複雜度為 O(V + E)。seen 集合與待處理堆疊所需空間至多為 O(V)。</p></div>
 
 <h3 id="c06-graph-bfs">六、無權圖 BFS：第一次發現，就得到最少邊數</h3>
 <p class="problem-source">圖例 graph=[[1,2],[0,3],[0,3],[1,2,4],[3],[]]，起點 0、終點 4 時回傳 [0,1,3,4]。起終點須為有效頂點；多條同長最短路可回傳任一條，無路時回傳 None。</p>
-<p>如果<mark>每走一條邊的代價相同</mark>，最短路就是最少邊數。BFS 先處理距離 0，再處理距離 1、2……。除了 visited，還可以記錄 parent：某頂點第一次被誰發現。從終點不斷回溯父節點，再反轉，就能重建一條最短路。</p>
+<p>在所有邊的權重皆相等（或者無權圖）的場景下，「走訪邊數最少」就等價於「路徑成本最低的最短路」。廣度優先搜尋（BFS）天然具備同心圓擴散的性質：它會先完全探訪所有距離起點為 0 步的節點，接著是 1 步的節點，然後是 2 步的節點……。為了重建出具體的行走軌跡，我們用 parent 字典記錄每個節點「最初是由哪個節點發現的」；當抵達終點時，只需沿著 parent 一路回溯至起點並進行清單反轉，就能無損復原出最短路徑。</p>
 <pre><code class="language-python">def shortest_path(graph: list[list[int]], start: int,
                   target: int) -&gt; list[int] | None:
     parent = {start: None}
@@ -156,7 +162,8 @@ def is_valid_bst(root: Node | None) -&gt; bool:
             if neighbor not in parent:
                 parent[neighbor] = node
                 queue.append(neighbor)
-    return None</code></pre><figure class="diagram"><svg role="img" aria-labelledby="c06-bfs-title" viewBox="0 0 760 275" width="760" height="275">
+    return None</code></pre>
+<figure class="diagram"><svg role="img" aria-labelledby="c06-bfs-title" viewBox="0 0 760 275" width="760" height="275">
 <title id="c06-bfs-title">無權菱形圖的 BFS：零到一和二，一和二都到三，三到四，五孤立；三只由首次發現它的一記錄父節點</title>
 <rect width="760" height="275" rx="12" fill="#fff"/>
 <g stroke="#64748b" stroke-width="3" fill="none"><path d="M80 130 L240 70 L420 130 L585 130 M80 130 L240 190 L420 130"/></g>
@@ -164,16 +171,15 @@ def is_valid_bst(root: Node | None) -&gt; bool:
 <g font-family="sans-serif" font-size="21" text-anchor="middle" fill="#172554"><text x="80" y="138">0</text><text x="240" y="78">1</text><text x="240" y="198">2</text><text x="420" y="138">3</text><text x="585" y="138">4</text><text x="695" y="83">5</text></g>
 <g font-family="sans-serif" font-size="17" fill="#334155" text-anchor="middle"><text x="80" y="35">距離 0</text><text x="240" y="35">距離 1</text><text x="420" y="35">距離 2</text><text x="585" y="35">距離 3</text><text x="695" y="122">不可達</text><text x="375" y="255">parent[3] = 1；從 2 再看見 3 時，不重複入隊</text></g>
 </svg><figcaption>鄰接清單順序會決定同長度路徑選哪一條，但不會改變最短距離。</figcaption></figure>
-<div class="example"><strong>逐步例子 B：從 0 找到 4</strong>
-<table><thead><tr><th>彈出</th><th>新發現與父節點</th><th>處理後佇列</th></tr></thead><tbody>
-<tr><td>0</td><td>parent[1]=0；parent[2]=0</td><td>[1, 2]</td></tr><tr><td>1</td><td>parent[3]=1</td><td>[2, 3]</td></tr><tr><td>2</td><td>3 已發現，略過</td><td>[3]</td></tr><tr><td>3</td><td>parent[4]=3</td><td>[4]</td></tr><tr><td>4</td><td>回溯 4 → 3 → 1 → 0</td><td>答案 [0, 1, 3, 4]</td></tr></tbody></table></div>
-<p><strong>為什麼第一次發現就是最短？</strong><mark class="mark-invariant">佇列按距離不遞減順序取出頂點</mark>。當距離 d 的 u 發現 v 時，長度 d+1 的路已存在；如果 v 有更短路，那條路的倒數第二個頂點距離小於 d，理應更早處理並發現 v，與「這是第一次」矛盾。</p>
-<p>parent 同時兼作 visited；起點的 parent 是 None，因此起點也被標記了。start==target 時回傳 [start]，路徑含一個頂點但距離是 0。找不到時回傳 None，與合法空步數區分。最壞時間 O(V+E)，輔助空間 O(V)，重建路徑再花與路徑長度成正比的時間與空間。</p>
-<div class="warning">有權圖中，一條邊不一定比兩條邊便宜。BFS 不能拿來最小化任意票價或耗時；第 13 章的非負權重最短路才使用 Dijkstra。DFS 找到的第一條路也不保證最短。</div>
+<div class="example"><strong>逐步追蹤範例 B：從頂點 0 尋找前往頂點 4 的最短路</strong>
+<table><thead><tr><th>當前從隊首彈出的頂點</th><th>本輪新發現的鄰居與記錄的 parent</th><th>操作後的 FIFO 佇列</th></tr></thead><tbody>
+<tr><td>0（距離 0）</td><td>parent[1] = 0；parent[2] = 0</td><td>[1, 2]（皆為距離 1）</td></tr><tr><td>1（距離 1）</td><td>parent[3] = 1</td><td>[2, 3]</td></tr><tr><td>2（距離 1）</td><td>鄰居 3 已存在於 parent 中，直接略過</td><td>[3]（距離 2）</td></tr><tr><td>3（距離 2）</td><td>parent[4] = 3</td><td>[4]（距離 3）</td></tr><tr><td>4（距離 3）</td><td>命中終點！回溯 4 → 3 → 1 → 0 反轉</td><td>產出最短路徑 [0, 1, 3, 4]</td></tr></tbody></table></div>
+<p><strong>為什麼在無權圖中，BFS 第一次看到某個節點就必定是最短路？</strong>這背後有堅不可摧的單調性證明：<mark class="mark-invariant">FIFO 佇列彈出節點的順序，天然按照與起點的距離單調不遞減推進</mark>。當我們從一個距離為 d 的頂點 u 第一次看見鄰居 v 時，說明了一條長度為 d + 1 的通往 v 的路徑已經確定。試想如果 v 存在另一條更短的路徑（長度 ≤ d），那麼那條更短路徑上的倒數第二個頂點的距離必定 ≤ d − 1；按照佇列順序，那個頂點早就應該在更早的輪次被處理完畢，並早已提前發現了 v，這與「這是第一次發現 v」產生矛盾！因此，第一次發現時記錄的距離與前驅，必然是最優解。</p>
+<p class="complexity">本演算法的時間複雜度為 O(V + E)，輔助空間為 O(V)。特別提醒：這項最短保證僅在所有邊的權重完全相等時成立；若邊具有不同的非負權重（例如不同路線的通行費用或時間），一條邊未必比兩條邊便宜，此時必須改用 Dijkstra 演算法（詳見第 13 章）。同樣地，DFS 找到的第一條路徑也完全無法保證是最短路徑。</p>
 
 <h3 id="c06-implicit">七、隱式圖：依規則產生鄰居</h3>
 <p class="problem-source">網格只准上下左右移動，以移動次數計距離。下圖 [[0,0,1,0],[1,0,0,0],[0,0,1,0]] 的答案為 5。空網格、起終點為牆或無路時回傳 −1；各列長度不一致時拋 ValueError。</p>
-<p>迷宮、字串替換、鎖碼與遊戲局面都是圖，只是鄰居由規則即時計算。以 0 代表可走、1 代表牆的矩形網格為例：頂點是 (row,col)，相鄰是上下左右的合法空格。每步代價相同，所以找最少移動次數用 BFS；起點左上、終點右下。</p>
+<p>在現實開發中，並非所有圖都會事先明確給出整張頂點與鄰接清單。迷宮探索、棋盤走法、拼圖還原、甚至是字串接龍等問題，本質上都是「隱式圖（Implicit Graph）」：頂點對應到特定的盤面狀態，而邊則是根據業務規則合法動態生成的狀態轉移。以二維網格走迷宮為例：狀態是座標 (row, col)，而相鄰邊則是上下左右四個方向未撞牆且未越界的鄰居。求起點到終點的最少步數，標準採用隱式圖上的 BFS。</p>
 <pre><code class="language-python">def grid_distance(grid: list[list[int]]) -&gt; int:
     # 0 = open, 1 = wall. Return the number of moves, not cells.
     if not grid:
@@ -197,7 +203,8 @@ def is_valid_bst(root: Node | None) -&gt; bool:
                     and grid[nr][nc] == 0 and (nr, nc) not in seen):
                 seen.add((nr, nc))
                 queue.append((nr, nc, distance + 1))
-    return -1</code></pre><figure class="diagram"><svg role="img" aria-labelledby="c06-grid-title" viewBox="0 0 760 280" width="760" height="280">
+    return -1</code></pre>
+<figure class="diagram"><svg role="img" aria-labelledby="c06-grid-title" viewBox="0 0 760 280" width="760" height="280">
 <title id="c06-grid-title">三乘四迷宮 BFS 距離圖：起點距離零，終點距離五；牆格不入隊，坐標而不是距離構成 visited 鍵</title>
 <rect width="760" height="280" rx="12" fill="#fff"/>
 <g stroke="#94a3b8" stroke-width="2"><path d="M40 40 H320 V250 H40 Z" fill="#eff6ff"/><path d="M110 40 V250 M180 40 V250 M250 40 V250 M40 110 H320 M40 180 H320" fill="none"/></g>
@@ -205,11 +212,11 @@ def is_valid_bst(root: Node | None) -&gt; bool:
 <g fill="#172554" font-size="23" text-anchor="middle" font-family="sans-serif"><text x="75" y="84">0</text><text x="145" y="84">1</text><text x="285" y="84">5</text><text x="145" y="154">2</text><text x="215" y="154">3</text><text x="285" y="154">4</text><text x="75" y="224">4</text><text x="145" y="224">3</text><text x="285" y="224">5</text></g>
 <g fill="#334155" font-size="18" font-family="sans-serif"><text x="360" y="70">格內數字 = 起點到這格的最少步數</text><text x="360" y="116">右下答案 5 步，共經過 6 格</text><text x="360" y="162">每次只產生最多 4 個鄰居</text><text x="360" y="208">visited = (row, col)</text><text x="360" y="246">不必事先儲存整張圖的所有邊</text></g>
 </svg><figcaption>每格的度數最多四，所以 V=RC、E=O(RC)，時間與額外空間都是 O(RC)。</figcaption></figure>
-<p>同一個格子可以因剩餘資源不同而代表不同狀態。若可以破牆一次，「已用掉破牆」和「還留著破牆」會影響未來可走的路。visited 只放座標就可能刪掉必要路徑。<mark>狀態必須保留所有會影響後續選擇的資訊</mark>；後面的動態規劃與限制轉乘最短路，也需要依這個原則定義狀態。</p>
+<p><strong>狀態維度擴展的重要性：</strong>在更複雜的問題中，同一個網格座標完全可能因為攜帶的外部資源不同而分化為不同的狀態。例如題目若允許「可以使用一次破牆技能」，那麼站在座標 (2, 3) 且「尚未使用破牆」的狀態，與站在相同座標 (2, 3) 但「已經用掉破牆」的狀態，在未來所能開展的探索空間是截然不同的！如果 visited 集合短視地只記錄座標 (row, col)，就會把保留充沛能力的重要狀態當作重複節點而過早剪枝。<mark>定義狀態時，必須包含所有會左右未來決策走向的關鍵維度</mark>，這項思維將直接引領我們進入後續動態規劃與進階最短路的世界。</p>
 
 <h3 id="c06-topological">八、拓樸排序：先完成所有前置工作</h3>
-<p>編譯套件、修課與工作排程都有先後相依。用有向邊 u → v 表示「u 必須先完成，v 才能開始」。拓樸排序要排列全部頂點，使每條邊的起點都排在終點之前。有向無環圖（DAG）一定能排出這種順序；有環時，相依關係會互相等待。</p>
-<p>Kahn 演算法從<strong>入度為 0</strong> 的頂點開始。入度是指向該頂點的邊數，這裡代表尚未完成的前置工作數。取出一個可執行頂點，把它加入答案，再將每個後繼的入度減一；後繼的入度剛降到 0 時，就可以加入佇列。</p>
+<p>在大型軟體套件編譯、大學課程擋修規則、或是任務依賴排程中，事物之間往往存在著不可顛倒的先後順序。我們以有向邊 u → v 代表「工作 u 必須完全執行完畢，工作 v 才能被允許開始」。所謂的拓樸排序（Topological Sort），就是將圖中的所有頂點排成一條線性序列，使得圖中每一條有向邊的起點，在序列中都保證排在終點的前面。在數學上，一個有向圖能夠排出合法的拓樸序列，當且僅當它是<strong>有向無環圖（DAG, Directed Acyclic Graph）</strong>；如果圖中存在任何環路，相依關係就會互相卡死（Deadlock）而永遠無解。</p>
+<p>Kahn 演算法是利用 BFS 思維實現拓樸排序的經典方案。它從<strong>入度為 0（Indegree = 0）</strong>的頂點切入。一個頂點的入度，代表著有多少條邊指向它，在語意上恰好等於「它目前還欠缺多少個未完成的前置工作」。當某個頂點入度為 0 時，代表它所有的前置相依皆已圓滿解決，隨時可以開工！演算法將可開工的頂點加入答案序列，並模擬「該工作已完成」——將它所有後繼工作的入度各自減 1；一旦某個後繼工作的入度剛好降至 0，就代表它也完全解鎖，立刻將其推進 ready 佇列中。</p>
 <figure class="diagram"><svg role="img" aria-labelledby="c06-topological-title" viewBox="0 0 760 270" xmlns="http://www.w3.org/2000/svg">
 <title id="c06-topological-title">五個工作的相依圖：零與一都必須先於二，一先於三，二與三都先於四</title>
 <defs><marker id="c06-topological-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="#64748b"/></marker></defs>
@@ -235,18 +242,17 @@ def is_valid_bst(root: Node | None) -&gt; bool:
             if indegree[neighbor] == 0:
                 ready.append(neighbor)
     return order if len(order) == len(graph) else None</code></pre>
-<div class="example"><p>上圖的鄰接清單為 [[2],[2,3],[4],[4],[]]，初始入度 [0,0,2,1,2]、ready=[0,1]。</p>
-<table><thead><tr><th>取出</th><th>後繼入度變化</th><th>處理後 ready</th></tr></thead><tbody>
-<tr><td>0</td><td>2：2 → 1</td><td>[1]</td></tr><tr><td>1</td><td>2：1 → 0；3：1 → 0</td><td>[2,3]</td></tr><tr><td>2</td><td>4：2 → 1</td><td>[3]</td></tr><tr><td>3</td><td>4：1 → 0</td><td>[4]</td></tr><tr><td>4</td><td>無後繼</td><td>[]</td></tr>
-</tbody></table><p>得到 [0,1,2,3,4]。[1,3,0,2,4] 也是合法順序；它同樣讓每條邊都朝向排列的後方。</p></div>
-<p><strong>不變量：</strong>對每個尚未輸出的頂點 v，<mark class="mark-invariant">indegree[v] 恰好是尚未移除的入邊數</mark>；ready 保存剩餘入度為 0 的頂點。每次輸出 ready 中的頂點，它的所有前置工作都已輸出，因此保留了每條相依邊的順序。</p>
-<p><mark class="mark-pitfall">若佇列已空卻還有頂點沒輸出</mark>，剩下每個頂點都至少有一條來自剩餘部分的入邊。沿入邊回溯，在有限圖中必會重遇頂點，形成有向環。例如加入 4 → 1 後，1 → 3 → 4 → 1 互相等待，函式回傳 None。用 len(order)==V 判斷是否排完，可以同時涵蓋不連通圖與孤立頂點。</p>
-<p class="complexity">每個頂點至多入列一次，每條邊在建立與更新入度時各掃一次，時間 O(V+E)，額外空間 O(V)。若每次都要選目前編號最小的可執行頂點，可把 ready 改成<a href="#chapter-07">最小堆積</a>，時間為 O(E+V log(V+1))。</p>
-<p>參考：<a href="https://algs4.cs.princeton.edu/code/edu/princeton/cs/algs4/TopologicalX.java.html">Princeton Algorithms：佇列式拓樸排序</a>。Python 標準庫也有 <a href="https://docs.python.org/3/library/graphlib.html">graphlib.TopologicalSorter</a>，它的輸入字典為「節點 → 前置節點集合」。</p>
+<div class="example"><p>追蹤上圖：鄰接清單為 [[2], [2, 3], [4], [4], []]，初始入度為 [0, 0, 2, 1, 2]，ready 佇列初始為 [0, 1]。</p>
+<table><thead><tr><th>從隊首取出的頂點</th><th>後續鄰居的入度扣減變化</th><th>本輪處理後 ready 佇列的狀態</th></tr></thead><tbody>
+<tr><td>取出 0</td><td>頂點 2 入度：2 降為 1</td><td>[1]</td></tr><tr><td>取出 1</td><td>頂點 2 入度：1 降為 0（解鎖！）；頂點 3 入度：1 降為 0（解鎖！）</td><td>[2, 3]</td></tr><tr><td>取出 2</td><td>頂點 4 入度：2 降為 1</td><td>[3]</td></tr><tr><td>取出 3</td><td>頂點 4 入度：1 降為 0（解鎖！）</td><td>[4]</td></tr><tr><td>取出 4</td><td>4 無任何後繼邊</td><td>[]（排程結束）</td></tr>
+</tbody></table><p>最終輸出序列為 [0, 1, 2, 3, 4]。請注意：[1, 3, 0, 2, 4] 同樣是完全合法的拓樸排序；拓樸排序的解往往不唯一，只要保證每條有向邊的箭頭始終由左指向右即可。</p></div>
+<p><strong>不變量與環路判定：</strong>在執行的任何時刻，<mark class="mark-invariant">indegree[v] 精確等於頂點 v 尚未完成的前置任務總數</mark>，ready 佇列中則嚴格只保存入度已經降為 0 的自由節點。因此，任何被加入 order 的節點，其所有前置條件必然已經在更早的順序中被滿足。<mark class="mark-pitfall">如果 ready 佇列已經提早淨空，但最終產出的 order 長度卻小於總頂點數 V，這雄辯地證明了圖中必然存在有向環！</mark>因為此時剩餘的所有頂點各自都至少欠缺一個前置相依，彼此相互等待形成死結。透過 len(order) == len(graph) 判定，能以極致簡潔的邏輯同時兼顧不連通圖與環路檢測。</p>
+<p class="complexity">每個頂點入隊出隊各一次，每條邊被掃描與扣減入度各一次，時間複雜度為緊確的 O(V + E)，輔助空間為 O(V)。若題目要求在多個可執行任務中優先選取編號最小者，只需將 ready 佇列改為最小堆積（Min-Heap），時間複雜度相應變為 O(E + V log V)。在 Python 標準庫中，亦可直接使用 graphlib.TopologicalSorter。</p>
 
 <h3 id="c06-exercises">九、練習：先寫不變量，再看解答</h3>
-<section class="exercise"><h4>練習 1｜只加總葉節點</h4>
-<p>給一般二元樹，回傳所有葉節點值的總和。值可以是負數；空樹回傳 0。上面的六節點樹答案是 2+9+21=32。請不要把「只有一個孩子」的節點算成葉子。</p><details><summary>參考解答</summary><p>使用 DFS；<mark>只有左右都不存在才累加</mark>。不變量是 total 恰好等於已彈出葉節點的值之和，每個節點恰好處理一次。時間 O(n)，輔助空間 O(h+1)。</p><pre><code class="language-python">def leaf_sum(root: Node | None) -&gt; int:
+
+<section class="exercise"><h4>練習 1｜只加總葉節點數值</h4>
+<p>給定一棵一般二元樹，請計算並回傳所有葉節點數值的總和。節點數值可能為負數；若為空樹則回傳 0。以本章開頭的六節點樹為例，葉節點為 2、9、21，答案應為 2 + 9 + 21 = 32。請特別注意：只有「左孩子與右孩子皆為 None」的節點才是葉節點，單親節點絕對不能算作葉子。</p><details><summary>參考解答</summary><p>使用 DFS 配合顯式堆疊進行尋訪；<mark>只有當 node.left is None 且 node.right is None 同時成立時，才將 node.value 累加至 total</mark>。核心不變量是 total 始終精確等於所有已被彈出且判定為葉節點的數值加總，每個節點恰好進出堆疊一次。時間複雜度為 O(n)，輔助空間為 O(h + 1)。</p><pre><code class="language-python">def leaf_sum(root: Node | None) -&gt; int:
     if root is None:
         return 0
     total, stack = 0, [root]
@@ -259,8 +265,9 @@ def is_valid_bst(root: Node | None) -&gt; bool:
         if node.left is not None:
             stack.append(node.left)
     return total</code></pre></details></section>
-<section class="exercise"><h4>練習 2｜每個社群有多少成員？</h4>
-<p class="problem-source"><a href="https://leetcode.com/problems/number-of-provinces/">LeetCode 547 · Number of Provinces</a> 使用對稱鄰接矩陣，回傳連通分量的個數；本題使用鄰接清單，回傳各分量大小。</p><p>給無向圖的鄰接清單，回傳每個連通分量的大小，依最小未訪問頂點啟動的順序輸出。五個互相連通的頂點加一個孤立頂點，應得到 [5,1]。空圖得到 []。</p><details><summary>參考解答</summary><p>外層迴圈尋找新的起點，內層迴圈走訪該起點所在分量的所有頂點。內層結束時，所有與起點相連的頂點都已被標記，後續不會重複計數。<mark>所有走訪共用 seen，所以總時間是 O(V+E)</mark>，不是「外層 V 次 × 每次完整走圖」；輔助空間 O(V)。</p><pre><code class="language-python">def component_sizes(graph: list[list[int]]) -&gt; list[int]:
+
+<section class="exercise"><h4>練習 2｜統計各個社交圈（連通分量）的大小</h4>
+<p class="problem-source"><a href="https://leetcode.com/problems/number-of-provinces/">LeetCode 547 · Number of Provinces</a> 給定對稱鄰接矩陣求省份數量；本題以鄰接清單輸入，要求回傳每個連通分量包含的頂點個數清單。</p><p>給定無向圖的鄰接清單，請回傳每個連通分量的大小清單，順序依據「外層迴圈首次遇到該分量中最小未造訪頂點」的時機產生。例如五個頂點互聯加上一個孤立節點，應回傳 [5, 1]。空圖回傳 []。</p><details><summary>參考解答</summary><p>外層迴圈從 0 到 V − 1 依序掃描，尋找尚未被標記的起點；內層利用 DFS 或 BFS 將該起點所屬連通分量中的所有頂點一次性全數走訪並計數。<mark>所有分量共享同一個全局 seen 集合，這保證了每條邊與每個頂點在全過程中依然只被檢驗常數次，總時間複雜度為純正的 O(V + E)</mark>，而絕非錯誤直覺以為的「V 次遍歷全圖」；輔助空間為 O(V)。</p><pre><code class="language-python">def component_sizes(graph: list[list[int]]) -&gt; list[int]:
     # graph must be undirected; every edge is represented both ways.
     seen, sizes = set(), []
     for start in range(len(graph)):
@@ -277,8 +284,9 @@ def is_valid_bst(root: Node | None) -&gt; bool:
                     stack.append(neighbor)
         sizes.append(size)
     return sizes</code></pre></details></section>
-<section class="exercise"><h4>練習 3｜多一張破牆券</h4>
-<p class="problem-source"><a href="https://leetcode.com/problems/shortest-path-in-a-grid-with-obstacles-elimination/">LeetCode 1293 · Shortest Path in a Grid with Obstacles Elimination</a> 可移除至多 k 個障礙；本題取 k=1，並要求起終點為空格。</p><p>延續網格題，最多可以進入一個牆格；起點與終點仍必須是空格。求最少步數，無解回傳 −1。[[0,1],[1,0]] 的答案應是 2。請說明為什麼不能沿用只記錄座標的 visited。</p><details><summary>參考解答</summary><p>把節點擴成 (row,col,used)，used 只有 0、1 兩種。每次進入牆格便加一，超過一就不能入隊。visited 只排除完全相同的狀態；同座標但不同券數可以同時存在。BFS 的最短路證明仍適用於這張擴展圖。最多 2RC 個狀態，每個四條轉移，因此時間、空間皆 O(RC)。</p><pre><code class="language-python">def grid_one_break(grid: list[list[int]]) -&gt; int:
+
+<section class="exercise"><h4>練習 3｜多一張破牆券的最短路徑</h4>
+<p class="problem-source"><a href="https://leetcode.com/problems/shortest-path-in-a-grid-with-obstacles-elimination/">LeetCode 1293 · Shortest Path in a Grid with Obstacles Elimination</a> 允許消除至多 k 個障礙物；本題設定 k = 1，起終點必須為空格。</p><p>在二維迷宮網格中，玩家全場最多允許穿過一次牆壁（即走入一個牆格）；起點與終點依舊必須是暢通的空格。請計算抵達終點的最少移動步數，無解回傳 −1。例如對於 [[0, 1], [1, 0]]，答案應為 2（穿過任一堵牆直達終點）。試說明為什麼在此題中，visited 集合不能只記錄純網格座標？</p><details><summary>參考解答</summary><p>因為「抵達該格時是否已經用掉了破牆券」是左右未來可行性的關鍵維度。我們必須將狀態擴充為 (row, col, used) 的三元組，其中 used 僅有 0 與 1 兩種取值。進入空格時 used 維持不變，進入牆格時 used 增加 1；只有當 next_used ≤ 1 且新狀態未曾造訪時才允許入隊。BFS 的最短路證明在擴展後的狀態圖上完全成立。擴展圖最多包含 2RC 個狀態，每個狀態至多 4 條合法邊，因此時間與空間複雜度皆為極佳的 O(RC)。</p><pre><code class="language-python">def grid_one_break(grid: list[list[int]]) -&gt; int:
     # At most one wall cell may be entered; start/end must be open.
     if not grid:
         return -1
@@ -304,10 +312,11 @@ def is_valid_bst(root: Node | None) -&gt; bool:
                     seen.add(state)
                     queue.append((nr, nc, next_used, moves + 1))
     return -1</code></pre></details></section>
-<section class="exercise"><h4>練習 4｜「中序有排序」真的夠嗎？</h4>
-<p>在本章禁止重複鍵的規則下，能否把整棵樹中序走訪後，檢查相鄰值是否嚴格遞增，作為 BST 驗證？如果只檢查「不遞減」呢？</p><details><summary>參考解答</summary><p>嚴格遞增是充分且必要的。每個根的左子樹在中序序列中全部排在根之前，右子樹全部排在之後；序列嚴格遞增便能保證左側全小於根、右側全大於根。不遞減不足以符合本章規則，例如根 4、左孩子 4 的中序是 [4,4]，仍非法。若儲存完整結果，時間 O(n)、空間 O(n)；也可以顯式中序走訪時只保留上一個值，把輔助空間降至 O(h+1)。</p></details></section>
+
+<section class="exercise"><h4>練習 4｜「中序走訪有排序」能否完全等價證明 BST？</h4>
+<p>在本書嚴格禁止重複鍵值的規則下，如果我們將一棵二元樹進行中序走訪，檢查產出的數值序列是否「嚴格單調遞增」，能否作為 BST 的充分必要判定條件？如果只檢查「非遞減（允許相等）」呢？</p><details><summary>參考解答</summary><p>在不含重複鍵的前提下，「中序走訪嚴格單調遞增」是驗證合法 BST 的充分必要條件。因為在中序走訪中，任意節點的整棵左子樹在時間上必然全部排在該節點之前輸出，而其整棵右子樹必然全部排在該節點之後輸出；只要全域序列嚴格遞增，就 mathematically 確保了左子樹所有元素嚴格小於根、右子樹所有元素嚴格大於根。但若放寬為「非遞減」，條件便不再充分：例如根為 4、左孩子為 4，其產出的序列為 [4, 4]，雖然非遞減，卻違反了左子樹必須嚴格小於根的定義。在實作上，我們甚至不需要儲存整條陣列，只需在中序走訪時用一個變數記錄前一個節點的數值，即可在 O(h + 1) 的空間內完成線上驗證。</p></details></section>
 
 <h3 id="c06-checklist">十、邊界測試與方法選擇</h3>
-<ul><li>空樹、單節點、全部偏左的鏈、重複值、負值，以及只違反祖先範圍的 BST 反例。</li><li>圖有孤立頂點、自環、重複鄰居、起終點相同、終點不可達；無向邊是否雙向存放；拓樸排序是否處理有向環。</li><li>網格只有一格、起終點堵住、無解；步數是否誤算成經過格數。</li><li>若要依序組合孩子答案，用後序；要逐層處理，用 BFS；只問可達，DFS/BFS 都可以。</li><li>問最少步數且每步等價，先試 BFS；有非負權重，見第 13 章；有限資源，把資源加入狀態。</li></ul>
-<div class="callout"><strong>面試時一句話講清楚：</strong>「我把＿＿當成狀態，用＿＿產生鄰居，在＿＿時標記；待處理集合維持＿＿順序，因此第一次得到的＿＿是正確的。」如果還填不出這句話，先回頭確認狀態定義與走訪順序，再寫程式。</div>
+<ul><li>樹的極端測試：空樹、只有單一節點、全部單向偏左的鏈狀樹、重複數值、負數節點，以及只在祖先跨層約束上違規的 BST 經典反例。</li><li>圖的極端測試：包含孤立頂點、自環（頂點連向自己）、重複平行邊、起點與終點相同、終點完全不可達；無向圖的邊是否確實雙向記錄；拓樸排序是否能優雅識別有向環。</li><li>迷宮網格邊界：網格只有 1×1 單一格子、起點或終點自身就是障礙物、完全無解；計算長度時釐清題目問的是「移動步數（邊數）」還是「經過的格子總數（頂點數）」。</li><li>演算法決策心法：需要「由下而上」匯總子樹答案時用後序走訪；需要「按深度逐層推進」時用 BFS；純粹確認連通性與可達性時 DFS 與 BFS 皆可。</li><li>求「最少步數」且每步權重完全等價時：首選 BFS；若邊帶有不同非負權重，請見第 13 章 Dijkstra；若每一步伴隨資源消耗限制，果斷將剩餘資源打包納入狀態。</li></ul>
+<div class="callout"><p><strong>面試官最想聽見的一句話總結：</strong>「在思考這道題時，我把＿＿定義為一個核心狀態，透過＿＿規則合法生成相鄰鄰居，並在＿＿的時機點標記造訪；因為待處理集合維持著＿＿的單調性質，所以我第一次彈出該狀態時所取得的＿＿必然是全局最優解。」若在面試時能清晰填滿這句話，你的演算法邏輯就已經成功了一大半。</p></div>
 </article>

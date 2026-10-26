@@ -1,10 +1,10 @@
 <article id="chapter-03" data-title="雜湊：存在性、頻率、前綴與複合鍵">
 <h2>03｜雜湊：把「之前見過什麼」變成可查詢的狀態</h2>
-<p>如果演算法不停問「這個值先前出現過嗎？」「出現幾次？」「最早在哪裡？」，反覆掃描歷史就會浪費時間。雜湊表把某種鍵映射到位置，讓集合 set 和字典 dict 能在通常情況下快速回答這些問題。選擇鍵與值時，要先想清楚後面的查詢需要哪些資訊，單靠記住 API 還不夠。</p>
-<div class="callout"><p>先決定要問「有沒有、幾次、哪個位置」，再決定保存 set、頻率或索引。本章的平均時間採良好雜湊分布與固定成本的整數鍵模型。</p></div>
+<p>在解題時，我們經常會需要向過去的歷史紀錄發問：「這個數值之前是不是已經出現過了？」「它總共出現過幾次？」「它最早或最近一次出現在哪個索引位置？」如果每次提問都重新把歷史紀錄從頭到尾掃描一遍，演算法的時間複雜度很快就會退化到平方級別。雜湊表（Hash Table）透過雜湊函式將鍵（Key）映射到底層儲存槽中，使得 Python 的 set 與 dict 在絕大多數情況下，都能以平均 O(1) 的極高效率回答這些查詢。但在實際運用時，光是記住語法 API 遠遠不夠，真正的核心功力在於：根據後續查詢的具體需求，精準設計出該存什麼作為鍵、該配什麼作為值。</p>
+<div class="callout"><p>解題思維步驟：先想清楚後續到底要問「有沒有出現過（存在性）」、「出現了幾次（頻率）」還是「在哪個位置（索引）」，再來決定容器該用 set、次數計數還是位置字典。本章的時間複雜度分析皆假設雜湊函式分布均勻，且整數鍵的雜湊與比對成本皆為常數時間。</p></div>
 
 <h3 id="c03-hash-model">1. 雜湊值、碰撞與相等性</h3>
-<p>概念上，雜湊函式把鍵映射成整數，再由容器定位可能的儲存區域。不同鍵可能有相同雜湊值，叫作碰撞；正確的<mark>容器還要比較鍵是否相等</mark>，不能只看雜湊值。因此自己寫「把 hash(x) 放進 set 就當作存了 x」可能產生假陽性，應直接把 x 存入集合。</p>
+<p>在底層機制上，雜湊函式會將任意合法的鍵映射成一個大整數，再透過取模運算定位到底層陣列的特定槽位（Bucket）。然而，不同內容的鍵完全有可能產生相同的雜湊值或落在同一個槽位中，這種現象稱為「碰撞（Collision）」。一個設計嚴謹的容器在定位到槽位後，<mark>還必須進一步透過 == 運算子比對鍵是否真正相等</mark>，而不能草率地單憑雜湊值相同就判定為同一個物件。因此，有些初學者會誤寫出「把 hash(x) 放進集合來記錄 x」的程式碼，這會因為雜湊碰撞而引發危險的假陽性誤判，正確做法永遠是直接把原始物件 x 放入集合。</p>
 <div class="diagram">
 <svg role="img" aria-labelledby="c03-collision-title" viewBox="0 0 680 275" width="680" style="max-width:100%;background:#f8fafc;border-radius:12px;font-family:system-ui,sans-serif">
 <title id="c03-collision-title">不同鍵可能映射到同一候選區域，必須進一步比較鍵才能確定是否相同</title>
@@ -14,12 +14,12 @@
 <g fill="#dcfce7" stroke="#16a34a"><rect x="477" y="84" width="170" height="111" rx="7"/></g>
 <g fill="#0f172a" font-size="17" text-anchor="middle"><text x="90" y="98">鍵 A</text><text x="90" y="188">鍵 B</text><text x="326" y="143">同一候選區域</text><text x="562" y="112">比較實際鍵</text><text x="562" y="143">A == A：命中</text><text x="562" y="174">A != B：繼續找</text></g>
 <g fill="#0f172a" font-size="15"><text x="30" y="242">雜湊定位候選區域，再以鍵的相等性確認是否命中。</text></g></svg></div>
-<p>平均查找、插入、刪除通常 O(1)，但碰撞嚴重時<mark class="mark-pitfall">一次操作最壞可達 O(n)</mark>，整串 n 次操作最壞可到 O(n²)。擴容也會有偶發成本，插入的常數分析帶有攤銷觀點。若鍵本身很長，計算雜湊和相等比較的成本還要算入；即使用了雜湊表，長字串或大 tuple 的鍵仍有這些處理成本。</p>
-<p>Python dict 保留插入順序，但不是依鍵排序；set 不應被當成有可依賴的排序。需要可重現的排序輸出時，請明確排序並計算其成本。雜湊表是一種查找結構，不是有序索引。</p>
+<p>在平均情況下，雜湊表的查找、插入與刪除操作都是 O(1) 的超高效率。但在最壞情況下——例如遇到刻意構造的雜湊碰撞攻擊，或者容器負載過高——<mark class="mark-pitfall">單次操作的時間複雜度可能急遽退化為 O(n)</mark>，導致整批 n 次操作累計達到 O(n²)。此外，當底層空間不足觸發動態擴容（Rehash）時，需要將所有既有項目重新搬遷，這是一筆偶發的大成本，因此插入的 O(1) 保證是建立在平攤（Amortized）視角上的。最後別忘了：若作為鍵的物件本身非常龐大（例如長字串或超大 tuple），每次計算雜湊與進行內容比對都需要逐字元掃描，這筆開銷必須老老實實算入時間複雜度中。</p>
+<p>自 Python 3.7 起，標準 dict 在語言層級保證了會維持元素的「插入順序」，但請記住它並不會根據鍵的大小自動排序；而 set 更是完全不保證任何可依賴的迭代順序。如果業務邏輯需要穩定可重現的排序輸出，務必主動進行 sorted() 顯式排序並計入其 O(n log n) 的代價。雜湊表的本質是為了快速查找而生的結構，而非有序的索引用具。</p>
 
 <h3 id="c03-existence">2. 只問是否出現，就用集合</h3>
 <p class="problem-link"><a href="https://leetcode.com/problems/contains-duplicate/" target="_blank" rel="noopener">LeetCode 217 · Contains Duplicate</a>：原題回傳布林值；本節回傳首先重複的值。</p>
-<p>問題：依序掃描整數，回傳第一個「在掃描當下成為重複」的值；若沒有則回傳 None。例如 [8,3,8,3] 的答案是 8，而不是值最小的重複元素。這個輸出定義讓掃描順序成為題目的一部分。</p>
+<p>問題說明：依序掃描一系列整數，請找出在掃描過程中第一個「第二次被讀到」的數值；若完全沒有重複則回傳 None。例如輸入為 [8, 3, 8, 3]，最早觸發重複事件的是 8，因此應回傳 8，而不是回傳數值較小的 3。這項輸出規範明確將「由左至右的時間掃描順序」納入了題意的一部分。</p>
 <pre><code class="language-python">def first_repeated(nums: list[int]):
     &quot;&quot;&quot;回傳掃描時首先重複出現的整數；無重複回傳 None。&quot;&quot;&quot;
     seen = set()
@@ -28,12 +28,12 @@
             return value
         seen.add(value)
     return None</code></pre>
-<p><strong>不變量：</strong>處理目前元素之前，<mark class="mark-invariant">seen 恰好包含所有已處理的值</mark>。<mark>先查詢、再加入</mark>；命中表示已有較早位置持有相同值。第一次命中就是最早重複事件。若先加入再查，每個元素都會看見自己。時間平均 O(n)，額外空間 O(u)，u 是不同值的個數，最壞 u ≤ n。</p>
-<p>本函式只接受整數，因此用 None 表示不存在沒有歧義；若輸入本身可以包含 None，就應改回傳索引、額外的 found 旗標，或使用獨特 sentinel。設計回傳值也屬於演算法合約。</p>
+<p><strong>核心不變量：</strong>在處理當前元素 value 之前，<mark class="mark-invariant">seen 集合中精確且完整地收錄了所有在它之前已經被處理過的元素</mark>。這裡有一個至關重要的寫法細節：<mark>必須「先查詢、後加入」</mark>。如果在當前輪次中命中集合，代表在更早的索引位置上必定出現過相同的值，此時第一次命中必然對應到全域最早的重複事件。反之，若先把自己加進集合才去查詢，那麼每一個元素都會尷尬地查到自己而引發全面誤判。演算法平均時間複雜度為 O(n)，輔助空間為 O(u)，其中 u 代表不同相異值的總數，最壞情況下 u ≤ n。</p>
+<p>在本範例中，輸入明確限制為整數清單，因此以 None 代表「找不到重複」不會產生任何歧義。但如果題目本身允許清單中包含 None，那麼回傳 None 就會造成呼叫端無從分辨是找到了 None 還是無解；在這種情境下，就應當改為回傳該元素的索引位置、額外回傳布林值旗標，或是使用物件識別的哨兵值（Sentinel）。設計清晰的回傳值型別，本身就是演算法合約不可或缺的一環。</p>
 
 <h3 id="c03-frequency">3. 問出現幾次，就保存頻率</h3>
 <p class="problem-link"><a href="https://leetcode.com/problems/number-of-good-pairs/" target="_blank" rel="noopener">LeetCode 1512 · Number of Good Pairs</a></p>
-<p>問題：計算值相同的索引對 (i,j)，其中 i &lt; j。當讀到 value，<mark>之前已有 c 個同值元素，就恰好新增 c 對</mark>，不必把先前的位置全部保存。頻率已足以回答這個計數問題，因此可以用它取代逐一檢查先前位置的工作。</p>
+<p>問題說明：計算陣列中有多少組索引配對 (i, j) 滿足 i &lt; j 且 nums[i] == nums[j]。當我們在右端讀入一個數值 value 時，思考的關鍵在於：<mark>只要在此之前歷史上已經累積出現過 c 次相同的數值，那麼當前的 value 就能與那 c 個前輩分別配對，為答案精確貢獻 c 組新配對</mark>。我們根本不需要大費周章地把所有舊索引都保留在清單裡，光是記錄「目前出現了幾次」這個頻率摘要，就足以在 O(1) 時間內直接結算新增的配對數。</p>
 <pre><code class="language-python">def count_equal_pairs(nums: list[int]) -&gt; int:
     freq = {}
     pairs = 0
@@ -42,14 +42,14 @@
         pairs += old_count
         freq[value] = old_count + 1
     return pairs</code></pre>
-<div class="example"><p><strong>逐步範例 A：</strong>輸入 [4,4,7,4,7]。</p><table><thead><tr><th>目前值</th><th>更新前次數</th><th>新增配對</th><th>累計 pairs</th><th>更新後頻率</th></tr></thead><tbody><tr><td>4</td><td>0</td><td>0</td><td>0</td><td>{4:1}</td></tr><tr><td>4</td><td>1</td><td>1</td><td>1</td><td>{4:2}</td></tr><tr><td>7</td><td>0</td><td>0</td><td>1</td><td>{4:2,7:1}</td></tr><tr><td>4</td><td>2</td><td>2</td><td>3</td><td>{4:3,7:1}</td></tr><tr><td>7</td><td>1</td><td>1</td><td>4</td><td>{4:3,7:2}</td></tr></tbody></table></div>
-<p><strong>正確性：</strong><mark class="mark-invariant">每一對只會在較晚位置到達時被計入</mark>，且較早的同值位置都由頻率表完整代表。因此每對剛好算一次。時間平均 O(n)，空間 O(u)。事後也可對各值頻率 c 累加 c(c−1)/2，但逐一處理的寫法更適合串流，也直接說明了計數來源。</p>
-<p>Python 可用 dict.get(key, 0)、collections.Counter 或 defaultdict(int)。get 讀不到鍵時不會寫入；defaultdict 的索引讀取缺失鍵則會建立預設值。選 API 時要確認它是否會改變字典內容，尤其是在用「字典有多少鍵」表示不同種類數時。</p>
+<div class="example"><p><strong>逐步追蹤範例 A：</strong>輸入陣列 [4, 4, 7, 4, 7]。</p><table><thead><tr><th>當前讀入值</th><th>歷史出現次數 old_count</th><th>本輪新增配對數</th><th>累計總配對 pairs</th><th>更新後的頻率狀態 freq</th></tr></thead><tbody><tr><td>4</td><td>0</td><td>0</td><td>0</td><td>{4: 1}</td></tr><tr><td>4</td><td>1</td><td>1</td><td>1</td><td>{4: 2}</td></tr><tr><td>7</td><td>0</td><td>0</td><td>1</td><td>{4: 2, 7: 1}</td></tr><tr><td>4</td><td>2</td><td>2</td><td>3</td><td>{4: 3, 7: 1}</td></tr><tr><td>7</td><td>1</td><td>1</td><td>4</td><td>{4: 3, 7: 2}</td></tr></tbody></table></div>
+<p><strong>正確性證明：</strong><mark class="mark-invariant">每一對合法配對，都恰好會在右端較晚的那個元素被讀入的當下被精確結算一次</mark>，而所有較早出現的同值元素都被 freq 完整計數，因此絕不重複也不會漏算。演算法平均時間複雜度為 O(n)，空間複雜度為 O(u)。雖然我們也可以在整段陣列讀完後，對每個數值的總次數 c 套用公式 c(c − 1)/2 加總，但這種在單次遍歷中動態累計的寫法不僅邏輯自然，更能無縫支援無法預知長度的即時資料串流（Streaming Data）。</p>
+<p>在 Python 中，次數統計常見的寫法有 dict.get(key, 0)、collections.Counter 以及 collections.defaultdict(int)。請務必留意它們的行為差異：dict.get 在找不到鍵時不會對字典產生任何副作用；而 defaultdict 在使用下標讀取不存在的鍵時，會主動在字典裡建立預設值項目。如果後續邏輯依賴「字典中有幾個 key」來代表相異元素個數，defaultdict 的隱式建立行為就可能導致非預期的幽靈鍵干擾，選用時請格外小心。</p>
 
 <h3 id="c03-complement">4. 問先前在哪裡，就保存索引</h3>
-<p class="problem-context">題意：輸入未排序整數陣列 nums 與 target，回傳兩個不同位置的零起算索引，使對應數值相加為 target；無解回傳 None。若有多組，回傳掃描中最先完成的那組，搭檔相同時保留最早索引。</p>
+<p class="problem-context">題意：輸入未排序的整數陣列 nums 與目標和 target，請找出兩個不同位置的 0 起算索引，使這兩個位置上的數值相加剛好為 target；若無解則回傳 None。若存在多組解，回傳在掃描過程中右端索引最早完成的那一組；若右端相同且有重複搭檔，保留左端索引最小者。</p>
 <p class="problem-link"><a href="https://leetcode.com/problems/two-sum/" target="_blank" rel="noopener">LeetCode 1 · Two Sum</a>：本節補上多解時的選擇順序與無解回傳值。</p>
-<p>未排序的兩數和不再能依大小移動左右指標。但對目前值 x，要找的搭檔一定是 target − x。將前面數值的最早索引存入字典，就能直接查其補數。</p>
+<p>在未排序的陣列中，我們無法使用左右夾逼雙指標，因為任意移動端點都不具備單調性的保證。但從數學角度來看：當我們站在當前位置 index、讀到數值 value 時，它所渴求的完美搭檔是唯一的，即 complement = target − value。我們只要在掃描途中，順手把每個看過數值的「最早出現索引」記錄在字典裡，就能在 O(1) 時間內直接向歷史詢問補數是否存在。</p>
 <pre><code class="language-python">def two_sum_any(nums: list[int], target: int):
     first_index = {}
     for index, value in enumerate(nums):
@@ -58,13 +58,13 @@
             return first_index[complement], index
         first_index.setdefault(value, index)
     return None</code></pre>
-<p>輸入 [9,2,9]、target = 18：第一個 9 還沒有搭檔，記 {9:0}；讀到 2 也無搭檔，記 {9:0,2:1}；最後的 9 查到先前的 9，回傳 (0,2)。輸入 [9] 則不會用自己配自己，因為查詢發生在加入目前位置之前。</p>
-<p><strong>不變量：</strong>每次查詢時，<mark class="mark-invariant">first_index 保存目前位置之前各值的最早索引</mark>。掃描順序保證先選最小的右端索引；setdefault 再保證同一右端下選最小的左端索引。例如 [1,2,8,9]、target = 10 回傳 (1,2)，因為它比 (0,3) 更早完成。時間平均 O(n)，空間 O(n)。</p>
+<p>追蹤細節：以 [9, 2, 9]、target = 18 為例，讀入第一個 9 時補數 9 尚未出現在字典中，字典記錄 {9: 0}；接著讀入 2，字典變為 {9: 0, 2: 1}；最後讀入第二個 9，立即在字典中命中先前的索引 0，成功回傳 (0, 2)。而如果輸入只有單一元素 [9]，程式絕不會自己跟自己配對，因為我們嚴格恪守「先查補數、再將自己寫入字典」的鐵律。</p>
+<p><strong>核心不變量：</strong>在每次進行補數查詢時，<mark class="mark-invariant">first_index 恰好儲存了當前位置之前所有出現過數值的最早索引</mark>。由左至右的迭代順序保證了最先被返回的必定是右端最小的解；而 setdefault 則確保了當數值重複出現時不會覆蓋掉更早的歷史索引，保證了左端索引起點也是最早的。演算法平均時間複雜度為 O(n)，輔助空間為 O(n)。</p>
 
 <h3 id="c03-prefix-hash">5. 前綴雜湊：把區間條件改寫成歷史查詢</h3>
 <p class="problem-link"><a href="https://leetcode.com/problems/subarray-sum-equals-k/" target="_blank" rel="noopener">LeetCode 560 · Subarray Sum Equals K</a>：原題的 k 對應本節的 target。</p>
-<p>問題：陣列可含正數、零與負數，計算總和恰好等於 target 的<strong>非空連續區間</strong>個數。第 02 章定義 P[j] 為前 j 個元素之和，故 [i,j) 的和為 P[j] − P[i]。把等式移項：P[j] − P[i] = target，等價於 <mark>P[i] = P[j] − target</mark>。</p>
-<p>於是每遇到一個新右邊界 j，只需知道之前有幾個前綴值等於 P[j] − target。因為不同邊界可能具有相同前綴值，這裡必須用<strong>次數</strong>，不能只用集合。這個方法也適用於負數，因為代數等式不要求前綴單調。</p>
+<p>問題說明：陣列中可以同時包含正整數、零與負數，請計算元素總和恰好等於 target 的<strong>非空連續子陣列</strong>總個數。在第 02 章中我們知道，若 P[j] 代表前 j 個元素的和，那麼連續區間 [i, j) 的總和恰為 P[j] − P[i]。現在我們要求這個區間和等於 target，將數學等式移項變形：P[j] − P[i] = target 可以完全等價改寫為 <mark>P[i] = P[j] − target</mark>。</p>
+<p>這是一個無比震撼的視角轉換：當我們遍歷到陣列的右端點 j 時，當前的前綴和 P[j] 已經確定；我們不再需要回頭去枚舉所有的左端點 i，而只需要問一句：「在過去的歷史中，到底有幾次前綴和的值剛好等於 P[j] − target？」由於可能有多個不同的歷史邊界具有相同的前綴數值，這裡的歷史紀錄必須使用<strong>出現次數（頻率字典）</strong>，而不能只用布林集合。最棒的是，這套代數推導完全不依賴數值是否單調遞增，即便陣列中充滿負數也完全適用。</p>
 <pre><code class="language-python">def count_subarrays_sum(nums: list[int], target: int) -&gt; int:
     freq = {0: 1}
     prefix = 0
@@ -84,15 +84,15 @@
 <g fill="#0f172a" text-anchor="middle" font-size="21"><text x="112" y="125">2</text><text x="217" y="125">−1</text><text x="322" y="125">2</text><text x="427" y="125">1</text><text x="532" y="125">−2</text></g>
 <path d="M480 157V180H165V157M158 169L165 157L172 169" fill="none" stroke="#2563eb" stroke-width="3"/>
 <g fill="#0f172a" text-anchor="middle" font-size="16"><text x="338" y="216">查詢 P[i] = 4 − 2 = 2，先前邊界 i = 1 符合。</text><text x="338" y="246">因此新增 [1,4)：−1 + 2 + 1 = 2。</text></g></svg></div>
-<div class="example"><p><strong>逐步範例 B：</strong>nums = [2,−1,2,1,−2]，target = 2。起始 freq = {0:1}。</p><table><thead><tr><th>右邊界 j</th><th>新前綴 P[j]</th><th>要找的舊前綴</th><th>舊次數</th><th>累計答案</th></tr></thead><tbody><tr><td>1</td><td>2</td><td>0</td><td>1</td><td>1</td></tr><tr><td>2</td><td>1</td><td>−1</td><td>0</td><td>1</td></tr><tr><td>3</td><td>3</td><td>1</td><td>1</td><td>2</td></tr><tr><td>4</td><td>4</td><td>2</td><td>1</td><td>3</td></tr><tr><td>5</td><td>2</td><td>0</td><td>1</td><td>4</td></tr></tbody></table><p>四個區間是 [0,1)、[2,3)、[1,4)、[0,5)。最後前綴值 2 的次數才更新成 2；它代表兩個不同邊界，不應被合併成一個「存在」。</p></div>
-<p><strong>不變量：</strong>處理右邊界 j 的查詢之前，freq 精確記錄 P[0] 到 P[j−1] 的出現次數；answer 已包含所有右邊界小於 j 的合法非空區間。查到的每一個舊邊界 i 都滿足 i &lt; j，因此新增區間非空，而且每個區間只在自己的右邊界被計入。接著加入 P[j]，不變量延續到下一輪。</p>
-<div class="warning"><p><strong>兩個不可省略的細節：</strong>初始 {0:1} 代表「尚未讀入元素」的前綴邊界，讓從索引 0 開始的區間也能被算到。<mark class="mark-pitfall">順序必須先查、再加入目前前綴</mark>；若 target = 0 而先加入，就把 P[j] 和自己配對，錯算空區間。</p></div>
-<div class="complexity"><p>時間平均 O(n)，額外空間 O(n)，不需要真的保存整個 prefix 陣列。答案可能是 n(n+1)/2，因此別把答案大小誤認成只有 O(n)。Python int 可容納大計數，但若改用固定位元語言，要檢查溢位；若以位元成本分析，也要計入大整數算術。</p></div>
+<div class="example"><p><strong>逐步追蹤範例 B：</strong>nums = [2, −1, 2, 1, −2]，target = 2。起始字典設為 freq = {0: 1}。</p><table><thead><tr><th>當前右端邊界 j</th><th>新前綴和 P[j]</th><th>要尋找的歷史前綴 P[j] − 2</th><th>歷史命中次數</th><th>累計答案 answer</th></tr></thead><tbody><tr><td>1</td><td>2</td><td>2 − 2 = 0</td><td>1</td><td>1</td></tr><tr><td>2</td><td>1</td><td>1 − 2 = −1</td><td>0</td><td>1</td></tr><tr><td>3</td><td>3</td><td>3 − 2 = 1</td><td>1</td><td>2</td></tr><tr><td>4</td><td>4</td><td>4 − 2 = 2</td><td>1</td><td>3</td></tr><tr><td>5</td><td>2</td><td>2 − 2 = 0</td><td>1</td><td>4</td></tr></tbody></table><p>最終找到的四個符合區間分別是：[0, 1)、[2, 3)、[1, 4) 以及 [0, 5)。請注意在第 5 步結束後，前綴和 2 的累積次數才被更新為 2；它代表了兩個實體位置完全不同的切分點，絕對不能被去重合併。</p></div>
+<p><strong>核心不變量：</strong>在針對右端點 j 進行查詢時，freq 精準記錄了所有 P[0] 到 P[j − 1] 的出現頻率；answer 則精準收錄了所有右端點小於 j 的合法非空區間總數。因為查到的每一個左端點 i 都必然滿足 i &lt; j，這保證了新算出的區間一定是合法的非空區間，且每個區間只會在自己的右邊界被精確計算一次。隨後將當前 P[j] 納入 freq，不變量順利交棒給下一輪。</p>
+<div class="warning"><p><strong>不可不知的兩大細節陷阱：</strong>首先，字典初始必須放入 {0: 1}，它代表「前 0 個元素之和為 0」的基準邊界，若缺少它，所有從索引 0 開始的合法區間（例如本身就剛好等於 target 的前綴）都會被無情漏掉。其次，<mark class="mark-pitfall">運算順序必須嚴格執行「先查頻率更新答案，再把當前前綴寫入字典」</mark>；如果順序顛倒且遇到 target = 0，當前前綴就會自己和自己配對，錯誤地把長度為 0 的空區間也當成答案計入。</p></div>
+<div class="complexity"><p>演算法平均時間複雜度為 O(n)，輔助空間為 O(n)，全程我們只用一個累加變數維護當前前綴，完全不需要實體配置長度為 n 的前綴陣列。值得警惕的是：合法子陣列的總數在極端情況下（例如包含大量 0）可能高達 n(n + 1)/2，因此回傳的答案數值本身可能非常巨大。在 Python 中 int 會自動支援任意精度的大整數，但在其他靜態語言中，累加變數務必宣告為 64 位元整數以防溢位。</p></div>
 
 <h3 id="c03-value-choice">6. 同樣的鍵，不同問題需要不同值</h3>
-<p class="problem-context">題意：輸入可含負數的整數陣列與 target，找總和恰好等於 target 的最長非空連續區間，回傳半開邊界；同長取最早，無解回傳 (0,0)。</p>
+<p class="problem-context">題意：輸入可含負數的整數陣列與 target，找總和恰好等於 target 的最長非空連續區間，回傳半開邊界；同長取最早，無解回傳 (0, 0)。</p>
 <p class="problem-link"><a href="https://leetcode.com/problems/maximum-size-subarray-sum-equals-k/" target="_blank" rel="noopener">LeetCode 325 · Maximum Size Subarray Sum Equals k</a>：原題回傳長度；本節回傳半開邊界。</p>
-<p>如果改問「總和恰好等於 target 的最長區間」，頻率不再有用；對固定右端點，越早的相符左端點會產生越長區間，所以只保存每個前綴值的<strong><mark>第一次出現位置</mark></strong>。後來相同的前綴不應覆蓋它。</p>
+<p>如果問題由「計算個數」改為「尋求最長的符合區間」，那麼記錄出現頻率就毫無意義了。思考幾何關係：對於一個固定的右邊界 end，如果我們希望 end − start 的區間長度最大化，我們自然希望左端點 start 越小越好。因此，字典中應當記錄的是每個前綴和<strong><mark>歷史上第一次出現的索引位置</mark></strong>。後續若再次遇到相同的前綴和，絕對不能將其覆蓋。</p>
 <pre><code class="language-python">def longest_subarray_sum(nums: list[int], target: int) -&gt; tuple[int, int]:
     &quot;&quot;&quot;回傳最長非空符合區間，同長取最早；無解回傳 (0, 0)。&quot;&quot;&quot;
     first_position = {0: 0}
@@ -107,12 +107,12 @@
                 best = (start, end)
         first_position.setdefault(prefix, end)
     return best</code></pre>
-<p>例如 [1,−1,1] 的前綴邊界依序為 0、1、0、1，target = 1。若把前綴 0 的最早位置 0 改寫成 2，最後只能得到 [2,3) 長度 1，而漏掉 [0,3) 長度 3。這個例子說明了保留最早位置才能找到最長區間，選擇更新方式時必須守住這項條件。時間平均 O(n)，空間 O(n)。</p>
-<table><thead><tr><th>真正要回答的問題</th><th>表中保存什麼</th></tr></thead><tbody><tr><td>是否曾出現</td><td>set 中的鍵</td></tr><tr><td>能形成多少組</td><td>鍵 → 出現次數</td></tr><tr><td>找最長區間</td><td>鍵 → 最早位置</td></tr><tr><td>找最短非空區間</td><td>常需鍵 → 最近位置，且先查後更新</td></tr><tr><td>列出所有區間</td><td>鍵 → 所有位置；必須另外計入輸出量</td></tr></tbody></table>
-<p>求最短的精確區間和時，<mark>固定右端搭配最近的相符前綴</mark>；求最長時則搭配最早的相符前綴。兩者都先查詢再更新，確保左右邊界不同。</p>
+<p>以輸入 [1, −1, 1]、target = 1 為例：各前綴邊界依序為 0、1、0、1。如果在讀到第二個 0 時，冒失地將前綴 0 的最早位置從 0 改寫為 2，那麼最後面對 end = 3 時，就只能計算出 [2, 3)（長度 1），而無情錯失了真正最優的 [0, 3)（長度 3）。這說明了：字典的更新策略必須嚴密服務於極值性質。本演算法平均時間複雜度為 O(n)，空間複雜度為 O(n)。</p>
+<table><thead><tr><th>演算法真正要回答的核心問題</th><th>雜湊容器中應當保存的資料型態</th></tr></thead><tbody><tr><td>某個狀態是否曾經出現過</td><td>set 中的唯一鍵</td></tr><tr><td>歷史上能與當前狀態拼成幾組答案</td><td>dict：鍵 → 累積出現頻率</td></tr><tr><td>固定右端，尋求跨度最大的最長區間</td><td>dict：鍵 → 第一次出現的最早位置（setdefault 不覆蓋）</td></tr><tr><td>固定右端，尋求跨度最小的最短非空區間</td><td>dict：鍵 → 最近一次出現的位置（先查詢後覆蓋更新）</td></tr><tr><td>需要輸出所有合法的具體區間清單</td><td>dict：鍵 → 歷史位置清單；需額外計入輸出複製成本</td></tr></tbody></table>
+<p>同理，若要尋求總和等於 target 的「最短非空區間」，策略便對稱地轉變為：<mark>固定右端點時，尋找離它最近的合法左端點</mark>。此時字典中應記錄的是「最近一次出現的位置」，且同樣必須遵循先查後更新的順序，以避免左右端點重疊形成長度為 0 的空區間。</p>
 
 <h3 id="c03-unique-window">7. 不重複字元視窗：保存最近位置</h3>
-<p>給定字串，找沒有重複字元的最長連續區間，回傳半開邊界；同長取最早，空字串回傳 (0,0)。字元與索引沿用 Python str 的碼位定義。右端加入字元時，若它上次出現在目前視窗內，左端直接移到上次位置的下一格。</p>
+<p>問題說明：給定一個字串，請找出不包含任何重複字元的最長連續子字串區間，回傳半開區間；若有多組長度相同，取出現最早者，空字串回傳 (0, 0)。字元索引與長度遵循 Python str 的碼位定義。當右端指標 right 納入一個字元時，如果這個字元上次出現的位置剛好落在目前的視窗之內，左端指標 left 就必須一口氣直接跳到「該字元上次出現位置的下一格」，從而瞬間排除重複。</p>
 <pre><code class="language-python">def longest_unique_window(text: str) -&gt; tuple[int, int]:
     &quot;&quot;&quot;最長無重複字元區間；同長取最早，回傳半開邊界。&quot;&quot;&quot;
     last_position = {}
@@ -124,15 +124,15 @@
             best = (left, right + 1)
         last_position[char] = right
     return best</code></pre>
-<table><caption>text = &quot;abba&quot;</caption><thead><tr><th>right／字元</th><th>上次位置</th><th>left</th><th>目前視窗</th><th>best</th></tr></thead><tbody><tr><td>0／a</td><td>無</td><td>0</td><td>a</td><td>[0,1)</td></tr><tr><td>1／b</td><td>無</td><td>0</td><td>ab</td><td>[0,2)</td></tr><tr><td>2／b</td><td>1</td><td>2</td><td>b</td><td>[0,2)</td></tr><tr><td>3／a</td><td>0</td><td>2</td><td>ba</td><td>[0,2)</td></tr></tbody></table>
-<p><strong>不變量：</strong>每輪更新後，<mark class="mark-invariant">text[left:right+1] 是以 right 結尾的最長無重複區間</mark>。若相同字元在目前視窗內，任何較早起點都會同時包含兩次出現，必須越過舊位置；<mark class="mark-pitfall">若舊位置已在視窗外，left 保持不動</mark>。在 &quot;abba&quot; 最後一輪，max 保留 left = 2，避免退回 1 而把兩個 b 放回視窗。</p>
-<p class="complexity">時間平均 O(n)，額外空間 O(u)，u 為字串中不同碼位的數量。每個字元只查詢及更新一次，回傳邊界也不需要複製子字串。</p>
+<table><caption>text = &quot;abba&quot;</caption><thead><tr><th>當前 right 與字元</th><th>該字元上次出現位置</th><th>更新後的 left</th><th>當前有效視窗內容</th><th>歷史最佳 best</th></tr></thead><tbody><tr><td>0／a</td><td>無（回傳 -1）</td><td>0</td><td>"a"</td><td>[0, 1)</td></tr><tr><td>1／b</td><td>無（回傳 -1）</td><td>0</td><td>"ab"</td><td>[0, 2)</td></tr><tr><td>2／b</td><td>1</td><td>max(0, 1 + 1) = 2</td><td>"b"</td><td>[0, 2)</td></tr><tr><td>3／a</td><td>0</td><td>max(2, 0 + 1) = 2</td><td>"ba"</td><td>[0, 2)</td></tr></tbody></table>
+<p><strong>核心不變量：</strong>在每一輪更新後，<mark class="mark-invariant">子字串 text[left:right+1] 永遠是以 right 結尾的最長無重複字元區間</mark>。這裡有一個經典的邊界陷阱：當我們處理到 "abba" 的最後一個字元 'a' 時，'a' 上次出現的索引是 0，但此時 left 早已推進到 2；<mark class="mark-pitfall">如果沒有用 max(left, ...) 限制，left 就會荒謬地倒退回 1，反而把兩個 'b' 重新框進視窗中</mark>。max 的存在確保了左邊界永遠只進不退。</p>
+<p class="complexity">本演算法的時間複雜度為平均 O(n)，輔助空間為 O(u)，其中 u 為字串中相異字元的數量。每個字元在字典中只做一次 O(1) 的查詢與更新，全程只維護指標邊界，完全無需動態生成多餘的切片子字串。</p>
 
 <h3 id="c03-composite">8. 複合鍵：讓相同結構得到同一個表示</h3>
-<p>鍵不一定是單一數字。格子座標可用 (row,col)，有時間維度的狀態可用 (row,col,time)。<mark>若方向會影響下一步，方向也要放入鍵</mark>；省略一個影響未來的維度，就會把不同狀態錯當成相同。反過來，不相關的資訊也不必加入，否則應被合併的狀態無法合併。</p>
+<p>在實際問題中，鍵絕不僅限於單一的數字或字串。在二維網格尋路中，座標通常打包為 (row, col)；在帶有時效或限制的圖搜尋中，狀態往往擴充為 (row, col, time)。<mark>原則是：只要某個維度會實質影響到未來的決策走向，它就必須被放入鍵中</mark>。如果漏掉了會影響未來的關鍵維度，就會把兩個本質不同的狀態誤當作同一個狀態而草率略過；反之，若把完全不相關的無效資訊也塞進鍵裡，原本應該合併剪枝的狀態就會被拆散，失去記憶化的意義。</p>
 <p class="problem-link"><a href="https://leetcode.com/problems/group-anagrams/" target="_blank" rel="noopener">LeetCode 49 · Group Anagrams</a>：本節保留組內順序及各組首次出現的順序。</p>
-<p class="problem-context">題意：輸入只含小寫英文字母的單字清單，回傳分組後的清單；空輸入回傳 []，空字串也可分組。例如 ["arc", "car", "arr"] 回傳 [["arc", "car"], ["arr"]。遇到字母表以外的字元則拋 ValueError。</p>
-<p>另一個例子是字母重排分組：兩個詞若每個字母的次數都相同，就放同組。對固定 a 到 z 的字母表，可用長度 26 的次數 tuple 作為鍵。列表本身可變且不可雜湊，轉成 tuple 才能當鍵；但 tuple 若內含 list，仍不可雜湊。不是所有「外觀不可變」的容器都保證可用。</p>
+<p class="problem-context">題意：輸入僅含小寫英文字母的單字清單，請將互為字母重排（Anagrams）的單字分在同一組；空輸入回傳 []，空字串亦可成組。例如輸入 ["arc", "car", "arr"]，應回傳 [["arc", "car"], ["arr"]]。若字串中出現小寫英文字母以外的字元，應拋出 ValueError。</p>
+<p>解決此類問題的核心，在於為所有等價的單字提取出唯一的「標準簽名（Canonical Representation）」。如果兩個單字互為字母重排，代表它們各個字母出現的頻率完全一致。對於固定只含 a 到 z 的場景，我們可以用長度為 26 的整數 tuple 作為簽名鍵。請特別注意：Python 中的 list 是可變物件，因此它是不可雜湊的（Unhashable）；必須轉成 tuple 才能當作字典的鍵。同時，若 tuple 內部嵌套了 list，整個 tuple 依然不可雜湊。</p>
 <div class="diagram">
 <svg role="img" aria-labelledby="c03-signature-title" viewBox="0 0 680 280" width="680" style="max-width:100%;background:#f8fafc;border-radius:12px;font-family:system-ui,sans-serif">
 <title id="c03-signature-title">arc 與 car 的 a、c、r 次數相同，使用相同二十六維 tuple 分組；arr 的頻率不同</title>
@@ -154,18 +154,20 @@
         key = tuple(counts)
         groups.setdefault(key, []).append(word)
     return list(groups.values())</code></pre>
-<p>設 W 為單字數、L 為總字元數、G 為組數、A 為字母表大小。建立計數及鍵的時間平均 O(L + WA)，鍵的保存空間 O(GA)，分組存放單字參照還需 O(W)。此處 A = 26 為固定常數，所以可簡寫為平均 O(L + W) 時間、O(G + W) 空間。這段程式只保存輸入字串的參照，不重新複製所有文字。</p>
-<p>若支援任意 Unicode，就不能用固定 26 格。可把排序後的碼位序列作為鍵，單字長度 k 時建鍵 O(k log k)，或用字元計數後排序的鍵值對；大小寫、重音正規化是否等同也要由需求決定。不要默默刪掉未知字元。本函式對不在 a 到 z 的字元直接報錯。</p>
-<div class="warning"><p>別用沒定義編碼規則的字串拼接代替 tuple。例如把兩段文字用「|」相接，('a|b','c') 和 ('a','b|c') 都可能變成 'a|b|c'。<mark>直接使用二元 tuple 能保留邊界</mark>。可作鍵的自訂物件還必須維持雜湊與相等性一致，且存入容器期間不能任意改變影響鍵身分的內容。</p></div>
+<p>複雜度分析：設 W 為單字總數、L 為所有單字的字元長度加總、G 為最終分組數，A 為字母表大小（在此為 26）。統計各單字字元並生成簽名 tuple 的時間為平均 O(L + WA)，儲存鍵的空間為 O(GA)，加上儲存分組清單中的單字參照需 O(W)。因為 A = 26 是固定常數，整體複雜度可簡寫為平均 O(L + W) 時間與 O(G + W) 輔助空間。這段實作只在字典中記錄原字串的參照，不會造成多餘的字串深複製。</p>
+<p>如果字元集包含任意 Unicode 字元，就不能使用固定長度 26 的陣列了。此時常見的替代策略是將單字中的字元排序後生成字串作為鍵（對長度為 k 的單字耗時 O(k log k)），或是使用精簡的字元頻率對。另外要特別提醒：千萬不要隨手用未妥善轉義的字串拼接來充當複合鍵，例如拿 "|" 拼接兩欄位，那麼 ("a|b", "c") 與 ("a", "b|c") 都會產生命中完全相同的 "a|b|c" 碰撞；<mark>直接使用原生 tuple 能完美保留欄位邊界與型別語意</mark>，既安全又高效。</p>
 
 <h3 id="c03-exercises">9. 練習與解答</h3>
 
-<div class="exercise"><p><strong>練習 1：零的壓力測試。</strong>[0,0,0] 中總和為 0 的非空區間有幾個？逐步列出 freq[0] 與 answer。改用 set 會少算多少？</p><details><summary>參考解答</summary><p>起始 freq[0] = 1。三次查詢分別新增 1、2、3 個區間，answer 依序 1、3、6；更新後頻率依序 2、3、4。若每輪集合查到就只加 1，只會得到 3，少算 3。<mark>相同值的不同前綴邊界對應不同區間</mark>，不能去重。</p></details></div>
-<div class="exercise"><p><strong>練習 2：集合還是字典？</strong>資料是使用者編號串流。需求 A：判斷是否曾出現重複；需求 B：回傳每個編號的總次數；需求 C：發現重複時回報最早一次的位置。各該保存什麼？</p><details><summary>參考解答</summary><p>A 用 seen 集合即可；B 用編號到次數的字典；C 用編號到最早索引的字典，首次見到才設定。三者的平均處理時間都是 O(n)，但保存的語意不同。若 A 只要布林值，第一次重複就能提前停止；B 則必須讀完整段。</p></details></div>
-<div class="exercise"><p><strong>練習 3：錯誤的最長區間。</strong>把 longest_subarray_sum 迴圈末尾的 first_position.setdefault(prefix, end) 改成 first_position[prefix] = end，為什麼 [1,−1,1]、target = 1 會失敗？請說出被破壞的不變量。</p><details><summary>參考解答</summary><p>第二個邊界的前綴為 0，覆蓋了原本邊界 0 的紀錄；第三個邊界查詢時只能找到位置 2。表中保存的是「最近位置」而非「最早位置」，無法支持最長性的推論。setdefault 或只在鍵不存在時賦值才能保留所需資訊。</p></details></div>
-<div class="exercise"><p><strong>練習 4：不只位置相同。</strong>機器人移動規則取決於目前格子以及已使用的折返次數。visited 只用 (row,col) 是否足夠？</p><details><summary>參考解答</summary><p>不夠。即使同一格，剩餘可折返額度不同，未來可行動作也可能不同。至少要用 (row,col,used) 或其他能完整代表剩餘能力的等價狀態。判斷需要哪些維度時，要看它們是否影響後續可行的動作，不能只因題目有座標就省略其他狀態。第 06 與 13 章會延續狀態設計。</p></details></div>
+<div class="exercise"><p><strong>練習 1：零元素對前綴雜湊的壓力測試。</strong>給定陣列 [0, 0, 0]，其中總和恰好為 0 的非空連續子陣列共有幾個？請逐步追蹤每一輪迴圈中 freq[0] 與 answer 的變化數值。如果當初誤將 freq 宣告成 set，最終算出的答案會差多少？</p><details><summary>參考解答</summary><p>演算法開始前 freq[0] 初始化為 1。三次迭代中，前綴和始終為 0，查詢 prefix − target 即 0 − 0 = 0：第一輪查到 1 次，answer 累計為 1；第二輪查到 2 次，answer 累計為 1 + 2 = 3；第三輪查到 3 次，answer 累計為 3 + 3 = 6。各輪結束後 freq[0] 的計數依序刷新為 2、3、4。如果誤用 set，每輪只要存在 0 就只會僵硬地加 1，最終只會算出 3，少算了整整 3 組答案。<mark>數值相同的前綴在不同索引被計算出來，代表的是完全不同的實體分割邊界</mark>，絕對不能被去重合併。</p></details></div>
+
+<div class="exercise"><p><strong>練習 2：容器選型決策。</strong>面對即時的使用者 ID 串流：需求 A 是即時判斷是否出現過重複使用者；需求 B 是隨時查詢每個使用者 ID 的累積造訪次數；需求 C 是在首次發現重複時，精確回報該使用者最初是出現在第幾筆紀錄。這三個需求分別該使用什麼容器？</p><details><summary>參考解答</summary><p>需求 A 只需要確認存在性，使用 seen 集合（set）即可，一旦發現已有記錄便可提早返回；需求 B 需要累加頻率，應使用使用者 ID 映射至整數次數的字典（dict）；需求 C 需要鎖定歷史定位，應使用使用者 ID 映射至首次出現索引的字典，且必須搭配 setdefault 或條件判斷以確保不被後續重複紀錄覆蓋。三者處理 n 筆資料的平均時間皆為 O(n)，但依據提問語意精確選取最小必要資料結構，是維持程式碼簡潔與效能的關鍵。</p></details></div>
+
+<div class="exercise"><p><strong>練習 3：破壞不變量的寫法。</strong>如果在 longest_subarray_sum 的迴圈末尾，把 first_position.setdefault(prefix, end) 隨意改寫成無條件賦值的 first_position[prefix] = end，為什麼在面對輸入 [1, −1, 1]、target = 1 時會產生錯誤？這項改動破壞了什麼核心不變量？</p><details><summary>參考解答</summary><p>在輸入 [1, −1, 1] 中，前綴邊界依序為 0、1、0、1。在處理到第二個 0 時，原本代表邊界 0 的紀錄被後來的邊界 2 覆蓋；等到後續遍歷至第三個邊界（前綴為 1）時，需要尋找前綴 0，此時字典中只剩位置 2，只能算出長度為 3 − 2 = 1 的區間，而錯失了從位置 0 開始長度為 3 的真正最長解答。這項改動摧毀了「first_position 始終保留該前綴最早出現位置」的核心不變量，使得後續求最大跨度的幾何推論徹底失效。</p></details></div>
+
+<div class="exercise"><p><strong>練習 4：複合鍵維度完整性。</strong>在一個網格走迷宮問題中，機器人除了能上下左右移動，全場還額外擁有最多 2 次穿牆或折返的特殊能量。如果我們用 visited 集合記錄造訪過的狀態，只用 (row, col) 作為鍵是否足夠？為什麼？</p><details><summary>參考解答</summary><p>絕對不夠。因為即便機器人站在完全相同的座標 (row, col) 上，剩餘 2 次特殊能量與剩餘 0 次特殊能量所能抵達的未來狀態空間是截然不同的。若省略了剩餘能量這個關鍵維度，演算法就會誤把「耗盡能量抵達此處」的狀態，當作「保留充沛能量抵達此處」的狀態而進行剪枝，進而將原本可行的成功路徑永久封殺。設計複合狀態鍵時，必須嚴格檢查：任何會對未來決策可能性造成分歧的維度，都必須被完整打包進鍵中（如 (row, col, remaining_energy)）。後續在第 06 章（圖搜尋）與第 13 章中，我們將深入探討這套狀態空間建模方法。</p></details></div>
 
 <h3 id="c03-checklist">10. 測試與章末決策</h3>
-<ul><li>只需存在性時，set 已足夠；需要數量或位置時，用 dict 並明確定義值。</li><li>題目關心「之前」，就通常先查詢，再加入目前元素，避免與自己配對。</li><li>區間和先寫 P[j] − P[i] = target，再決定保存頻率、最早或最近邊界。</li><li>複合鍵應保存影響未來的所有維度，也要保留欄位邊界。</li><li>報告平均／攤銷假設、鍵的建構成本、最壞碰撞風險與輸出空間。</li></ul>
-<p>官方補充：<a href="https://docs.python.org/3/library/stdtypes.html#mapping-types-dict" target="_blank" rel="noopener">dict 與映射操作</a>、<a href="https://docs.python.org/3/library/collections.html#collections.Counter" target="_blank" rel="noopener">Counter</a>、<a href="https://docs.python.org/3/reference/datamodel.html#object.__hash__" target="_blank" rel="noopener">雜湊與相等性的契約</a>。下一章會離開隨機索引，改用鏈結串列練習指向關係與局部修改。</p>
+<ul><li>只關心「有沒有出現過」時，使用 set 就綽綽有餘；需要「累積幾次」或「具體在哪裡」時，才引入 dict 並精準定義 value 的語意。</li><li>演算法關心「先前歷史」時，原則上必須恪守「先向容器查詢、再將當前元素寫入」的順序，防止元素與自身發生誤配對。</li><li>處理連續區間和時，先在紙上寫出代數關係 P[j] − P[i] = target，再根據目標是求個數、求最長還是求最短，決定字典應該存頻率、最早位置還是最近位置。</li><li>複合狀態鍵必須完整包含所有會影響未來可能性的維度，且應直接使用原生不可變的 tuple，避免使用無轉義的字串拼接以免邊界混淆。</li><li>效能分析時，務必主動報告平均/平攤時間假設、鍵物件的生成與比對成本、極端情況下的碰撞退化風險，以及輸出結果所佔用的記憶體空間。</li></ul>
+<p>延伸閱讀：<a href="https://docs.python.org/3/library/stdtypes.html#mapping-types-dict" target="_blank" rel="noopener">Python 官方 dict 映射型別說明</a>、<a href="https://docs.python.org/3/library/collections.html#collections.Counter" target="_blank" rel="noopener">collections.Counter 計數容器</a>、<a href="https://docs.python.org/3/reference/datamodel.html#object.__hash__" target="_blank" rel="noopener">Python 雜湊值與物件相等性協定</a>。在接下來的第四章中，我們將離開隨機存取的連續陣列，進入鏈結串列的世界，探討指標鏈的動態重組與結構不變量。</p>
 </article>

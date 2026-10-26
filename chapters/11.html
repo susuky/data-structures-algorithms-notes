@@ -1,23 +1,24 @@
 <article id="chapter-11" data-title="動態規劃：狀態、轉移與計算順序">
 <h2>11．動態規劃：狀態、轉移與計算順序</h2>
-<p>動態規劃（dynamic programming，DP）把未來相同的子問題合併，只計算一次。狀態保留會影響後續選擇的資訊；轉移把子問題的答案組合成最大值、最小值、可行性或數量。</p>
-<p>解題時要交代六件事：狀態定義、轉移、邊界、計算順序、答案位置、複雜度。本章從一維湊數開始，再處理背包、雙字串、矩陣與狀態機，並分析狀態數量與轉移成本如何共同決定時間複雜度。</p>
+<p>動態規劃（Dynamic Programming，簡稱 DP）是演算法中最具威力的思維武器之一。它的精髓非常純粹：<mark>將具有相同未來的子問題大膽合併，使其只被計算一次</mark>。許多初學者容易將動態規劃誤認為某種高深莫測的填表公式，但本質上，DP 不過是「懂得適度遺忘歷史、只萃取必要資訊」的精準記憶搜尋。在狀態中，我們只保留會對後續決策產生影響的關鍵特徵；而轉移方程式，則是依據最後一步或下一步的可行選擇，將大問題拆解為更小規模子問題的極值、總數或可行性組合。</p>
+<p>面對任何動態規劃問題，在動手寫第一行程式碼之前，你必須先在腦海中清清楚楚回答六個關鍵問題：狀態如何定義？轉移式如何推導？初始與邊界條件是什麼？狀態的相依計算順序為何？最終答案位於表格的哪個座標？以及整體的時空複雜度是否能被系統承載？本章將從經典的一維零錢兌換出發，循序拆解 0/1 背包的空間壓縮奧秘、雙字串 LCS 網格、二維矩陣走訪、有限狀態機（FSM）DP 以及狀態壓縮，帶你建立無可撼動的動態規劃直覺。</p>
 
 <h3 id="c11-framework">11.1 填 dp 表前，先回答六個問題</h3>
-<ol><li><strong>狀態：</strong>dp 的每個索引與儲存值是什麼？例如 dp[a] 是「恰好湊成 a 的最少硬幣數」，不是含糊的「到這裡的答案」。</li>
-<li><strong>轉移：</strong>依最後一步／下一個選擇，把答案連到較小的子問題。最佳化通常用 min 或 max，計數通常相加，可行性通常用 or。</li>
-<li><strong>邊界：</strong>空問題的答案是什麼？哪些狀態不可達？最小化的不可達通常用正無限大，最大化常用負無限大。</li>
-<li><strong>順序：</strong>讀取某個狀態前，它依賴的結果是否都已算好？依賴較小金額就由小到大；區間依賴較短區間就由短到長。</li>
-<li><strong>答案：</strong>是 dp[n]、整列最大值、所有合法終態的最大值，還是其他位置？</li>
-<li><strong>成本：</strong><mark>狀態數 × 每狀態轉移成本</mark>，再加前處理、輸出與資料結構操作。空間要包含表格、遞迴、重建答案。</li></ol>
-<div class="callout"><strong>足夠的狀態：</strong>兩段歷史若映射到同一狀態，<mark class="mark-invariant">它們之後的合法選擇與所求結果必須相同</mark>；最佳化時，可只保留這個狀態下最好的已累積值。若過去某個資訊仍會改變未來，就不能丟掉它。回溯的整條 path 往往資訊太多，但只存「目前走到第幾步」又可能太少。</div>
-<p>「重疊子問題」說明為什麼可以省下重算；「最優子結構」說明局部子問題的最佳答案能組成整體最佳答案。兩者都需要由題意論證。用遞迴求解的問題，也不一定適合 DP：若子問題根本不重複，cache 可能只增加開銷；若轉移含循環，普通遞迴記憶化還可能無限遞迴，需另外處理循環與求解方法。</p>
+<p>在開始設計 DP 表格前，請養成逐一核對以下六大維度的嚴謹習慣：</p>
+<ol><li><strong>狀態定義（State Definition）：</strong><code>dp</code> 陣列的每個索引維度到底代表什麼現實意義？裡面儲存的純量值又是什麼？例如 <code>dp[a]</code> 必須精確定義為「湊齊總金額剛好為 a 所需的最少硬幣數量」，切忌使用「走到這一步的答案」這種語焉不詳的模糊描述。</li>
+<li><strong>狀態轉移（State Transition）：</strong>依據「最後一步可能做出的所有互斥選擇」，如何將當前狀態的答案由較小規模的子問題推導出來？求極值通常使用 <code>min</code> 或 <code>max</code>，求方案總數通常相加累計，求可行性則使用布林邏輯 <code>or</code>。</li>
+<li><strong>邊界與不可達狀態（Base Cases &amp; Unreachability）：</strong>最基礎的空問題（例如金額為 0、字串為空）對應什麼數值？哪些在物理上根本無法抵達的非法狀態需要被特別標記？在求最小值問題中，不可達狀態通常初始化為正無窮大（$\infty$）；求最大值時則設為負無窮大（$-\infty$）。</li>
+<li><strong>計算順序與拓撲依賴（Evaluation Order）：</strong>在嘗試計算並填入某個狀態前，它所依賴的所有子問題是否都已經在記憶體中計算完畢？若當前狀態依賴較小金額，迴圈就必須由小到大；若區間 DP 依賴較短區間，外層迴圈就必須按區間長度由短到長推進。</li>
+<li><strong>答案位置（Answer Location）：</strong>最終的全域解答究竟存放在哪裡？是右下角的 <code>dp[m][n]</code>、最後一列的極值、所有合法終止狀態的最大值，還是需要將某些狀態累加？</li>
+<li><strong>複雜度審計（Complexity Audit）：</strong><mark>時間複雜度嚴格等於「狀態總數量 × 單一狀態的轉移成本」</mark>，隨後再加上必要的前處理與答案重建開銷；空間複雜度則需涵蓋表格陣列、遞迴堆疊以及可能的路徑回溯指標。</li></ol>
+<div class="callout"><strong>什麼叫做「足夠的狀態」？</strong>如果兩段截然不同的決策歷史被映射到了同一個 DP 狀態，<mark class="mark-invariant">那麼從此刻開始，這兩個狀態在未來所有可行的決策分支、以及各分支產生的後續收益，必須完全一模一樣</mark>！如果在未來的某個判斷中，你還需要知道「過去到底有沒有用過第 3 件物品」，那麼這個資訊就屬於無法被遺忘的狀態特徵，必須老老實實擴充進狀態維度中。回溯法保留的整條 path 資訊量過大；而如果只記錄「目前走到第幾步」往往又遺漏過多，DP 的藝術就在於拿捏這份恰到好處的平衡。</div>
+<p>只有當問題同時具備「最優子結構」（整體最優解可由子問題最優解構造）與「重疊子問題」（不同分支反覆造訪相同的局部狀態）時，動態規劃才能發揮其碾壓暴力搜尋的威力。若子問題之間完全不重疊，記憶化快取只會白白浪費記憶體；若狀態轉移圖中存在有向環（Circular Dependency），普通的遞迴記憶化將直接墜入無窮遞迴，此時必須轉用圖論的最短路徑演算法（如 Dijkstra 或 Bellman-Ford）來化解。</p>
 
 <h3 id="c11-memo">11.2 自頂向下：先寫遞迴，再記住答案</h3>
 <p class="problem-link"><a href="https://leetcode.com/problems/coin-change/">LeetCode 322．Coin Change</a>。coins=[1,3,4]、amount=6，最少需要 2 枚。</p>
-<p>面額都是正整數，每種硬幣可以無限使用。求恰好湊成 amount 的最少枚數，不能湊出就回傳 −1。令 best(a) 為湊 a 的最少枚數。最後放入一枚 c 之前，必須先湊出 a−c，因此 best(a)=min(1+best(a−c))，只考慮 c≤a。best(0)=0，沒有合法選法則為無限大。</p>
+<p>給定一組正整數面額的硬幣，每種面額供應量無限。我們希望能以最少枚數湊出目標金額 <code>amount</code>；若無論如何都無法剛好湊出，則回傳 -1。令 <code>best(a)</code> 代表湊齊金額 <code>a</code> 所需的最少枚數。思考最後一步：在放入最後一枚面額為 $c$ 的硬幣之前，我們必定先湊出了金額 $a - c$。因此轉移關係非常自然：$best(a) = 1 + \min_{c \le a} best(a - c)$。基礎邊界為 $best(0) = 0$；若無任何合法硬幣可選，則回傳無窮大。</p>
 <figure class="diagram"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="重疊子問題：湊 6 的兩條分支都會需要 best(2)，記憶化只計算一次" viewBox="0 0 760 360"><title>重疊子問題：湊 6 的兩條分支都會需要 best(2)，記憶化只計算一次</title><rect x="0" y="0" width="760" height="360" rx="12" fill="#f8fafc"/><path d="M380,66 L155,140" stroke="#64748b" stroke-width="2" fill="none"/><text x="267.5" y="98.0" text-anchor="middle" font-size="14" fill="#334155">−1</text><path d="M380,66 L380,140" stroke="#64748b" stroke-width="2" fill="none"/><text x="380.0" y="98.0" text-anchor="middle" font-size="14" fill="#334155">−3</text><path d="M380,66 L605,140" stroke="#64748b" stroke-width="2" fill="none"/><text x="492.5" y="98.0" text-anchor="middle" font-size="14" fill="#334155">−4</text><path d="M155,184 L380,250" stroke="#64748b" stroke-width="2" fill="none"/><text x="267.5" y="212.0" text-anchor="middle" font-size="14" fill="#334155">−3</text><path d="M380,184 L380,250" stroke="#64748b" stroke-width="2" fill="none"/><text x="380.0" y="212.0" text-anchor="middle" font-size="14" fill="#334155">−1</text><rect x="305" y="24" width="150" height="42" rx="8" fill="#dbeafe" stroke="#334155"/><text x="380.0" y="50.0" text-anchor="middle" font-size="16" fill="#0f172a">best(6)</text><rect x="85" y="140" width="140" height="44" rx="8" fill="#dbeafe" stroke="#334155"/><text x="155.0" y="167.0" text-anchor="middle" font-size="16" fill="#0f172a">best(5)</text><rect x="310" y="140" width="140" height="44" rx="8" fill="#dbeafe" stroke="#334155"/><text x="380.0" y="167.0" text-anchor="middle" font-size="16" fill="#0f172a">best(3)</text><rect x="535" y="140" width="140" height="44" rx="8" fill="#dcfce7" stroke="#334155"/><text x="605.0" y="167.0" text-anchor="middle" font-size="16" fill="#0f172a">best(2)</text><rect x="280" y="250" width="200" height="44" rx="8" fill="#dcfce7" stroke="#334155"/><text x="380.0" y="277.0" text-anchor="middle" font-size="16" fill="#0f172a">同一個 best(2)</text><text x="35" y="335" font-size="15" fill="#0f172a">圖只畫出部分相依邊；面額是 1、3、4。</text></svg><figcaption>重疊子問題：湊 6 的兩條分支都會需要 best(2)，記憶化只計算一次</figcaption></figure>
-<p>不加記憶化時，相同餘額會被沿不同路徑重算。加上 cache 後，<mark>每個餘額的函式主體只執行一次</mark>。面額正值保證餘額嚴格下降，轉移沒有循環。下面將快取放在函式內，讓每次呼叫使用自己的面額集合，不會把另一組輸入的答案誤當成相同問題。</p>
+<p>如果使用純暴力遞迴，湊成 6 的過程中，子問題 <code>best(2)</code> 會在 <code>6 - 4 = 2</code> 以及 <code>6 - 1 - 3 = 2</code> 等多條路徑上被反覆重複計算，遞迴樹呈現指數爆炸。但只要掛上快取字典（例如 <code>@cache</code>），<mark>每個不同的金額餘額就保證只會真正執行其內部迴圈一次</mark>。硬幣全為正數確保了每次遞迴時金額必定嚴格遞減，轉移圖是有向無環圖（DAG），絕對不會發生循環依賴。我們在函式內部建立快取，確保每次呼叫都能使用封裝的獨立狀態，避免不同測資之間相互污染。</p>
 <pre><code class="language-python">from functools import cache
 from math import inf
 
@@ -40,12 +41,11 @@ def minimum_coins_memo(coins, amount):
 
     answer = best(amount)
     return -1 if answer == inf else answer</code></pre>
-<p><strong>正確性：</strong>任意最優解都有最後一枚 c。刪掉它，剩下的硬幣必須是 a−c 的最優解，否則可用更少枚數替換，和原解最優相矛盾。枚舉所有可作為最後一枚的 c，便包含某個最優解；轉移不會產生不合法總額。由 a=0 向上做歸納，即得所有有限答案正確。</p>
-<div class="complexity">令 A=amount，輸入有 M 個面額、去重後 D 種。先整理面額，再檢查與重用；最多 A+1 個狀態，每狀態至多 D 次轉移，時間 O(M + D log D + A·D)。面額與 cache 合計占 O(A+D) 空間，遞迴深度最壞 O(A／最小面額)。Python 可能先遇到遞迴深度限制，此時所需的 DP 表格還遠小於可接受的大小；大 A 優先考慮迭代。</div>
+<p><strong>最優子結構證明（反證法）：</strong>假設湊齊金額 $a$ 的某個最優解中最後一枚硬幣為 $c$。若扣除這枚硬幣後剩餘的金額 $a - c$ 不是透過最優解湊齊的，那麼我們必定能找到一套枚數更少的硬幣方案來湊齊 $a - c$，將這套更優方案補上硬幣 $c$ 之後，就能湊出總額為 $a$ 且枚數更少的新方案，這直接與「原方案為湊齊 a 的最優解」產生矛盾！因此，最優子結構必然成立。</p>
+<div class="complexity">設目標金額為 $A$，硬幣種類去重後有 $D$ 種。狀態總數最多為 $A + 1$ 個，每個狀態在內部最多嘗試 $D$ 次面額轉移，總時間複雜度為 $O(A \cdot D)$。空間方面，快取字典佔用 $O(A)$，遞迴呼叫堆疊最深可能達到 $A$ 層（例如只有面額 1 時）。在 Python 中，若金額高達數千，很容易直接觸發 <code>RecursionError: maximum recursion depth exceeded</code>，這時改用自底向上的迭代填表法是更為穩健的工程實踐。</div>
 
 <h3 id="c11-tabulation">11.3 自底向上：按相依順序填表</h3>
-
-<p>由於 a−c&lt;a，金額從 0 遞增就是合法順序。dp[a] 更新時，<mark class="mark-invariant">它讀取的所有較小金額都已完成</mark>。這樣不用遞迴，也省下函式呼叫和雜湊快取的開銷。</p>
+<p>觀察狀態轉移式 $dp[a] = 1 + \min(dp[a - c])$，可以發現任何金額 $a$ 都只依賴於嚴格小於 $a$ 的子問題結果。這意味著：只要我們讓金額從 0 開始由小到大遞增跑迴圈，<mark class="mark-invariant">當我們準備計算 dp[total] 時，其所有可能需要查閱的前置狀態 dp[total - coin] 都保證百分之百已經算妥定案</mark>！這就是表格法（Tabulation）的核心邏輯——拋棄遞迴開銷，以純粹的陣列迭代循序推進。</p>
 <pre><code class="language-python">def minimum_coins(coins, amount):
     values = sorted(set(coins))
     if amount &lt; 0 or any(c &lt;= 0 for c in values):
@@ -68,11 +68,11 @@ def minimum_coins_memo(coins, amount):
 <tr><td>5</td><td>min(dp[4]+1, dp[2]+1, dp[1]+1)</td><td>2</td><td>4+1</td></tr>
 <tr><td>6</td><td>min(dp[5]+1, dp[3]+1, dp[2]+1)</td><td>2</td><td>3+3</td></tr>
 </tbody></table></div>
-<p>每次拿最大面額會取 4+1+1，共 3 枚；DP 比較所有最後一步，找到 3+3。</p>
+<p>對比貪心法在此處的潰敗：若貪心每次挑最大面額，湊 6 時會先拿 4，隨後被迫拿兩枚 1，總共耗費 3 枚；而動態規劃全面考察了所有可能的最後一步，成功鎖定了 3+3 僅需 2 枚的最優解！</p>
 <h4>從最少枚數還原一組硬幣</h4>
-<p>更新 dp[total] 時，同時<mark>用 chosen[total] 記住最後一枚硬幣</mark>。從目標金額反覆減去這枚硬幣，就能沿著已記錄的選擇回到 0。只在枚數嚴格變少時更新，平手時保留先找到的方案。</p>
+<p>在實際系統開發中，業務需求往往不僅要回傳「最少需要幾枚」，更要給出「具體是哪幾枚硬幣」。我們只需在更新 <code>dp[total]</code> 的同時，<mark>額外使用一個 chosen[total] 陣列記錄下讓它取得最小值的最後那枚硬幣面額</mark>。運算完成後，從目標金額 <code>amount</code> 出發，不斷減去 <code>chosen[amount]</code> 回溯跳躍，就能輕鬆在 $O(\text{枚數})$ 時間內將整組最佳解答完整重建出來：</p>
 <pre><code class="language-python">def minimum_coin_solution(coins, amount):
-    &quot;&quot;&quot;回傳一組最少硬幣；無解為 None，金額 0 為 []。&quot;&quot;&quot;
+    """回傳一組最少硬幣；無解為 None，金額 0 為 []。"""
     values = sorted(set(coins))
     if amount &lt; 0 or any(coin &lt;= 0 for coin in values):
         raise ValueError(&quot;amount 必須非負，硬幣面額必須為正整數&quot;)
@@ -95,49 +95,47 @@ def minimum_coins_memo(coins, amount):
         answer.append(coin)
         amount -= coin
     return answer</code></pre>
-<p>例如 [1,3,4] 湊 6：chosen[6]=3，回到 3；chosen[3]=3，再回到 0，得到 [3,3]。硬幣皆為正值，每步剩餘金額嚴格下降；每一步又讓 dp 值減 1，因此輸出枚數恰為最優值。設答案有 L 枚，重建多花 O(L) 時間，chosen 多占 O(A) 空間。</p>
-<table><thead><tr><th>面向</th><th>記憶化遞迴（memoization）</th><th>表格法（tabulation）</th></tr></thead><tbody>
-<tr><td>計算範圍</td><td>只算從目標實際觸及的狀態</td><td>通常填指定範圍內所有狀態</td></tr>
-<tr><td>相依順序</td><td>由遞迴自然往下追</td><td>需自行選擇拓樸順序</td></tr>
-<tr><td>主要額外成本</td><td>函式呼叫、快取雜湊、遞迴堆疊</td><td>可能計算不會用到的格子</td></tr>
-<tr><td>適合情況</td><td>狀態稀疏，遞迴清楚且深度可控</td><td>狀態密集，需省空間或避免深遞迴</td></tr>
+<p>例如湊 6 時：<code>chosen[6] = 3</code>，金額減去 3 跳到 <code>chosen[3] = 3</code>，再減去 3 跳到 0 終止，成功還原 <code>[3, 3]</code>。這套「陣列記錄決策來源、逆向追蹤還原解答」的模式在所有 DP 方案重建中完全通用。</p>
+<table><thead><tr><th>評估維度</th><th>記憶化遞迴（Memoization / Top-Down）</th><th>表格迭代法（Tabulation / Bottom-Up）</th></tr></thead><tbody>
+<tr><td>狀態探查範圍</td><td>按需探查：只計算從初始目標向下實際觸及的子狀態</td><td>全量探查：通常無差別填滿整個給定矩陣範圍</td></tr>
+<tr><td>相依拓撲順序</td><td>由遞迴呼叫棧自然隱式展開，無需人腦排定迴圈順序</td><td>必須由開發者事先精確推導出無環的拓撲迭代順序</td></tr>
+<tr><td>效能開銷</td><td>額外的函式呼叫棧幀、雜湊表 Look-up 成本</td><td>純陣列平鋪讀寫，快取局部性極佳，無呼叫開銷</td></tr>
+<tr><td>空間最佳化潛力</td><td>無法進行滾動壓縮，完整呼叫棧與快取必須常駐</td><td>通常可透過滾動陣列將空間壓縮一個維度</td></tr>
 </tbody></table>
-<div class="warning">O(A·D) 是依「金額數值」而非其二進位輸入長度的多項式，稱為偽多項式（pseudo-polynomial）。A=10⁹ 就可能完全不可行。使用 DP 前，先代入最大狀態量，確認時間與記憶體能否承受，再決定要不要開陣列。</div>
+<div class="warning">特別提醒：時間複雜度 $O(A \cdot D)$ 中的 $A$ 是「數值大小」而非「輸入資料的長度」。在理論計算機科學中，這種複雜度稱為「偽多項式時間（Pseudo-polynomial Time）」。如果目標金額 $A$ 高達 $10^9$，即便 $D=3$，建立一個長度十億的陣列也會瞬間讓記憶體崩潰。在評估動態規劃方案時，永遠要先拿數值上限檢視記憶體容量！</div>
 
 <h3 id="c11-knapsack">11.4 二維狀態與壓縮：0/1 背包</h3>
-
-<p>每件樣品有重量與價值，只能挑一次；總重<strong>至多</strong> W，可不選任何東西。令 f[i][w] 表示只考慮前 i 件、容量上限 w 時的最大價值。處理第 i 件（重量 a、價值 v）有兩種互斥選擇：</p>
-<ul><li>不選：f[i−1][w]。</li><li>選：若 w≥a，得到 f[i−1][w−a]+v。</li></ul>
-<p>兩者取 max，邊界 f[0][w]=0。狀態是 (i,w)，不能只快取 i，因為不同剩餘容量會改變可選物品。由於每一列只依賴上一列，先以兩列計算，再考慮壓成一列。</p>
+<p>背包問題是動態規劃的經典試金石。每件樣品具備重量與價值，且每件物品「至多只能被選取一次（0/1 決策）」；背包總耐重上限為 $W$。令二維狀態 $f[i][w]$ 代表「只在清單前 $i$ 件物品中挑選、且總重量不超過 $w$ 的最大累積價值」。當我們考慮第 $i$ 件物品（重 $a$、值 $v$）時，面臨兩個非此即彼的決策：</p>
+<ul><li><strong>不選第 i 件：</strong>容量完全不變，價值等於前 $i - 1$ 件在容量 $w$ 下的最佳解，即 $f[i - 1][w]$。</li><li><strong>選擇第 i 件：</strong>前提是背包還裝得下（$w \ge a$）。消耗 $a$ 容量後，剩餘的 $w - a$ 容量交給前 $i - 1$ 件去最佳化，得到 $f[i - 1][w - a] + v$。</li></ul>
+<p>兩者取 <code>max</code>，即為轉移方程式。觀察轉移可以發現：計算第 $i$ 列的任何數值時，我們只會向前查閱「第 $i - 1$ 列」的數據，完全不依賴更早的歷史列！這為我們進行空間壓縮提供了強大的理論依據。</p>
 <figure class="diagram"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="0/1 背包為何倒序：讀到的 dp[limit−weight] 必須仍來自上一輪物品" viewBox="0 0 760 305"><title>0/1 背包為何倒序：讀到的 dp[limit−weight] 必須仍來自上一輪物品</title><rect x="0" y="0" width="760" height="305" rx="12" fill="#f8fafc"/><text x="35" y="40" font-size="17" fill="#0f172a">只有一件：重量 2、價值 4；容量 4。</text><text x="35" y="90" font-size="16" fill="#0f172a">正序（錯）</text><rect x="180" y="64" width="200" height="44" rx="8" fill="#fee2e2" stroke="#334155"/><text x="280.0" y="91.0" text-anchor="middle" font-size="16" fill="#0f172a">dp[2] ← 4</text><path d="M380,86 L430,86" stroke="#64748b" stroke-width="2" fill="none"/><rect x="430" y="64" width="275" height="44" rx="8" fill="#fee2e2" stroke="#334155"/><text x="567.5" y="91.0" text-anchor="middle" font-size="16" fill="#0f172a">dp[4] ← dp[2]+4 = 8</text><text x="180" y="136" font-size="15" fill="#0f172a">把同一件物品用了兩次。</text><text x="35" y="202" font-size="16" fill="#0f172a">倒序（對）</text><rect x="180" y="176" width="240" height="44" rx="8" fill="#dcfce7" stroke="#334155"/><text x="300.0" y="203.0" text-anchor="middle" font-size="16" fill="#0f172a">dp[4] ← 舊 dp[2]+4 = 4</text><path d="M420,198 L465,198" stroke="#64748b" stroke-width="2" fill="none"/><rect x="465" y="176" width="240" height="44" rx="8" fill="#dcfce7" stroke="#334155"/><text x="585.0" y="203.0" text-anchor="middle" font-size="16" fill="#0f172a">之後 dp[2] ← 4</text><text x="35" y="273" font-size="15" fill="#0f172a">方向由相依關係決定；可無限重用的完全背包則需要另一種更新語意。</text></svg><figcaption>0/1 背包為何倒序：讀到的 dp[limit−weight] 必須仍來自上一輪物品</figcaption></figure>
+<p>如果我們把二維表格拍平成一維陣列 <code>dp[w]</code>，核心關鍵在於<mark class="mark-invariant">內層容量迴圈必須由大到小逆序倒著跑</mark>！為什麼？請仔細推演：當我們站在較大的容量 <code>limit</code> 時，我們需要查閱 <code>dp[limit - weight]</code> 的值。因為迴圈是從大容量往小容量掃描，此刻位於左側較小容量的 <code>dp[limit - weight]</code> 根本還沒被當前物品的邏輯覆寫過，它所保留的完完全全是「上一輪（即前 i - 1 件物品）」的舊答案！如果內層迴圈不小心寫成由小到大正序掃描，那麼 <code>dp[2]</code> 被更新為放入第 $i$ 件物品後，當掃到 <code>dp[4]</code> 時查閱 <code>dp[2]</code>，就會把已經放過第 $i$ 件物品的成果又疊加了一次，等同於無意間把單件物品拿了兩次（退化為完全背包）！</p>
 <pre><code class="language-python">def knapsack_01(items, capacity):
-    &quot;&quot;&quot;items 為 (正整數重量, 價值)；可不選，總重至多 capacity。&quot;&quot;&quot;
+    """items 為 (正整數重量, 價值)；可不選，總重至多 capacity。"""
     if capacity &lt; 0:
-        raise ValueError(&quot;capacity 必須非負&quot;)
+        raise ValueError("capacity 必須非負")
     dp = [0] * (capacity + 1)
     for weight, value in items:
         if weight &lt;= 0:
-            raise ValueError(&quot;重量必須為正整數&quot;)
+            raise ValueError("重量必須為正整數")
         for limit in range(capacity, weight - 1, -1):
             dp[limit] = max(dp[limit], dp[limit - weight] + value)
     return dp[capacity]</code></pre>
-<p><strong>一維不變量：</strong>處理某件物品、<mark class="mark-invariant">由大容量往小容量掃描</mark>時，比目前容量更小的格子尚未更新，所以 dp[w−a] 仍代表「沒有使用這一件」的上一輪答案。這正是每件只用一次所需的語意。若改由小往大，會讀到本輪新值，等同允許重用同一物品。</p>
 <div class="example"><h4>逐步例子二：樣品 (2,4)、(3,5)、(4,7)，容量 5</h4>
 <table><thead><tr><th>完成的物品</th><th>容量 0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr></thead><tbody>
 <tr><td>尚未處理</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
 <tr><td>(2,4)</td><td>0</td><td>0</td><td>4</td><td>4</td><td>4</td><td>4</td></tr>
 <tr><td>再處理 (3,5)</td><td>0</td><td>0</td><td>4</td><td>5</td><td>5</td><td>9</td></tr>
 <tr><td>再處理 (4,7)</td><td>0</td><td>0</td><td>4</td><td>5</td><td>7</td><td>9</td></tr>
-</tbody></table><p>第二輪先更新容量 5：max(4, dp[2]+5)=9。此時 dp[2]=4 仍是上一輪的值，恰好代表挑第一件、再挑第二件。答案為 9，沒有必要用完所有物品。</p></div>
-<div class="complexity">n 件物品、容量 W：時間 O(nW)，完整二維表 O(nW) 空間，一維壓縮 O(W)。這同樣是偽多項式。若題目改成「恰好用滿 W」，初值必須改成 <mark class="mark-pitfall">dp[0]=0、其餘負無限大</mark>，並維持不可達語意；全部設 0 會把沒湊出的重量誤認為合法。</div>
-<p>壓縮空間時，也會丟掉歷史決策。若要重建選了哪些物品，最直接的做法是保留二維表，從最後一列逆推選／不選；不要假設最後那一維數字已保留每次取用的物品。先確認狀態與計算順序都正確，再壓縮空間。</p>
+</tbody></table><p>在第二輪處理物品 (3,5) 時，容量 5 優先更新：<code>max(4, dp[2] + 5) = max(4, 4 + 5) = 9</code>。因為此時 <code>dp[2]</code> 依舊維持上一輪的 4，它準確代表了「先選第一件，再選第二件」的組合。最終最大價值為 9。</p></div>
+<div class="complexity">設物品總數為 $n$，容量上限為 $W$。時間複雜度為 $O(nW)$；完整二維空間為 $O(nW)$，經逆序滾動壓縮後空間直接銳減至 $O(W)$！但請格外注意題意約束：若題目要求背包「必須恰好裝滿 W」，初始條件就必須改為 <mark class="mark-pitfall">dp[0] = 0，而其餘所有格子全設為負無窮大</mark>，以確保不可達容量絕不會被誤算為合法狀態。</div>
 
 <h3 id="c11-multidimensional">11.5 兩個進度：最長共同子序列</h3>
 <p class="problem-link"><a href="https://leetcode.com/problems/longest-common-subsequence/">LeetCode 1143．Longest Common Subsequence</a>。回傳共同子序列的長度。</p>
-<p>子序列可以刪掉元素，但保留相對順序；不要求連續。令 dp[i][j] 為 a 的前 i 個元素與 b 的前 j 個元素的最長共同子序列（LCS）長度。<mark>兩個前綴各有自己的進度，所以要兩個索引</mark>，不能只記較短長度或目前匹配總數。</p>
-<ul><li>末元素相同：存在一個最優解配對這兩個末元素，故 dp[i][j]=dp[i−1][j−1]+1。</li><li>末元素不同：它們不可能作為同一配對，至少跳過一邊，故取 max(dp[i−1][j], dp[i][j−1])。</li><li>任一前綴長度為 0：共同子序列長度是 0。</li></ul>
+<p>在雙字串或雙序列匹配問題中，單一進度指標無法描述兩條字串各自前進的步伐。令 <code>dp[i][j]</code> 代表「字串 a 的前 i 個字元」與「字串 b 的前 j 個字元」之間的最長共同子序列（LCS）長度。子序列允許跳過字元，但相對順序不得顛倒：</p>
+<ul><li><strong>當前兩字元匹配（a[i - 1] == b[j - 1]）：</strong>這對字元能被同時納入共同子序列，長度直接由兩者的前綴繼承並加一：$dp[i][j] = dp[i - 1][j - 1] + 1$。</li><li><strong>當前兩字元不同（a[i - 1] != b[j - 1]）：</strong>這兩個字元絕不可能同時結尾配對，因此必然至少要割捨其中一個：要麼放棄 a 的第 i 個字元，要麼放棄 b 的第 j 個字元，取兩者較大者：$dp[i][j] = \max(dp[i - 1][j], dp[i][j - 1])$。</li><li><strong>邊界條件：</strong>任一字串的前綴長度為 0 時，LCS 長度自然為 0。</li></ul>
 <pre><code class="language-python">def lcs_length(a, b):
-    &quot;&quot;&quot;子序列可跳過元素，但不能改變相對次序。&quot;&quot;&quot;
+    """子序列可跳過元素，但不能改變相對次序。"""
     m, n = len(a), len(b)
     dp = [[0] * (n + 1) for _ in range(m + 1)]
     for i in range(1, m + 1):
@@ -147,23 +145,22 @@ def minimum_coins_memo(coins, amount):
             else:
                 dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
     return dp[m][n]</code></pre>
-<p>例如 a="CABA"、b="ACBA"，長度是 3，可取 "ABA" 或 "CBA"。連續子字串的題目是不同問題：不相等時通常會把連續匹配長度清為 0，不能拿那個轉移來解子序列。</p>
-<p>時間與完整表格空間皆為 O(mn)。若只求長度，可用兩列把空間壓成 O(min(m,n))。若壓成單列，還需要暫存「左上角舊值」；直接由左到右覆寫會失去 dp[i−1][j−1]。Python 建表要寫每列獨立的串列推導式，不能用 [[0]*(n+1)]*(m+1)，後者讓各列指向同一物件。</p>
+<p>請留意「子序列（Subsequence）」與「連續子字串（Substring）」在轉移上的本質差異：連續子字串若字元不匹配，連續性當場中斷，必須強制將匹配長度歸零；而子序列則具備傳承性，允許跳過不相干的字元繼續向後探索。時間與空間複雜度皆為 $O(mn)$。若只需輸出長度，利用滾動陣列保留前一列，能將輔助空間降至 $O(\min(m, n))$。</p>
 
 <h3 id="c11-matrix">11.6 矩陣 DP：路徑與障礙</h3>
 <p class="problem-link"><a href="https://leetcode.com/problems/minimum-path-sum/">LeetCode 64．Minimum Path Sum</a> 的延伸：加入 None 障礙、負代價與無路可走時回傳 None 的規則。</p>
-<p>在矩形格子中，每格有通過代價，只能向右或向下；None 表示不可走。求從左上走到右下的最小總和，起點與終點代價都算。dp[r][c] 是「抵達這格」的最小總和，並非「從這格出發」的剩餘代價。<mark class="mark-invariant">相依格子是上方與左方</mark>，因此按列、再按欄遞增即可。</p>
+<p>在二維網格走訪中，若移動規則限制為「只能向右或向下」，那麼抵達任何座標 $(r, c)$ 的唯二前置跳板，必定只可能來自其「正上方 $(r - 1, c)$」或「正左方 $(r, c - 1)$」。這種局部單向流動性保證了網格具備天然的有向無環拓撲結構，因此以雙層迴圈由上至下、由左至右掃描就是絕對正確的計算順序：</p>
 <figure class="diagram"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="矩陣的局部相依：右下格只能從上或左抵達，形成無環的相依圖" viewBox="0 0 760 285"><title>矩陣的局部相依：右下格只能從上或左抵達，形成無環的相依圖</title><rect x="0" y="0" width="760" height="285" rx="12" fill="#f8fafc"/><rect x="245" y="20" width="150" height="58" rx="8" fill="#dbeafe" stroke="#334155"/><text x="320.0" y="54.0" text-anchor="middle" font-size="16" fill="#0f172a">上：dp[r−1][c]</text><rect x="30" y="130" width="165" height="58" rx="8" fill="#dbeafe" stroke="#334155"/><text x="112.5" y="164.0" text-anchor="middle" font-size="16" fill="#0f172a">左：dp[r][c−1]</text><rect x="245" y="130" width="185" height="58" rx="8" fill="#dcfce7" stroke="#334155"/><text x="337.5" y="164.0" text-anchor="middle" font-size="16" fill="#0f172a">目前：dp[r][c]</text><path d="M320,78 L320,130" stroke="#64748b" stroke-width="2" fill="none"/><path d="M195,159 L245,159" stroke="#64748b" stroke-width="2" fill="none"/><text x="475" y="60" font-size="16" fill="#0f172a">取上、左的較小值，</text><text x="475" y="90" font-size="16" fill="#0f172a">再加目前格子的代價。</text><text x="475" y="143" font-size="16" fill="#0f172a">障礙＝不可達（∞）</text><text x="475" y="174" font-size="16" fill="#0f172a">起點＝起點自己的代價</text><text x="35" y="250" font-size="16" fill="#0f172a">列由上到下、欄由左到右；即使代價有負數，仍沒有循環。</text></svg><figcaption>矩陣的局部相依：右下格只能從上或左抵達，形成無環的相依圖</figcaption></figure>
 <pre><code class="language-python">def minimum_grid_path(grid):
-    &quot;&quot;&quot;只能往右或下；None 是障礙。回傳最小總和，無路可走則 None。&quot;&quot;&quot;
+    """只能往右或下；None 是障礙。回傳最小總和，無路可走則 None。"""
     if not grid:
         return None
     rows, cols = len(grid), len(grid[0])
     if any(len(row) != cols for row in grid):
-        raise ValueError(&quot;grid 必須為矩形&quot;)
+        raise ValueError("grid 必須為矩形")
     if cols == 0:
         return None
-    infinity = float(&quot;inf&quot;)
+    infinity = float("inf")
     dp = [infinity] * cols
     for r in range(rows):
         for c in range(cols):
@@ -174,77 +171,62 @@ def minimum_coins_memo(coins, amount):
                 dp[c] = cost
             else:
                 above = dp[c]  # 尚未覆寫，仍是上一列
-                left = dp[c - 1] if c &gt; 0 else infinity
+                left = dp[c - 1] if c > 0 else infinity
                 dp[c] = min(above, left) + cost
     return None if dp[-1] == infinity else dp[-1]</code></pre>
-<div class="example"><h4>逐步例子三：障礙不是零成本</h4>
-<table><thead><tr><th>列</th><th>原始格子代價</th><th>處理後 dp</th><th>觀察</th></tr></thead><tbody>
-<tr><td>0</td><td>[2,1,5,2]</td><td>[2,3,8,10]</td><td>第一列只能從左累積</td></tr>
-<tr><td>1</td><td>[4,None,2,1]</td><td>[6,∞,10,11]</td><td>障礙清成 ∞，不能保留上一列的 3</td></tr>
-<tr><td>2</td><td>[1,3,1,2]</td><td>[7,10,11,13]</td><td>答案 13；到第 2 欄可取上方 10 或左方 10</td></tr>
-</tbody></table><p>最後一列更新第 1 欄時，dp[1] 仍是上方的 ∞，dp[0] 已是同列左方的 7，所以得到 7+3=10。這種一維陣列在迴圈途中混合「上一列」與「這一列」，是刻意設計的相依關係。</p></div>
-<p>這裡即使代價為負也能處理，因為只能向右或下，路徑永遠不會回頭，依然是無環圖。若允許四方向移動，就不能直接沿用這個填表順序；可能產生循環，問題需要重新定義路徑限制並選擇合適的圖論演算法。R×C 格子時間 O(RC)，本實作輔助空間 O(C)，無可行路徑回傳 None。</p>
+<p>這段實作巧妙展示了一維陣列的狀態混合之美：在計算當前位置 <code>dp[c]</code> 時，其右側的 <code>dp[c]</code> 尚未被寫入，因此依然保留著「上一列正上方格子」的數值；而其左側的 <code>dp[c - 1]</code> 剛剛被更新過，恰好代表「當前列左側格子」的新數值。一行 <code>min(above, left) + cost</code> 完美融合了兩個時空的資料，將空間消耗壓制在極其輕量的一行寬度 $O(cols)$。</p>
 
 <h3 id="c11-state-machine">11.7 狀態機 DP：昨天的資格決定今天的動作</h3>
 <p class="problem-link"><a href="https://leetcode.com/problems/best-time-to-buy-and-sell-stock-with-cooldown/">LeetCode 309．Best Time to Buy and Sell Stock with Cooldown</a>。價格非負，空輸入回傳 0。</p>
-<p>每天有一個價格，可以多次買賣，但最多持有一股；賣出後隔天必須冷卻，不能買入。光存「到今天的最高收益」不足以描述明天能做什麼：持股與否、今天是否剛賣出都會影響下一步。把一天結束的狀態分成：</p>
-<ul><li>hold：結束時持有一股的最大淨現金；買入花的錢已扣除。</li><li>sold：恰在今天賣出，結束時不持股的最大收益。</li><li>rest：結束時不持股，而且今天沒有賣出的最大收益；明天可買。</li></ul>
+<p>有些問題的後續動作，高度依賴於「當前實體處於何種身分或狀態」。例如股票交易附帶冷卻期：每天有固定股價，最多只能同時持有一股；當你賣出股票後，次日強制進入冷卻期（Cooldown），完全禁止買入股票。此時單純記錄「截至今天為止的最大獲利」是無法轉移的，因為系統必須精確區分：你今天結束時到底手上是有股票、還是沒股票、還是正好今天剛賣出？</p>
+<p>我們將每天結束時的系統劃分為三種明確的互斥狀態：</p>
+<ul><li><strong>hold：</strong>今天結束時「手上持有股票」的最大累計淨收益（買入成本已從現金流中扣除）。</li><li><strong>sold：</strong>「恰好在今天賣出股票」的最大累計淨收益（今天剛套現）。</li><li><strong>rest：</strong>今天結束時「手頭無股票、且今天不是賣出日」的最大累計淨收益（處於隨時可買入的自由身分）。</li></ul>
 <figure class="diagram"><svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="有冷卻日的交易狀態：所有箭頭都從昨天移動到今天，不可原地連走兩條" viewBox="0 0 760 325"><title>有冷卻日的交易狀態：所有箭頭都從昨天移動到今天，不可原地連走兩條</title><rect x="0" y="0" width="760" height="325" rx="12" fill="#f8fafc"/><rect x="30" y="100" width="170" height="55" rx="8" fill="#dbeafe" stroke="#334155"/><text x="115.0" y="132.5" text-anchor="middle" font-size="16" fill="#0f172a">rest：可買入</text><rect x="295" y="100" width="170" height="55" rx="8" fill="#fef3c7" stroke="#334155"/><text x="380.0" y="132.5" text-anchor="middle" font-size="16" fill="#0f172a">hold：持股</text><rect x="560" y="100" width="170" height="55" rx="8" fill="#dcfce7" stroke="#334155"/><text x="645.0" y="132.5" text-anchor="middle" font-size="16" fill="#0f172a">sold：今天賣出</text><path d="M200,127 L295,127" stroke="#64748b" stroke-width="2" fill="none"/><text x="247.5" y="122.0" text-anchor="middle" font-size="14" fill="#334155">買：−p</text><path d="M465,127 L560,127" stroke="#64748b" stroke-width="2" fill="none"/><text x="512.5" y="122.0" text-anchor="middle" font-size="14" fill="#334155">賣：+p</text><path d="M645,155 L645,225 L115,225 L115,155" stroke="#64748b" fill="none" stroke-width="2"/><text x="255" y="253" font-size="16" fill="#0f172a">sold → rest：度過一天冷卻，收益不變</text><text x="35" y="50" font-size="16" fill="#0f172a">rest → rest：休息；hold → hold：繼續持有。</text><text x="35" y="292" font-size="16" fill="#0f172a">沒有 sold → hold 的隔日邊，因此賣出後隔天不能買。</text></svg><figcaption>有冷卻日的交易狀態：所有箭頭都從昨天移動到今天，不可原地連走兩條</figcaption></figure>
-<p>處理今天價格 p 時，新 hold=max(舊 hold, 舊 rest−p)，新 sold=舊 hold+p，新 rest=max(舊 rest, 舊 sold)。舊 sold 今天只能進入 rest 度過冷卻，不能直接買入。<mark class="mark-invariant">所有轉移都必須讀昨天的值</mark>；若先覆寫 rest，再拿新 rest 去算 hold，就可能讓昨天剛賣出的錢在今天立刻買入。</p>
+<p>在推導今日新狀態時，<mark class="mark-invariant">所有算式右側都必須嚴格參照昨天的舊狀態值</mark>：若想在今天買入股票進入 <code>hold</code>，昨天的狀態必須是 <code>rest</code>（因為若是 <code>sold</code> 代表昨天剛賣，今天受冷卻期保護禁止買入）；昨天剛賣出 <code>sold</code> 的資產，今天只能無奈轉入 <code>rest</code> 渡過冷卻期。先將昨日變數做快照存入 <code>old_*</code>，再行覆寫，是避免邏輯偷跑的最安全寫法。</p>
 <pre><code class="language-python">def cooldown_profit(prices):
-    &quot;&quot;&quot;可多次交易，最多持有一股；賣出後隔天不能買入。&quot;&quot;&quot;
-    hold = sold = float(&quot;-inf&quot;)
+    """可多次交易，最多持有一股；賣出後隔天不能買入。"""
+    hold = sold = float("-inf")
     rest = 0
     for price in prices:
         if price &lt; 0:
-            raise ValueError(&quot;價格必須非負&quot;)
+            raise ValueError("價格必須非負")
         old_hold, old_sold, old_rest = hold, sold, rest
         hold = max(old_hold, old_rest - price)
         sold = old_hold + price
         rest = max(old_rest, old_sold)
     return max(rest, sold)</code></pre>
-<div class="example"><h4>逐步例子四：價格 [2,5,1,4,6]</h4>
-<table><thead><tr><th>時刻／價格</th><th>hold</th><th>sold</th><th>rest</th></tr></thead><tbody>
-<tr><td>開始前</td><td>−∞</td><td>−∞</td><td>0</td></tr>
-<tr><td>第 0 天：2</td><td>−2</td><td>−∞</td><td>0</td></tr>
-<tr><td>第 1 天：5</td><td>−2</td><td>3</td><td>0</td></tr>
-<tr><td>第 2 天：1</td><td>−1</td><td>−1</td><td>3</td></tr>
-<tr><td>第 3 天：4</td><td>−1</td><td>3</td><td>3</td></tr>
-<tr><td>第 4 天：6</td><td>−1</td><td>5</td><td>3</td></tr>
-</tbody></table><p>第 2 天不能用昨天剛賣出得到的 3 來買價格 1 的股票，因此 hold 不是 2，而是 −1。表格每一欄各自保留符合該狀態的最佳候選歷史。最後取 max(rest,sold)=5，排除尚未賣出的 hold。</p></div>
-<div class="complexity">n 天、每一天只有 3 個狀態且每狀態 O(1) 轉移：時間 O(n)，空間 O(1)。加入手續費時修改買賣代價；限制交易次數時，狀態還要記錄已完成的交易數。</div>
+<p class="complexity">此演算法展現了極致的工程美感：每天只有 3 個狀態常數，每個狀態轉移耗費 $O(1)$，掃描完長度為 $n$ 的價格序列總共耗時 $O(n)$，而額外空間竟然是不可思議的 $O(1)$！這種將離散事件狀態機嵌入動態規劃的技巧，是處理各種附帶冷卻、凍結或交易手續費問題的標準解題範式。</p>
 
 <h3 id="c11-state-audit">11.8 先審狀態，再估複雜度</h3>
-<p><strong>完整性檢查：</strong>背包狀態漏掉容量會混合不同問題；路徑不能重訪時漏掉 visited 集合會混合不同合法選項；限制相鄰字元時漏掉上一個字元會允許違規轉移。反過來，把整段 path 放進 key 可能完全保留歷史，卻幾乎無法合併狀態，並付出建立 tuple 與雜湊的成本。</p>
-<p><strong>狀態數檢查：</strong>i 有 n 種、容量 w 有 W 種，最多 nW 個；但<mark class="mark-pitfall">「已選集合」有 2ⁿ 種</mark>，不能因為它只用一個整數 mask 儲存，就說只有 n 種狀態。若還記最後一個點 last，狀態可能是 n·2ⁿ，每個狀態再試 n 個下一點，時間可能到 O(n²·2ⁿ)。cache 只避免同狀態重算，無法消除本來就不同的指數個狀態。</p>
-<p><strong>Python 成本檢查：</strong>切片、拼字串、建立 tuple 都可能不是 O(1)；使用 a[i:] 當狀態，不如用索引 i。大整數計數可能長到數百或數千位，整數加法也有位元成本。本章常見 O(狀態×轉移) 估計採用比較與有界整數運算為 O(1) 的模型；處理巨大計數或位元遮罩時需補上數值長度成本。</p>
+<p>在實際面試與工程設計中，常有開發者憑感覺推算複雜度而翻車。請務必落實以下三道審查關卡：</p>
+<ul><li><strong>狀態維度的完備性審查：</strong>若背包問題遺漏了剩餘容量，就會把不同背包預算混為一談；若路徑搜尋不能重複踩踏，卻在狀態中遺漏了走訪紀錄，就會允許違法回頭。但反過來，若把回溯法的完整 <code>path</code> 串列原封不動塞入狀態 key 中，每個狀態都獨一無二，重疊子問題的機率直接降為零，DP 將退化為帶有龐大 Hash 開銷的假演算法。</li><li><strong>維度背後的實質狀態量：</strong>例如狀態參數包含一個長度為 $n$ 的位元遮罩 <code>mask</code>，初學者常誤以為這只是「增加了一個整數維度」，但實際上<mark class="mark-pitfall">長度為 n 的位元遮罩隱含了高達 2ⁿ 種相異狀態</mark>！若後面再帶一個當前頂點座標 $last$，狀態空間為 $n \cdot 2^n$，總運算量直接飆升至 $O(n^2 \cdot 2^n)$。請看清維度的實質基數。</li><li><strong>底層操作的隱性代價：</strong>在 Python 中，字串切片 <code>s[i:]</code> 或元組拼接 <code>tuple(lst)</code> 都不是 $O(1)$ 操作，它們具有與長度成正比的記憶體分配成本。盡量在狀態中傳遞純量整數索引，才能保證單次轉移真正達到預期的 $O(1)$ 效能。</li></ul>
 
 <h3 id="c11-exercises">11.9 練習：把題意翻成狀態</h3>
 <section class="exercise"><h4>練習一：配送機器人的步伐序列</h4>
-<p class="problem-link"><a href="https://leetcode.com/problems/combination-sum-iv/">LeetCode 377．Combination Sum IV</a>。本題使用步長 1、3、4，順序不同分開計數。</p><p>機器人一次前進 1、3 或 4 格，走到距離 n 有幾種<strong>有順序</strong>的步伐序列？例如 1+3 與 3+1 是兩種。定義距離 0 有一種空序列，手算 n=5。</p>
-<details><summary>參考解答</summary><p>dp[t] 是總距離恰為 t 的序列數；依最後一步 s 分組，dp[t] 加上 dp[t−s]。每個序列最後一步唯一，所以這些分組不重疊。外層按總距離遞增，內層枚舉最後一步。</p><pre><code class="language-python">def count_step_sequences(n, steps=(1, 3, 4)):
+<p class="problem-link"><a href="https://leetcode.com/problems/combination-sum-iv/">LeetCode 377．Combination Sum IV</a>。本題使用步長 1、3、4，順序不同分開計數。</p><p>物流機器人每次可前進 1、3 或 4 格，欲抵達距離 $n$ 處，總共有幾種「有順序區別」的步伐組合？（例如 1+3 與 3+1 視為兩種不同方案）。若定義距離 0 有 1 種空序列，請手算推演 n=5。</p>
+<details><summary>參考解答</summary><p>定義 <code>dp[t]</code> 為抵達距離恰為 $t$ 的合法步伐序列總數。思考最後一步所跨越的步長 $s \in \{1, 3, 4\}$：因為每個序列的最後一步是互斥且唯一的，我們依最後一步分類累加：$dp[t] = \sum dp[t - s]$。程式碼：</p><pre><code class="language-python">def count_step_sequences(n, steps=(1, 3, 4)):
     choices = sorted(set(steps))
-    if n &lt; 0 or any(step &lt;= 0 for step in choices):
-        raise ValueError(&quot;n 必須非負，步長必須為正整數&quot;)
+    if n < 0 or any(step <= 0 for step in choices):
+        raise ValueError("n 必須非負，步長必須為正整數")
     dp = [0] * (n + 1)
     dp[0] = 1
     for total in range(1, n + 1):
         for step in choices:
-            if step &gt; total:
+            if step > total:
                 break
             dp[total] += dp[total - step]
-    return dp[n]</code></pre><p>dp[0..5]=[1,1,1,2,4,6]，答案 6。輸入 M 個步長、去重後 D 種，時間 O(M + D log D + nD)、空間 O(n+D)，以整數加法 O(1) 模型估計。</p><p>計數是否區分順序，會改變迴圈語意。步長 [1,2] 湊出 3：序列有 [1,1,1]、[1,2]、[2,1] 三種；組合只有 [1,1,1]、[1,2] 兩種。序列由外層枚舉總額、內層枚舉最後一步；組合則<mark>外層先枚舉面額、內層金額遞增</mark>，讓每個組合按固定面額順序建構。</p></details></section>
+    return dp[n]</code></pre><p>手算陣列 <code>dp[0..5] = [1, 1, 1, 2, 4, 6]</code>，最終解答為 6。請體會雙層迴圈的排列與組合語意：<mark>若外層枚舉總額、內層枚舉步長，算出來的是「有順序區別的排列序列」；反之若外層枚舉面額、內層枚舉金額，算出來的則是「無順序區別的組合總數」</mark>。</p></details></section>
 <section class="exercise"><h4>練習二：不能連續接案</h4>
-<p class="problem-link"><a href="https://leetcode.com/problems/house-robber/">LeetCode 198．House Robber</a> 的延伸：允許負分與空輸入，可全部不選。</p><p>每天接案會得到 values[i] 分，接案後隔天必須休息，可全部不接；求最高分。分數可能為負。例如 [4,−1,6,3] 的答案為 10。請使用 O(1) 輔助空間。</p>
-<details><summary>參考解答</summary><p>令 f[i] 為前 i 天的最高分。最後一天不接是 f[i−1]，接則是 f[i−2]+當天分數。邊界空前綴為 0，只保留前兩個值。允許不接任何案子，所以全負輸入答案為 0。</p><pre><code class="language-python">def best_nonadjacent(values):
+<p class="problem-link"><a href="https://leetcode.com/problems/house-robber/">LeetCode 198．House Robber</a> 的延伸：允許負分與空輸入，可全部不選。</p><p>每天接案可獲取 <code>values[i]</code> 的報酬，但規定接案後次日必須強制休息；允許完全不接任何案子。求最高總報酬。陣列中可能包含負值。例如 [4, -1, 6, 3] 的最高得分為 10。請以 $O(1)$ 空間完成。</p>
+<details><summary>參考解答</summary><p>令 <code>f[i]</code> 為前 $i$ 天能斬獲的最高總報酬。面對第 $i$ 天：若不接案，收益維持前一天的 <code>f[i - 1]</code>；若選擇接案，則前一天必定休息，收益為 <code>f[i - 2] + values[i]</code>。兩者取大值。狀態只需保留前兩天的數值：</p><pre><code class="language-python">def best_nonadjacent(values):
     before_previous = previous = 0
     for value in values:
         current = max(previous, before_previous + value)
         before_previous, previous = previous, current
-    return previous</code></pre><p>每一天兩個選擇，時間 O(n)、空間 O(1)。若題目規定至少接一天，不能照抄這組全零邊界，因為空選擇不再合法。</p></details></section>
+    return previous</code></pre><p>因為題目允許完全不接案，若整批輸入全為負數，函式回傳 0 滿足邊界語意。時間複雜度為 $O(n)$，空間複雜度為極簡的 $O(1)$。</p></details></section>
 <section class="exercise"><h4>練習三：最少插入成回文</h4>
-<p class="problem-link"><a href="https://leetcode.com/problems/minimum-insertion-steps-to-make-a-string-palindrome/">LeetCode 1312．Minimum Insertion Steps to Make a String Palindrome</a>。回傳最少插入次數，空字串回傳 0。</p><p>可以在字串任意位置插入字元，不能刪除或替換，求變成回文的最少插入次數。"ABCA" 只要插入一個字元就能得到 "ABCBA"。</p>
-<details><summary>參考解答</summary><p>dp[l][r] 是原字串閉區間 l..r 的答案。兩端相同，只處理內部；不同則在另一端插入一個字元，代價是 1+min(dp[l+1][r],dp[l][r−1])。長度 0 或 1 已是回文。<mark class="mark-invariant">每次依賴較短區間</mark>，因此外層按區間長度遞增。</p><pre><code class="language-python">def minimum_palindrome_insertions(text):
+<p class="problem-link"><a href="https://leetcode.com/problems/minimum-insertion-steps-to-make-a-string-palindrome/">LeetCode 1312．Minimum Insertion Steps to Make a String Palindrome</a>。回傳最少插入次數，空字串回傳 0。</p><p>可以在字串任意位置插入字元（不可刪除或修改），問最少需要插入幾個字元才能讓整條字串變成對稱的回文字串？例如 "ABCA" 只要插入一個字元即可得到 "ABCBA"。</p>
+<details><summary>參考解答</summary><p>這是標準的區間動態規劃（Interval DP）。令 <code>dp[left][right]</code> 代表將子字串閉區間 <code>text[left..right]</code> 轉變為回文所需的最少插入次數。若兩端字元相等（<code>text[left] == text[right]</code>），則這兩個字元天生對稱，插入成本直接等於內部子字串 <code>dp[left + 1][right - 1]</code>；若兩端字元不同，我們必須在左端或右端補入一個字元來完成對稱，成本為 $1 + \min(dp[left + 1][right], dp[left][right - 1])$。<mark class="mark-invariant">長區間必然依賴短區間的解答</mark>，因此外層迴圈必須以長度 <code>length</code> 由小到大推進：</p><pre><code class="language-python">def minimum_palindrome_insertions(text):
     n = len(text)
     if n == 0:
         return 0
@@ -253,34 +235,34 @@ def minimum_coins_memo(coins, amount):
         for left in range(n - length + 1):
             right = left + length - 1
             if text[left] == text[right]:
-                dp[left][right] = dp[left + 1][right - 1] if length &gt; 2 else 0
+                dp[left][right] = dp[left + 1][right - 1] if length > 2 else 0
             else:
                 dp[left][right] = 1 + min(dp[left + 1][right],
                                          dp[left][right - 1])
-    return dp[0][n - 1]</code></pre><p>O(n²) 時間、O(n²) 空間。若從左到右隨意掃 l、r，可能讀到尚未算好的較短區間；依賴圖比陣列外觀更重要。</p></details></section>
+    return dp[0][n - 1]</code></pre><p>總時間與空間複雜度均為 $O(n^2)$。這展示了區間 DP「小區間推廣至大區間」的經典拓撲邏輯。</p></details></section>
 <section class="exercise"><h4>練習四：指數 DP 的工作分配</h4>
-<p>n 個人分配 n 份工作，每人一份、每份只用一次。cost[i][j] 是第 i 人做第 j 份工作的代價，求總代價最小值。只討論 n 很小的情況；這題也有更適合大型輸入的專門演算法。</p>
-<details><summary>參考解答</summary><p>mask 的第 j 位為 1 表示第 j 份工作已用；<mark>已安排的人數等於 mask 中 1 的數量</mark>，所以不用再存 person。dp[mask] 是前 person 人完成這些工作的最小代價。枚舉下一份未使用的工作，設位後的 next_mask 一定大於 mask，數值遞增就是合法順序。</p><pre><code class="language-python">def minimum_assignment(cost):
-    &quot;&quot;&quot;n 個人各分配一份不同工作；cost[人][工作] 為代價。&quot;&quot;&quot;
+<p>有 $n$ 個人與 $n$ 份工作，每個人必須恰好分配一份不同工作。<code>cost[i][j]</code> 代表第 $i$ 個人執行第 $j$ 份工作的代價。求將所有人分配完畢後的最小總代價。請以狀態壓縮動態規劃求解（適用於 $n \le 20$）。</p>
+<details><summary>參考解答</summary><p>使用整數的二進位位元遮罩 <code>mask</code> 來標記「哪幾份工作已經被分配」。巧妙之處在於：<mark>當前已經被分配工作的人數，嚴格等於 mask 中二進位 1 的總數（即 mask.bit_count()）</mark>！因此我們完全不需要浪費維度去記錄 <code>person</code>。令 <code>dp[mask]</code> 代表完成這些工作集合的最小花費，枚舉下一份尚未被認領的工作進行轉移：</p><pre><code class="language-python">def minimum_assignment(cost):
+    """n 個人各分配一份不同工作；cost[人][工作] 為代價。"""
     n = len(cost)
     if any(len(row) != n for row in cost):
-        raise ValueError(&quot;cost 必須為方陣&quot;)
-    size = 1 &lt;&lt; n
-    dp = [float(&quot;inf&quot;)] * size
+        raise ValueError("cost 必須為方陣")
+    size = 1 << n
+    dp = [float("inf")] * size
     dp[0] = 0
     for mask in range(size):
         person = mask.bit_count()
         if person == n:
             continue
         for job in range(n):
-            if not (mask &amp; (1 &lt;&lt; job)):
-                next_mask = mask | (1 &lt;&lt; job)
+            if not (mask & (1 << job)):
+                next_mask = mask | (1 << job)
                 dp[next_mask] = min(dp[next_mask],
                                     dp[mask] + cost[person][job])
-    return dp[-1]</code></pre><p>cost=[[6,2,4],[3,5,1],[2,6,4]] 的答案為 5，分別挑工作 1、2、0。共有 2ⁿ 個 mask，每個至多 n 次轉移，所以時間 O(n·2ⁿ)、空間 O(2ⁿ)，以位元運算 O(1) 的一般小 n 模型估計。n=0 回傳 0，代表唯一的空分配。這是 DP，但仍是指數演算法。</p></details></section>
+    return dp[-1]</code></pre><p>總狀態數為 $2^n$，每個狀態轉移 $n$ 次，時間複雜度為 $O(n \cdot 2^n)$，空間複雜度為 $O(2^n)$。相較於暴力排列窮舉的 $O(n!)$，動態規劃在 $n=20$ 時將運算量從百億億次壓縮至僅需千萬次，展現了狀態壓縮的極致威力。</p></details></section>
 
 <h3 id="c11-checklist">11.10 邊界測試與面試小結</h3>
-<p>重建方案時，同時檢查目標總和、每件物品的使用限制，以及方案成本是否等於 dp 最優值。零目標、不可達、全負收益與單件物品重用，最能區分不同的邊界與轉移語意。</p>
-<ul><li>先用一句話精確定義每格；說清楚「前 i 個」還是「從 i 開始」，以及「恰好」還是「至多」。</li><li>由最後一步拆成互斥且完整的選擇，寫出轉移，再說明為何子問題足夠。</li><li>列出空狀態與不可達值，別讓預設 0 偷渡成合法答案。</li><li>先畫相依箭頭，再選迴圈順序；壓縮陣列後重新驗證每次讀到的是哪一輪。</li><li>數一遍狀態量、每狀態候選數和 Python 操作成本；先代入輸入上限估算表格大小。</li><li>若要方案本身，預先規劃 parent 或保留歷史；若只要數值，才考慮最大程度壓縮。</li></ul>
+<p>在交付動態規劃解答時，請對照以下清單自我驗收：是否嚴謹說明了狀態的物理語意？初始邊界與無窮大哨兵是否能防範非法偷渡？空間壓縮時的內外層迴圈走向是否保證了時空相依的正確性？</p>
+<ul><li>狀態定義務求精確：清楚標註是「恰好湊出」還是「至多不超過」，定義偏差會直接導致轉移邏輯全盤崩潰。</li><li>窮舉最後一步的互斥選擇：確保所有可能的決策分支被無漏涵蓋，並透過最優子結構論證局部最優的傳遞性。</li><li>區隔空狀態與不可達狀態：切勿貪圖方便把所有初始格子全預設為 0，求極小值時未連通的節點必須嚴格設為 $\infty$。</li><li>畫出相依圖再寫迴圈：依賴較小值就正序跑，依賴舊一輪就倒序跑，依賴短區間就依長度推進，嚴格順應拓撲順序。</li><li>方案重建需預留追蹤指標：若調用端需要還原具體解路徑，記得維護 <code>parent</code> 或 <code>chosen</code> 陣列；若只需純量值，才考慮極限空間壓縮。</li></ul>
 <p><a href="#c10-cache">回看回溯與快取的分界</a>，再試著把一題列舉問題改成計數或最佳化，觀察哪些 path 資訊不再需要保留。</p>
 </article>
