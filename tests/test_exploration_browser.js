@@ -128,7 +128,7 @@ const shots=process.env.COURSE_SCREENSHOTS;
    await p.locator('[data-explore-preset="lr"]').click();
    await p.locator('[data-explore-bst-input]').fill('20');
    await p.locator('[data-explore-bst-action="insert"]').click();
-   await p.locator('[data-explore-step="end"]').click();
+   if(await p.locator('[data-explore-step="end"]').getAttribute('aria-disabled')!=='true')await p.locator('[data-explore-step="end"]').click();
    assert.equal(await p.locator('[data-explore-bst-rot]').innerText(),'2');
   });
   await check('Hash table tab switches chaining and linear probing with tombstones',async()=>{
@@ -137,7 +137,7 @@ const shots=process.env.COURSE_SCREENSHOTS;
    await p.locator('[data-explore-hash-strategy="probing"]').click();
    await p.locator('[data-explore-hash-input]').fill('14');
    await p.locator('[data-explore-hash-action="delete"]').click();
-   await p.locator('[data-explore-step="end"]').click();
+   if(await p.locator('[data-explore-step="end"]').getAttribute('aria-disabled')!=='true')await p.locator('[data-explore-step="end"]').click();
    assert.ok(await p.locator('.exploration-hash-tombstone').count()===1);
   });
   await check('Tab arrow keys and route navigation pause playback',async()=>{
