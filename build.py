@@ -27,7 +27,19 @@ CHAPTERS = [
     ('動態規劃', '狀態、轉移、記憶化與填表', '設計解法'),
     ('面試工具箱', '解題流程、模板與原創模擬題', '整合與延伸'),
     ('進階補給', '差分、Trie、Union-Find 與最短路徑', '整合與延伸'),
+    ('排序與選擇', '穩定排序、分治、計數、桶與第 k 小', '排序、數學與字串'),
+    ('數學與組合', '因數、質數、計數與組合數', '排序、數學與字串'),
+    ('字串比對與索引', 'KMP、雜湊、滾動雜湊與後綴陣列', '排序、數學與字串'),
+    ('機率與取樣', '洗牌、期望值、水塘與拒絕取樣', '排序、數學與字串'),
+    ('區間與有序集合', '線段樹、Fenwick Tree 與平衡搜尋樹', '進階結構與圖'),
+    ('圖的連通與路徑', '生成樹、Euler、SCC、雙連通與最短路', '進階結構與圖'),
+    ('幾何與掃描線', '方向、凸包與事件順序', '進階結構與圖'),
+    ('設計與串流', 'LRU、雙向串列、迭代器與中位數', '設計與實作'),
+    ('遊戲與不變量', '取石子、Minimax 與奇偶推理', '設計與實作'),
+    ('資料查詢與協作', 'SQL、Shell、執行緒與互動評測', '設計與實作'),
+    ('列舉、折半與模擬', '縮小搜尋量，推進事件狀態', '設計與實作'),
 ]
+
 KEYWORDS = [
     'Big O recursion complexity Python',
     'array arrays string strings two pointers sliding window prefix sum',
@@ -42,7 +54,19 @@ KEYWORDS = [
     'dynamic programming DP memoization tabulation',
     'interview template complexity',
     'difference array trie bit intervals modular Dijkstra union find disjoint set DSU',
+    'sorting stable insertion merge sort counting sort bucket sort radix sort quickselect divide conquer inversions',
+    'math number theory gcd sieve prime combinatorics pascal factorial',
+    'string matching KMP rolling hash hash function suffix array',
+    'randomized probability statistics reservoir sampling rejection sampling shuffle expectation',
+    'segment tree binary indexed tree Fenwick ordered set AVL balanced BST',
+    'minimum spanning tree Kruskal Eulerian circuit strongly connected component biconnected component Bellman Ford zero one BFS shortest path',
+    'geometry convex hull cross product sweep line',
+    'design doubly linked list iterator data stream LRU median',
+    'game theory minimax brainteaser parity invariant',
+    'database SQL shell concurrency interactive oracle lock condition',
+    'enumeration meet in the middle simulation event',
 ]
+
 LABS = [
     ('two-pointers', '雙指標', '找出有序陣列中總和等於目標的一組索引。', 'chapter-02',
      [('array', '有序整數（2–12 個，逗號分隔）', '1, 3, 4, 6, 8, 11', 'text'), ('target', '目標總和', '10', 'number')],
@@ -170,9 +194,37 @@ def lab_markup():
     return '\n'.join(blocks)
 
 
+
+def category_catalog(source):
+    order = json.loads((source / 'category-order.json').read_text(encoding='utf-8'))
+    entries = []
+    for path in sorted(source.glob('categories-*.json')):
+        entries.extend(json.loads(path.read_text(encoding='utf-8')))
+    names = [entry['name'] for entry in entries]
+    if len(names) != len(set(names)):
+        raise ValueError('類別索引含有重複名稱')
+    if set(names) != set(order) or len(order) != len(set(order)):
+        missing = sorted(set(order) - set(names))
+        extra = sorted(set(names) - set(order))
+        raise ValueError(f'類別對照不完整；缺少 {missing}，多出 {extra}')
+    by_name = {entry['name']: entry for entry in entries}
+    entries = [by_name[name] for name in order]
+    groups = {}
+    for entry in entries:
+        groups.setdefault(entry['group'], []).append(entry)
+    blocks = []
+    for index, (group, items) in enumerate(groups.items(), 1):
+        links = []
+        for item in items:
+            keywords = item['name'] + ' ' + item['label']
+            links.append(f'<li data-group="{html.escape(group)}" data-keywords="{html.escape(keywords)}"><a class="category-link" href="#{html.escape(item["lesson"])}" data-category="{html.escape(item["name"])}"><strong lang="en">{html.escape(item["name"])}</strong><span>{html.escape(item["label"])}</span></a><a class="category-experiment js-only" href="#{html.escape(item["lesson"])}" data-category-experiment="{html.escape(item["name"])}" data-category-model="{html.escape(item["model"])}" aria-label="{html.escape(item["label"])}互動圖解">互動 <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7 4 9 6-9 6z"/></svg></a></li>')
+        blocks.append(f'<section class="category-group" aria-labelledby="category-group-{index}"><h3 id="category-group-{index}">{html.escape(group)}</h3><ul class="category-grid">{"".join(links)}</ul></section>')
+    return entries, '\n'.join(blocks)
+
+
 def build(root: Path = ROOT, output: Path | None = None):
     output = output or root / 'index.html'
-    missing = [f'{i:02}.html' for i in range(1, 14) if not (root / 'chapters' / f'{i:02}.html').is_file()]
+    missing = [f'{i:02}.html' for i in range(1, len(CHAPTERS) + 1) if not (root / 'chapters' / f'{i:02}.html').is_file()]
     if missing:
         raise ValueError('無法建置：缺少 chapters/' + ', chapters/'.join(missing))
     all_ids = set()
@@ -205,7 +257,18 @@ def build(root: Path = ROOT, output: Path | None = None):
         sidebar.append(f'<li><a class="chapter-link" data-chapter="{chapter_id}" href="#{chapter_id}"><span class="chapter-number">{i:02}</span><span>{html.escape(short)}</span><span class="nav-done" aria-hidden="true"></span></a></li>')
         cards.append(f'<li><a href="#{chapter_id}"><span class="map-number">{i:02}</span><span class="map-content"><strong>{html.escape(short)}</strong><span class="map-summary">{html.escape(description)}</span></span><span class="map-arrow" aria-hidden="true">→</span></a></li>')
     source = root / 'source'
-    replacements = {'STYLES': (source / 'styles.css').read_text(encoding='utf-8'), 'APP_JS': (source / 'app.js').read_text(encoding='utf-8'), 'LABS_JS': (source / 'labs.js').read_text(encoding='utf-8'), 'CHAPTERS': '\n'.join(contents), 'CHAPTER_META': json.dumps(meta, ensure_ascii=False, separators=(',', ':')).replace('<', '\\u003c'), 'SIDEBAR': '\n'.join(sidebar), 'CHAPTER_MAP': '\n'.join(cards), 'LABS': lab_markup(), 'TOPIC_COUNT': str(sum(len(ch['topics']) for ch in meta))}
+    categories, category_html = category_catalog(source)
+    replacements = {'STYLES': '\n'.join((source / filename).read_text(encoding='utf-8') for filename in ('styles.css', 'labs-interactive.css', 'reader.css', 'topic-labs.css', 'exploration-studio.css')), 'APP_JS': (source / 'app.js').read_text(encoding='utf-8'), 'READER_JS': (source / 'reader.js').read_text(encoding='utf-8'), 'LABS_JS': (source / 'labs.js').read_text(encoding='utf-8'), 'CHAPTERS': '\n'.join(contents), 'CHAPTER_META': json.dumps(meta, ensure_ascii=False, separators=(',', ':')).replace('<', '\\u003c'), 'SIDEBAR': '\n'.join(sidebar), 'CHAPTER_MAP': '\n'.join(cards), 'LABS': lab_markup(), 'TOPIC_COUNT': str(sum(len(ch['topics']) for ch in meta))}
+    replacements.update({
+        'CHAPTER_COUNT': str(len(CHAPTERS)),
+        'CATEGORY_COUNT': str(len(categories)),
+        'CATEGORIES': category_html,
+        'CATEGORY_META': json.dumps(categories, ensure_ascii=False, separators=(',', ':')).replace('<', '\\u003c'),
+        'MODEL_JS': '\n'.join(path.read_text(encoding='utf-8') for path in sorted(source.glob('models-*.js'))),
+        'TOPIC_LABS_JS': (source / 'topic-labs.js').read_text(encoding='utf-8'),
+        'CATEGORY_JS': (source / 'category-ui.js').read_text(encoding='utf-8'),
+        'EXPLORATION_STUDIO_JS': (source / 'exploration-studio.js').read_text(encoding='utf-8'),
+    })
     rendered = (source / 'shell.html').read_text(encoding='utf-8')
     for key, value in replacements.items():
         rendered = rendered.replace('{{' + key + '}}', value)
@@ -222,8 +285,9 @@ def build(root: Path = ROOT, output: Path | None = None):
     broken = sorted({ref for ref in final.refs if ref and ref not in ids})
     if broken:
         raise ValueError('無效的內部連結: ' + ', '.join(broken))
-    output.write_text(rendered, encoding='utf-8', newline='\n')
-    return {'chapters': len(meta), 'topics': sum(len(ch['topics']) for ch in meta), 'bytes': output.stat().st_size, 'path': str(output)}
+    with output.open('w', encoding='utf-8', newline='\n') as stream:
+        stream.write(rendered)
+    return {'categories': len(categories), 'chapters': len(meta), 'topics': sum(len(ch['topics']) for ch in meta), 'bytes': output.stat().st_size, 'path': str(output)}
 
 if __name__ == '__main__':
     cli = argparse.ArgumentParser(description=__doc__)

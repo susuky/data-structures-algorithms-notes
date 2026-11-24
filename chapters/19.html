@@ -1,0 +1,168 @@
+<article id="chapter-19" data-title="圖的群組、關鍵連線與路線"><h2>19 · 圖的群組、關鍵連線與路線</h2><p class="chapter-intro">學會 DFS 和 BFS 之後，接著看圖裡更進階的結構：怎麼用最便宜的邊把所有點接起來、怎麼把每條路剛好走一遍、怎麼找出互相繞得回來的強連通群組，還有拿掉哪條邊會讓整個路網斷線。</p><section class="lesson-unit" data-lesson="c19-mst"><h3 id="c19-mst">接通所有據點，總線路費用最少是多少</h3><p class="lesson-question">五個據點之間有幾種拉線方案，只要求每個據點都能透過線路連到其他據點。Kruskal 從最便宜的邊往上看，兩端還在不同群組就選，已相連就跳過。選出的連通樹就是 Minimum Spanning Tree（最小生成樹）。</p>
+<p>為什麼能直接拿最便宜的跨群組邊？把其中一個群組和其餘節點切開，任何連通方案都要跨過這個切口。若某個最優方案用更貴的邊跨過，換成眼前這條就能接通、總成本也不增加。這是 cut property 的交換理由，允許相同權重與負權重。</p><figure><svg viewBox="0 0 720 300" role="img" aria-labelledby="c19-mst-figure"><title id="c19-mst-figure">五個節點中選取權重一一二三的四條邊，總成本七</title><rect width="720" height="300" rx="12" fill="#fffaf4"/><g font-family="sans-serif" font-size="17" fill="#27362e"><line x1="85" y1="80" x2="315" y2="65" stroke="#b7b2a9" stroke-width="2"/><text x="190.0" y="62.5">4</text><line x1="85" y1="80" x2="195" y2="220" stroke="#227357" stroke-width="5"/><text x="130.0" y="140.0">1</text><line x1="315" y1="65" x2="195" y2="220" stroke="#227357" stroke-width="5"/><text x="245.0" y="132.5">2</text><line x1="315" y1="65" x2="440" y2="215" stroke="#227357" stroke-width="5"/><text x="367.5" y="130.0">1</text><line x1="195" y1="220" x2="440" y2="215" stroke="#b7b2a9" stroke-width="2"/><text x="307.5" y="207.5">5</text><line x1="440" y1="215" x2="620" y2="125" stroke="#227357" stroke-width="5"/><text x="520.0" y="160.0">3</text><circle cx="85" cy="80" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="85" y="86" text-anchor="middle">0</text><circle cx="315" cy="65" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="315" y="71" text-anchor="middle">1</text><circle cx="195" cy="220" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="195" y="226" text-anchor="middle">2</text><circle cx="440" cy="215" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="440" y="221" text-anchor="middle">3</text><circle cx="620" cy="125" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="620" y="131" text-anchor="middle">4</text></g></svg><figcaption>選 0—2、1—3、1—2 後，0、1、2、3 已經同群；0—1 雖然也存在，加入它只會成環。再用成本 3 接上 4，總成本是 7。</figcaption></figure><table><caption>權重相同時任選順序，此例以輸入順序打破同分</caption><thead><tr><th scope="col">邊（成本）</th><th scope="col">判斷</th><th scope="col">已選總成本</th></tr></thead><tbody><tr><td>0—2（1）</td><td>接起兩群</td><td>1</td></tr><tr><td>1—3（1）</td><td>接起兩群</td><td>2</td></tr><tr><td>1—2（2）</td><td>合併前面兩群</td><td>4</td></tr><tr><td>3—4（3）</td><td>全部五點相連</td><td>7</td></tr><tr><td>0—1（4）、2—3（5）</td><td>兩端已相連，略過</td><td>7</td></tr></tbody></table><pre><code class="language-python">def minimum_spanning_forest(n, edges):
+    parent, size = list(range(n)), [1] * n
+    def find(node):
+        while node != parent[node]:
+            parent[node] = parent[parent[node]]
+            node = parent[node]
+        return node
+    chosen, cost = [], 0
+    for edge_id in sorted(range(len(edges)), key=lambda i: edges[i][2]):
+        a, b, weight = edges[edge_id]
+        a, b = find(a), find(b)
+        if a == b:
+            continue
+        if size[a] &lt; size[b]:
+            a, b = b, a
+        parent[b] = a
+        size[a] += size[b]
+        chosen.append(edge_id)
+        cost += weight
+    return cost, chosen</code></pre><p>Union-Find 負責查兩端的群組與合併。排序花 O(E log E)，所有合併搭配路徑壓縮與按大小合併，攤銷 O(E α(V))；總計 O(V+E log E)，額外空間 O(V+E)。連通圖選 V−1 條邊，原圖分成 c 群就選 V−c 條，結果是最小生成森林。</p>
+<p>另一個常用選擇是 Prim：從一個點長出一棵樹，每次選跨出目前樹的最小邊。已有鄰接表與 heap 時很好接；Kruskal 直接拿邊清單排序，跟 Union-Find 搭配最短。兩者的目標都是選邊總成本，輸出還可保存邊編號，讓平行邊各自被辨認。</p><div class="check-yourself"><p>把所有邊權重都加 10，原本的最小生成樹還能用嗎？五個節點的總成本增加多少？</p><details><summary>看推理</summary><p>仍可用。每棵生成樹都選四條邊，因此總成本一律增加 40，排序與最優方案的比較維持原樣。</p></details></div><p class="unit-sources">延伸閱讀：<a href="https://algs4.cs.princeton.edu/43mst/index.php" target="_blank" rel="noopener">Princeton：Minimum Spanning Trees</a></p><div class="topic-lab" data-model="kruskal"></div></section><section class="lesson-unit" data-lesson="c19-euler"><h3 id="c19-euler">每條路都走一次，回到原點</h3><p class="lesson-question">路線要巡過每一條道路，再回到起點。你可以重訪路口，每條道路各走一次。Eulerian Circuit（歐拉迴路）看的正是邊的使用次數，Hierholzer 演算法把局部小環接成完整路線。</p>
+<p>本節處理無向圖。帶有邊的節點要在同一個連通群組，而且每個節點度數為偶數：每次沿一條邊進來，就要配一條邊出去。孤立節點不影響道路路線；完全沒有邊時，保留單一起點作為長度零的路線。</p><figure><svg viewBox="0 0 720 300" role="img" aria-labelledby="c19-euler-figure"><title id="c19-euler-figure">兩個三角形在節點零相接，每條邊都有獨立編號</title><rect width="720" height="300" rx="12" fill="#fffaf4"/><g font-family="sans-serif" font-size="17" fill="#27362e"><line x1="360" y1="145" x2="160" y2="55" stroke="#84918c" stroke-width="2"/><text x="268.0" y="94.0">#0</text><line x1="160" y1="55" x2="160" y2="235" stroke="#84918c" stroke-width="2"/><text x="168.0" y="139.0">#1</text><line x1="160" y1="235" x2="360" y2="145" stroke="#84918c" stroke-width="2"/><text x="268.0" y="184.0">#2</text><line x1="360" y1="145" x2="560" y2="55" stroke="#84918c" stroke-width="2"/><text x="468.0" y="94.0">#3</text><line x1="560" y1="55" x2="560" y2="235" stroke="#84918c" stroke-width="2"/><text x="568.0" y="139.0">#4</text><line x1="560" y1="235" x2="360" y2="145" stroke="#84918c" stroke-width="2"/><text x="468.0" y="184.0">#5</text><circle cx="360" cy="145" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="360" y="151" text-anchor="middle">0</text><circle cx="160" cy="55" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="160" y="61" text-anchor="middle">1</text><circle cx="160" cy="235" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="160" y="241" text-anchor="middle">2</text><circle cx="560" cy="55" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="560" y="61" text-anchor="middle">3</text><circle cx="560" cy="235" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="560" y="241" text-anchor="middle">4</text></g></svg><figcaption>兩個環共享節點 0。走完右邊的小環回到 0 後，還能接著走左邊的小環，六條邊各用一次。</figcaption></figure><p>路徑堆疊頂端還有未用邊，就沿那條邊前進並標記邊編號；沒有未用邊時，把節點從堆疊取出放進答案。這個退回順序是倒著長出的路線，最後反轉。對同一個無向邊，兩端鄰接表共用同一編號；兩條平行邊則用不同編號。</p><table><caption>先走尚未使用的邊，答案在走到盡頭時才開始成形</caption><thead><tr><th scope="col">階段</th><th scope="col">目前路徑堆疊</th><th scope="col">退回順序</th></tr></thead><tbody><tr><td>沿未使用邊走</td><td>0→4→3→0→2→1→0</td><td>尚未退回</td></tr><tr><td>0 已無邊</td><td>0→4→3→0→2→1</td><td>0</td></tr><tr><td>繼續退回</td><td>逐項彈出</td><td>0、1、2、0、3、4、0</td></tr><tr><td>反轉</td><td>完成</td><td>0→4→3→0→2→1→0</td></tr></tbody></table><pre><code class="language-python">def eulerian_circuit(n, edges):
+    if n == 0:
+        return [] if not edges else None
+    adjacency = [[] for _ in range(n)]
+    for edge_id, (a, b) in enumerate(edges):
+        adjacency[a].append((b, edge_id))
+        adjacency[b].append((a, edge_id))
+    if any(len(neighbors) % 2 for neighbors in adjacency):
+        return None
+    start = next((v for v in range(n) if adjacency[v]), 0)
+    stack, circuit = [start], []
+    used = [False] * len(edges)
+    while stack:
+        node = stack[-1]
+        while adjacency[node] and used[adjacency[node][-1][1]]:
+            adjacency[node].pop()
+        if adjacency[node]:
+            neighbor, edge_id = adjacency[node].pop()
+            used[edge_id] = True
+            stack.append(neighbor)
+        else:
+            circuit.append(stack.pop())
+    if len(circuit) != len(edges) + 1:
+        return None
+    return circuit[::-1]</code></pre><p>每條邊只被標記一次，兩份鄰接項目各彈出一次，時間與空間都是 O(V+E)。完成路線要有 E+1 個節點；若長度不足，還有另一個帶邊的群組。若題目要開放路線，無向圖允許恰有兩個奇數度數節點，從其中一個出發、在另一個結束；有向閉合路線則改檢查每點入度等於出度，以及帶邊部分的可達關係。</p><div class="check-yourself"><p>兩個節點之間有兩條平行邊，度數各是多少？為什麼 visited[node] 不適合用來限制這條路線？</p><details><summary>看推理</summary><p>兩點度數都是 2，路線可走 0→1→0。路口會被重訪；每條道路的編號才是要標記的對象。</p></details></div><p class="unit-sources">延伸閱讀：<a href="https://algs4.cs.princeton.edu/code/edu/princeton/cs/algs4/EulerianCycle.java.html" target="_blank" rel="noopener">Princeton：EulerianCycle 實作與分析</a></p><div class="topic-lab" data-model="euler-circuit"></div></section><section class="lesson-unit" data-lesson="c19-scc"><h3 id="c19-scc">單向連結裡，哪些頁面可以繞回彼此</h3><p class="lesson-question">頁面 0→1→2→0 彼此能繞回；2 另有一條連結通往 3。Strongly Connected Component（強連通分量，SCC）把有向圖切成「任何兩點都互相可達」的最大群組。Tarjan 用一次 DFS 找出這些群組。</p>
+<p>disc[v] 是第一次發現 v 的順序，low[v] 是這段搜尋可連回的最早活躍位置。進入新節點時把它放進 active 堆疊；這個堆疊保留尚未歸組的節點，節點的遞迴呼叫返回後，也可能繼續留在裡面。</p><figure><svg viewBox="0 0 720 300" role="img" aria-labelledby="c19-scc-figure"><title id="c19-scc-figure">有向圖分成零一二、三四與五三個強連通群組</title><rect width="720" height="300" rx="12" fill="#fffaf4"/><g font-family="sans-serif" font-size="17" fill="#27362e"><line x1="80" y1="85" x2="190" y2="215" stroke="#84918c" stroke-width="2"/><path d="M 157.0 176.0 L 146.07770391702653 170.83246206827062 L 153.71156677071767 164.37303965360888 Z" fill="#53675d"/><line x1="190" y1="215" x2="295" y2="85" stroke="#84918c" stroke-width="2"/><path d="M 263.5 124.0 L 260.4779977230548 135.69903851767904 L 252.69858592101758 129.41566744680281 Z" fill="#53675d"/><line x1="295" y1="85" x2="80" y2="85" stroke="#84918c" stroke-width="2"/><path d="M 144.5 85.0 L 155.5 80.0 L 155.5 90.0 Z" fill="#53675d"/><line x1="295" y1="85" x2="445" y2="85" stroke="#84918c" stroke-width="2"/><path d="M 400.0 85.0 L 389.0 90.0 L 389.0 80.0 Z" fill="#53675d"/><line x1="445" y1="85" x2="555" y2="215" stroke="#84918c" stroke-width="2"/><path d="M 522.0 176.0 L 511.0777039170265 170.83246206827062 L 518.7115667707177 164.37303965360888 Z" fill="#53675d"/><line x1="555" y1="215" x2="445" y2="85" stroke="#84918c" stroke-width="2"/><path d="M 478.0 124.0 L 488.9222960829735 129.16753793172938 L 481.2884332292823 135.62696034639112 Z" fill="#53675d"/><line x1="555" y1="215" x2="660" y2="85" stroke="#84918c" stroke-width="2"/><path d="M 628.5 124.0 L 625.4779977230547 135.69903851767904 L 617.6985859210175 129.41566744680281 Z" fill="#53675d"/><circle cx="80" cy="85" r="25" fill="#d5e9e1" stroke="#53675d" stroke-width="2"/><text x="80" y="91" text-anchor="middle">0</text><circle cx="190" cy="215" r="25" fill="#d5e9e1" stroke="#53675d" stroke-width="2"/><text x="190" y="221" text-anchor="middle">1</text><circle cx="295" cy="85" r="25" fill="#d5e9e1" stroke="#53675d" stroke-width="2"/><text x="295" y="91" text-anchor="middle">2</text><circle cx="445" cy="85" r="25" fill="#f2dfcc" stroke="#53675d" stroke-width="2"/><text x="445" y="91" text-anchor="middle">3</text><circle cx="555" cy="215" r="25" fill="#f2dfcc" stroke="#53675d" stroke-width="2"/><text x="555" y="221" text-anchor="middle">4</text><circle cx="660" cy="85" r="25" fill="#e3e2ed" stroke="#53675d" stroke-width="2"/><text x="660" y="91" text-anchor="middle">5</text><text x="160" y="280" text-anchor="middle">{0,1,2}</text><text x="500" y="280" text-anchor="middle">{3,4}</text><text x="660" y="280" text-anchor="middle">{5}</text></g></svg><figcaption>2→3 與 4→5 都只有前進方向。縮成三個群組後，路線是 {0,1,2}→{3,4}→{5}，因此沒有跨群組的環。</figcaption></figure><p>遇到尚未發現的孩子，DFS 回來後用孩子的 low 更新自己；遇到仍在 active 堆疊的已發現節點，用對方的 disc 更新；遇到已經歸組的節點，略過這次 low 更新。當 low[v]==disc[v]，v 是這批群組最早的位置，從堆疊頂端一路取到 v 就完成一個 SCC。</p><table><caption>同一個 DFS 分支裡，可以先完成較下游的 SCC</caption><thead><tr><th scope="col">正在返回</th><th scope="col">low 值與原因</th><th scope="col">收出的群組</th></tr></thead><tbody><tr><td>5</td><td>沒有可回去的邊，low[5]=disc[5]</td><td>{5}</td></tr><tr><td>4→3</td><td>4 可回到 3，3 是這批最早者</td><td>{3,4}</td></tr><tr><td>2→1→0</td><td>2→0 把 low 降到 0</td><td>{0,1,2}</td></tr></tbody></table><pre><code class="language-python">def strongly_connected_components(n, edges):
+    graph = [[] for _ in range(n)]
+    for a, b in edges:
+        graph[a].append(b)
+    discovery, low = [-1] * n, [0] * n
+    active, stack, components = [False] * n, [], []
+    timer = 0
+    def visit(node):
+        nonlocal timer
+        discovery[node] = low[node] = timer
+        timer += 1
+        stack.append(node)
+        active[node] = True
+        for neighbor in graph[node]:
+            if discovery[neighbor] == -1:
+                visit(neighbor)
+                low[node] = min(low[node], low[neighbor])
+            elif active[neighbor]:
+                low[node] = min(low[node], discovery[neighbor])
+        if low[node] == discovery[node]:
+            component = []
+            while True:
+                top = stack.pop()
+                active[top] = False
+                component.append(top)
+                if top == node:
+                    break
+            components.append(component)
+    for node in range(n):
+        if discovery[node] == -1:
+            visit(node)
+    return components</code></pre><p>每個節點進出堆疊各一次，每條邊檢查一次，時間 O(V+E)，含圖的儲存 O(V+E)，DFS 與輔助陣列 O(V)。程式用遞迴表達回程；深鏈圖可改成顯式呼叫堆疊保存「節點、下一條邊位置、回程狀態」。</p>
+<p>把每個 SCC 縮成一點後得到 DAG，可再做拓樸排序或 DAG 上的 DP。若群組之間還有環，環上的所有點就能互相抵達，應當已經被合成同一個 SCC。</p><div class="check-yourself"><p>先完成群組 {0,1}，後來從 2 看到邊 2→0。這條邊應該把 low[2] 降成 disc[0] 嗎？</p><details><summary>看推理</summary><p>跳過這次更新。0 已離開 active 堆疊，該群組已完成；目前的單向連結可保留為縮點圖上的邊。互動中的「指向已完成群組」可以直接比較。</p></details></div><p class="unit-sources">延伸閱讀：<a href="https://algs4.cs.princeton.edu/code/edu/princeton/cs/algs4/TarjanSCC.java.html" target="_blank" rel="noopener">Princeton：TarjanSCC 實作與分析</a></p><div class="topic-lab" data-model="tarjan-scc"></div></section><section class="lesson-unit" data-lesson="c19-biconnected"><h3 id="c19-biconnected">移除哪個路口，會把道路網切開</h3><p class="lesson-question">兩個社區內部各有環路，中間靠一條道路相接。刪掉這條道路會斷線，刪掉它兩端的路口也會切開道路網。DFS 的 low 值能同時找出橋、割點，以及 Biconnected Component（點雙連通分量）。</p>
+<p>本節採無向圖、邊兩端不同，允許平行邊。disc[v] 是發現時間；low[v] 是 v 的子樹沿樹邊往下，再接至多一條回邊，能碰到的最早發現時間。回程時把孩子的 low 傳給父節點，於是父節點知道孩子有沒有其他路能繞出去。</p><figure><svg viewBox="0 0 720 300" role="img" aria-labelledby="c19-bcc-figure"><title id="c19-bcc-figure">兩個三角形由一到三的橋相連，割點是一與三</title><rect width="720" height="300" rx="12" fill="#fffaf4"/><g font-family="sans-serif" font-size="17" fill="#27362e"><line x1="70" y1="145" x2="220" y2="65" stroke="#667a6c" stroke-width="2"/><text x="153.0" y="123.0">#0</text><line x1="220" y1="65" x2="220" y2="235" stroke="#667a6c" stroke-width="2"/><text x="228.0" y="168.0">#1</text><line x1="220" y1="235" x2="70" y2="145" stroke="#667a6c" stroke-width="2"/><text x="153.0" y="208.0">#2</text><line x1="220" y1="65" x2="440" y2="65" stroke="#b65332" stroke-width="5"/><text x="338.0" y="83.0">#3</text><line x1="440" y1="65" x2="610" y2="145" stroke="#667a6c" stroke-width="2"/><text x="533.0" y="123.0">#4</text><line x1="610" y1="145" x2="440" y2="235" stroke="#667a6c" stroke-width="2"/><text x="533.0" y="208.0">#5</text><line x1="440" y1="235" x2="440" y2="65" stroke="#667a6c" stroke-width="2"/><text x="448.0" y="168.0">#6</text><circle cx="70" cy="145" r="25" fill="#dce8dd" stroke="#53675d" stroke-width="2"/><text x="70" y="151" text-anchor="middle">0</text><circle cx="220" cy="65" r="25" fill="#f0cbbd" stroke="#53675d" stroke-width="2"/><text x="220" y="71" text-anchor="middle">1</text><circle cx="220" cy="235" r="25" fill="#dce8dd" stroke="#53675d" stroke-width="2"/><text x="220" y="241" text-anchor="middle">2</text><circle cx="440" cy="65" r="25" fill="#f0cbbd" stroke="#53675d" stroke-width="2"/><text x="440" y="71" text-anchor="middle">3</text><circle cx="610" cy="145" r="25" fill="#dce8dd" stroke="#53675d" stroke-width="2"/><text x="610" y="151" text-anchor="middle">4</text><circle cx="440" cy="235" r="25" fill="#dce8dd" stroke="#53675d" stroke-width="2"/><text x="440" y="241" text-anchor="middle">5</text></g></svg><figcaption>邊 #3 是唯一跨社區道路，所以是橋。點 1 與 3 各自連接兩個區塊；每個三角形內刪一個頂點，剩餘兩點仍有道路相接。</figcaption></figure><table><caption>大於與大於等於各回答一個具體問題</caption><thead><tr><th scope="col">回程條件</th><th scope="col">代表的路線</th><th scope="col">可得結論</th></tr></thead><tbody><tr><td>low[child] &gt; disc[v]</td><td>孩子連 v 都繞不回來</td><td>父子邊是橋</td></tr><tr><td>low[child] ≥ disc[v]</td><td>孩子至多繞回 v，越不過 v</td><td>在這裡收出一個點雙連通區塊</td></tr><tr><td>非根，且上條件成立</td><td>孩子離開子樹要通過 v</td><td>v 是割點</td></tr><tr><td>DFS 根有至少兩個樹孩子</td><td>各孩子子樹彼此沒有回邊相通</td><td>根是割點</td></tr></tbody></table><p>找區塊時，走過的樹邊與向祖先的回邊放進 edge_stack。碰到 low[child]≥disc[v]，把邊取到這條父子邊為止，就是一個區塊。這裡把橋當作單邊區塊；孤立頂點沒有邊，回傳的 blocks 不替它建立邊區塊。割點可同時在多個區塊內，每條邊則恰好屬於一塊。</p>
+<p>平行邊需要用邊編號判斷父邊。從 0 經 #0 到 1 後，另一條 1—0 的 #1 是合法回邊，會把 low[1] 降到 disc[0]；因此兩條平行邊都可互相替代，刪掉其中一條仍相連。</p><pre><code class="language-python">def biconnected_components(n, edges):
+    # Undirected, parallel edges allowed; self-loops are excluded by contract.
+    adjacency = [[] for _ in range(n)]
+    for edge_id, (a, b) in enumerate(edges):
+        if a == b:
+            raise ValueError(&#x27;use distinct endpoints&#x27;)
+        adjacency[a].append((b, edge_id))
+        adjacency[b].append((a, edge_id))
+    discovery, low = [-1] * n, [0] * n
+    edge_stack, blocks, bridges, cuts = [], [], [], set()
+    timer = 0
+    def visit(node, parent_edge=-1):
+        nonlocal timer
+        discovery[node] = low[node] = timer
+        timer += 1
+        children = 0
+        for neighbor, edge_id in adjacency[node]:
+            if edge_id == parent_edge:
+                continue
+            if discovery[neighbor] == -1:
+                children += 1
+                edge_stack.append(edge_id)
+                visit(neighbor, edge_id)
+                low[node] = min(low[node], low[neighbor])
+                if low[neighbor] &gt; discovery[node]:
+                    bridges.append(edge_id)
+                if low[neighbor] &gt;= discovery[node]:
+                    if parent_edge != -1 or children &gt; 1:
+                        cuts.add(node)
+                    block = []
+                    while True:
+                        top = edge_stack.pop()
+                        block.append(top)
+                        if top == edge_id:
+                            break
+                    blocks.append(block)
+            elif discovery[neighbor] &lt; discovery[node]:
+                edge_stack.append(edge_id)
+                low[node] = min(low[node], discovery[neighbor])
+    for node in range(n):
+        if discovery[node] == -1:
+            visit(node)
+    return {&#x27;blocks&#x27;: blocks, &#x27;cuts&#x27;: sorted(cuts), &#x27;bridges&#x27;: bridges}</code></pre><p>每條邊進出邊堆疊各一次，時間 O(V+E)，空間 O(V+E)。割點與橋能指出單點或單邊中斷的位置；把區塊與割點接成 block-cut forest，後續還能回答兩個路口之間必經哪些割點。</p><div class="check-yourself"><p>三角形 0—1—2—0 裡，DFS 從 0 到 1 再到 2，low[1] 會等於 disc[0]。0—1 是橋嗎？根 0 是割點嗎？</p><details><summary>看推理</summary><p>兩者都不是。low[1] 等於 disc[0]，表示可以繞回 0，橋的嚴格大於條件沒有成立。根 0 只有一個 DFS 樹孩子，刪去 0 後 1 與 2 仍相連。</p></details></div><p class="unit-sources">延伸閱讀：<a href="https://www.boost.org/doc/libs/1_80_0/libs/graph/doc/biconnected_components.html" target="_blank" rel="noopener">Boost Graph Library：Biconnected Components</a></p><div class="topic-lab" data-model="biconnected"></div></section><section class="lesson-unit" data-lesson="c19-bellman-ford"><h3 id="c19-bellman-ford">路徑有折扣邊，讓新低價繼續傳出去</h3><p class="lesson-question">從 0 到 1 原價 4；經過 2 的成本先付 5，再得到 −3 的折扣，最後只要 2。當邊允許負權重，Bellman–Ford 反覆掃描全部邊：若 distance[a]+w 比 distance[b] 更小，就把 b 的價格降下來。</p>
+<p>一輪至少能把最佳答案多傳一條邊。沒有起點可達負環時，最短路徑可移除重複節點形成的非負環，留下至多 V−1 條邊。所以做 V−1 輪已足夠；整輪都沒變動，可以提早停止。這個原地更新版本會利用同輪剛更新的值，依邊順序有時一輪就傳完好幾條邊。</p><table><caption>鬆弛只接受更便宜的路徑；未知的 ∞ 不參與加價</caption><thead><tr><th scope="col">按此順序鬆弛</th><th scope="col">距離 [0,1,2,3]</th><th scope="col">改變原因</th></tr></thead><tbody><tr><td>初始化</td><td>[0,∞,∞,∞]</td><td>只有起點免費抵達</td></tr><tr><td>0→1，權重 4</td><td>[0,4,∞,∞]</td><td>抵達 1</td></tr><tr><td>0→2，權重 5</td><td>[0,4,5,∞]</td><td>抵達 2</td></tr><tr><td>2→1，權重 −3</td><td>[0,2,5,∞]</td><td>5−3 比 4 更小</td></tr><tr><td>1→3，權重 2</td><td>[0,2,5,4]</td><td>同一輪繼續使用 1 的新距離</td></tr></tbody></table><pre><code class="language-python">from math import inf
+
+def bellman_ford(n, edges, start):
+    distance = [inf] * n
+    distance[start] = 0
+    for _ in range(n - 1):
+        changed = False
+        for a, b, weight in edges:
+            if distance[a] != inf and distance[a] + weight &lt; distance[b]:
+                distance[b] = distance[a] + weight
+                changed = True
+        if not changed:
+            break
+    if any(distance[a] != inf and distance[a] + weight &lt; distance[b]
+           for a, b, weight in edges):
+        raise ValueError(&#x27;reachable negative cycle&#x27;)
+    return distance</code></pre><p>多掃一次時，若起點可達的某條邊仍能降低距離，就存在可達負環。每多繞一次該環，成本持續下降，受影響節點沒有有限的最短值。下列函式用 ValueError 回報這個結果；互動則停在檢出負環的步驟。另一個完全走不到的群組有負環時，起點的距離表維持原樣。</p>
+<p>最壞 O(VE) 時間，距離表 O(V)；輸入邊另佔 O(E)。所有權重非負且圖大時，用 heap Dijkstra；DAG 則依拓樸順序鬆弛一次，允許負邊，時間 O(V+E)。若你要的是「最多 k 條邊」，每輪讀上一輪快照、寫下一輪，才會維持邊數上限。</p><div class="check-yourself"><p>0→1 的成本是 0，1→2 是 −1，2→1 是 0。為什麼再多跑幾輪，距離還會一直減少？</p><details><summary>看推理</summary><p>1→2→1 每圈總成本 −1，且起點能抵達 1。多走一圈就再省 1，於是不存在有限的最低價。檢查額外一輪的可達邊即可發現這種情況。</p></details></div><p class="unit-sources">延伸閱讀：<a href="https://algs4.cs.princeton.edu/44sp/index.php" target="_blank" rel="noopener">Princeton：Shortest Paths</a></p><div class="topic-lab" data-model="bellman-ford"></div></section><section class="lesson-unit" data-lesson="c19-zero-one-bfs"><h3 id="c19-zero-one-bfs">通道只分免費與付費，雙端佇列就夠用</h3><p class="lesson-question">地圖上的邊只花 0 或 1：免費通道可以多繞幾站，總費用仍可能比直走便宜。0–1 BFS 用 deque 維持目前最便宜的候選，沿免費邊改善的點放前端，沿成本 1 的邊改善的點放後端。</p>
+<p>取出距離 d 的候選時，新距離只會是 d 或 d+1。把同距離放前面、下一級放後面，就保持處理次序。入列保存當時距離，取出時若已找到更低價，這份舊候選直接略過。只有嚴格變小才重新入列，零權重環會自然停止。</p><table><caption>括號裡是候選入列時的距離，免費繞路把點 1 從成本 1 改成 0</caption><thead><tr><th scope="col">動作</th><th scope="col">deque（前→後）</th><th scope="col">目前距離</th></tr></thead><tbody><tr><td>起點 0</td><td>0(0)</td><td>[0,∞,∞]</td></tr><tr><td>0→1，成本 1</td><td>1(1)</td><td>[0,1,∞]</td></tr><tr><td>0→2，成本 0</td><td>2(0)、1(1)</td><td>[0,1,0]</td></tr><tr><td>取出 2，2→1 成本 0</td><td>1(0)、1(1)</td><td>[0,0,0]</td></tr><tr><td>取出新 1，再略過舊 1</td><td>空</td><td>[0,0,0]</td></tr></tbody></table><pre><code class="language-python">from collections import deque
+from math import inf
+
+def zero_one_bfs(n, edges, start):
+    graph = [[] for _ in range(n)]
+    for a, b, weight in edges:
+        if weight not in (0, 1):
+            raise ValueError(&#x27;weights must be 0 or 1&#x27;)
+        graph[a].append((b, weight))
+    distance = [inf] * n
+    distance[start] = 0
+    queue = deque([(start, 0)])
+    while queue:
+        node, known = queue.popleft()
+        if known != distance[node]:
+            continue
+        for neighbor, weight in graph[node]:
+            candidate = known + weight
+            if candidate &lt; distance[neighbor]:
+                distance[neighbor] = candidate
+                if weight == 0:
+                    queue.appendleft((neighbor, candidate))
+                else:
+                    queue.append((neighbor, candidate))
+    return distance</code></pre><p>用 deque 的兩端 O(1) 操作，整體時間 O(V+E)，含鄰接表與候選的空間 O(V+E)。互動為了顯示每個候選，把佇列狀態複製成畫面；分析演算法成本時，以這份 Python deque 實作為準。</p>
+<p>全部邊都是 1，普通 BFS 已經足夠；非負權重有很多種，用 Dijkstra；有負邊時，可回到上一節的 Bellman–Ford。把「沿既有方向走」設成 0、「反轉一條邊」設成 1，就能用本節方法求最少反轉次數。</p><div class="check-yourself"><p>把 0→1 的成本設為 1，再加 0→2 成本 0、2→1 成本 0。節點 1 第一次入列時，可以立刻把它鎖成永久完成嗎？</p><details><summary>看推理</summary><p>距離還會由 1 降成 0，所以以 distance 是否改善來判斷。取出時檢查入列距離，略過舊候選，便能得到免費繞路的結果。</p></details></div><p class="unit-sources">延伸閱讀：<a href="https://unswcpmsoc.com/workshops/programming/2026/t1w10.pdf" target="_blank" rel="noopener">UNSW CPMSoc：Graph Theory I，0–1 BFS</a>；<a href="https://algs4.cs.princeton.edu/44sp/index.php" target="_blank" rel="noopener">Princeton：Shortest Paths</a></p><div class="topic-lab" data-model="zero-one-bfs"></div></section></article>

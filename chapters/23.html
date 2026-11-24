@@ -1,0 +1,115 @@
+<article id="chapter-23" data-title="資料、文字與執行順序"><h2>23 · 資料、文字與執行順序</h2><p class="chapter-intro">不是每題都在寫單機演算法。有時你要用 SQL 先對齊「一列代表誰」，有時要用 Shell 管線一行行處理文字串流，還有多執行緒共用變數怎麼加鎖，以及只能靠有限次提問逼近答案的互動題。</p><section class="lesson-unit" data-lesson="c23-database"><h3 id="c23-database" data-syllabus="Database SQL GROUP BY window function join">先算每個人的總額，再排名</h3><p class="lesson-question">訂單是 A:12、A:8、B:20、C:7，要找總消費前兩名。A 有兩張訂單，B 只有一張，但兩人的總額都是 20。先決定「一列是一張訂單」還是「一列是一位客戶」，查詢就容易安排。</p>
+<div class="topic-lab" data-model="sql-ranking"></div>
+<p>GROUP BY 把相同 customer 收成一組，SUM 產生每人的 total；DENSE_RANK 依 total 由大到小排名，相同總額共用名次，下一名接續加一。用一層 CTE 接住排名，再篩 place ≤ 2。</p>
+<pre><code class="language-sql">WITH orders(customer, amount) AS (
+    VALUES ('A', 12), ('A', 8), ('B', 20), ('C', 7)
+), totals AS (
+    SELECT customer, SUM(amount) AS total
+    FROM orders
+    GROUP BY customer
+), ranked AS (
+    SELECT customer, total,
+           DENSE_RANK() OVER (ORDER BY total DESC) AS place
+    FROM totals
+)
+SELECT customer, total, place
+FROM ranked
+WHERE place &lt;= 2
+ORDER BY place, customer;</code></pre>
+<table><caption>四張訂單變成三位客戶</caption><thead><tr><th scope="col">customer</th><th scope="col">total</th><th scope="col">DENSE_RANK</th><th scope="col">ROW_NUMBER（加 customer 排序）</th></tr></thead><tbody><tr><td>A</td><td>20</td><td>1</td><td>1</td></tr><tr><td>B</td><td>20</td><td>1</td><td>2</td></tr><tr><td>C</td><td>7</td><td>2</td><td>3</td></tr></tbody></table>
+<p>若題目要求恰好兩位，改用 ROW_NUMBER，並在 ORDER BY 加入明確的同分順序；若要求前兩種總額，就用 DENSE_RANK。SQL 的最外層 ORDER BY 決定輸出順序，視窗裡的排序決定名次。</p>
+<p>再把需求改成「所有客戶，包括沒有下單的人」。從 customers LEFT JOIN orders，沒有訂單的 C 仍保留一列。COUNT(o.customer) 得到 0；SUM 的空值以 COALESCE 換成 0。COUNT(*) 會把 LEFT JOIN 保留的那一列也算進去。</p>
+<pre><code class="language-sql">WITH customers(id) AS (
+    VALUES ('A'), ('B'), ('C')
+), orders(customer, amount) AS (
+    VALUES ('A', 20), ('A', 5), ('B', 10)
+)
+SELECT c.id, COUNT(o.customer) AS order_count,
+       COALESCE(SUM(o.amount), 0) AS total
+FROM customers AS c
+LEFT JOIN orders AS o ON o.customer = c.id
+GROUP BY c.id
+ORDER BY c.id;</code></pre>
+<p>資料量變大時，用 EXPLAIN QUERY PLAN 看分組與排序是否建立暫存 B-tree，及 JOIN 是否走索引。以 N 張訂單、U 位客戶估算，分組需要掃過訂單，排名常需要 O(U log U) 排序；實際計畫取決於索引與資料庫的分組方法。</p>
+<div class="check-yourself"><p>只保留金額大於 10 的訂單，再計算每人總額，條件放 WHERE 還是 HAVING？若想要總額大於 10 呢？</p><details><summary>看推理</summary><p>單張訂單的條件放 GROUP BY 前的 WHERE amount &gt; 10；整組總額的條件放 HAVING SUM(amount) &gt; 10，或在 totals CTE 之外篩 total。前者會先移除 A 的 8 元訂單，後者會讓它參與合計。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://sqlite.org/windowfunctions.html" target="_blank" rel="noopener">SQLite：Window Functions</a></p>
+<p class="unit-sources">延伸閱讀：<a href="https://sqlite.org/lang_select.html" target="_blank" rel="noopener">SQLite：SELECT、GROUP BY 與 LEFT JOIN</a></p>
+<p class="unit-sources">延伸閱讀：<a href="https://sqlite.org/eqp.html" target="_blank" rel="noopener">SQLite：EXPLAIN QUERY PLAN</a></p></section><section class="lesson-unit" data-lesson="c23-shell"><h3 id="c23-shell" data-syllabus="Shell pipelines word frequency">把詞頻問題拆成一段管線</h3><p class="lesson-question">輸入 <code>Tea, coffee TEA. tea!</code>，要得到 tea 3 次、coffee 1 次。每段指令只處理一件事，觀察它交給下一段的資料形狀。</p>
+<div class="topic-lab" data-model="shell-frequency"></div>
+<p>本例把連續英文字母當成單字。tr 將其他字元換成換行並壓縮連續分隔字元，再把大寫換成小寫。開頭若有標點，可能產生空行，用 sed 移除。sort 把相同單字排在一起，uniq -c 才能一次數出完整的相鄰群組。</p>
+<pre><code class="language-bash">export LC_ALL=C
+tr -cs 'A-Za-z' '\n' |
+tr 'A-Z' 'a-z' |
+sed '/^$/d' |
+sort |
+uniq -c |
+sort -k1,1nr -k2,2</code></pre>
+<p>在 Git Bash 或 Bash 中執行，管線從標準輸入讀文字；也可在第一個 tr 後加 <code>&lt; words.txt</code> 讀檔。LC_ALL=C 讓這個 ASCII 範例按固定的字元順序處理。末段先依第 1 欄數字遞減，再用第 2 欄單字決定同次數順序。</p>
+<table><caption>資料一路換形狀</caption><thead><tr><th scope="col">階段</th><th scope="col">結果</th></tr></thead><tbody><tr><td>切詞與小寫</td><td>tea、coffee、tea、tea，各占一行</td></tr><tr><td>sort</td><td>coffee、tea、tea、tea</td></tr><tr><td>uniq -c</td><td>1 coffee；3 tea</td></tr><tr><td>依次數排序</td><td>3 tea；1 coffee</td></tr></tbody></table>
+<p>uniq 只合併相鄰的相同行。若把 sort 拿掉，第一次 tea 和後面的 tea 中間隔了 coffee，就會落在不同群組。以 w 個詞估算，排序通常花 O(w log w) 比較，其他階段線性掃描；大檔案的 sort 可以用外部排序處理記憶體放不下的內容。</p>
+<div class="check-yourself"><p>輸入「red blue RED blue green」，最後順序是什麼？如果直接 sort -r，次數 9 與 10 會怎麼排？</p><details><summary>看推理</summary><p>blue 2、red 2、green 1；同次數依單字遞增。一般字串逆序會把開頭是 9 的行排在 10 前面，數字排序 -n 讓 10 正確地大於 9。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://www.gnu.org/software/coreutils/manual/html_node/uniq-invocation.html" target="_blank" rel="noopener">GNU Coreutils：uniq 的相鄰群組與計數</a></p>
+<p class="unit-sources">延伸閱讀：<a href="https://www.gnu.org/software/coreutils/manual/html_node/sort-invocation.html" target="_blank" rel="noopener">GNU Coreutils：sort 的欄位與數字排序</a></p></section><section class="lesson-unit" data-lesson="c23-concurrency"><h3 id="c23-concurrency" data-syllabus="Concurrency locks condition variable interleaving">兩個人加一，怎麼只多一？</h3><p class="lesson-question">共用計數器從 0 開始，A、B 都要加一。把動作拆成「讀取」與「寫回讀值 + 1」：A 讀 0、B 讀 0、A 寫 1、B 寫 1，最後只有 1。問題出在兩次操作交錯時，各自拿著過期的讀值。</p>
+<div class="topic-lab" data-model="thread-interleaving"></div>
+<table><caption>ABAB：每位工作者各執行讀取、寫回</caption><thead><tr><th scope="col">步驟</th><th scope="col">動作</th><th scope="col">A 暫存</th><th scope="col">B 暫存</th><th scope="col">共享 value</th></tr></thead><tbody><tr><td>1</td><td>A 讀取</td><td>0</td><td>—</td><td>0</td></tr><tr><td>2</td><td>B 讀取</td><td>0</td><td>0</td><td>0</td></tr><tr><td>3</td><td>A 寫回</td><td>0</td><td>0</td><td>1</td></tr><tr><td>4</td><td>B 寫回</td><td>0</td><td>0</td><td>1</td></tr></tbody></table>
+<p>鎖包住完整的讀取、修改、寫回，持鎖者完成後才讓下一位進入。所有會改這個共享值的路徑都使用同一把鎖，兩次 increment 就依序發生，得到 2。</p>
+<pre><code class="language-python">from threading import Lock
+
+class LockedCounter:
+    def __init__(self):
+        self.value = 0
+        self.lock = Lock()
+
+    def increment(self):
+        with self.lock:
+            self.value += 1</code></pre>
+<p>需要等資料時，條件變數讓執行緒交出鎖並休眠。下面的有界信箱最多放 capacity 筆：生產者等空位，消費者等資料。wait_for 在醒來後重新檢查條件，符合時才繼續；notify_all 喚醒等待者，持鎖者離開 with 後，其他人才能重新取得鎖。</p>
+<details><summary>展開可執行的生產者／消費者信箱</summary><pre><code class="language-python">from collections import deque
+from threading import Condition
+
+class BoundedMailbox:
+    def __init__(self, capacity):
+        if capacity &lt; 1:
+            raise ValueError(&quot;capacity 至少為 1&quot;)
+        self.capacity = capacity
+        self.items = deque()
+        self.changed = Condition()
+
+    def put(self, value):
+        with self.changed:
+            self.changed.wait_for(lambda: len(self.items) &lt; self.capacity)
+            self.items.append(value)
+            self.changed.notify_all()
+
+    def get(self):
+        with self.changed:
+            self.changed.wait_for(lambda: bool(self.items))
+            value = self.items.popleft()
+            self.changed.notify_all()
+            return value</code></pre><p>put 與 get 的佇列操作各是 O(1)，容量 c 使用 O(c) 空間；等待時間由其他執行緒何時提供資料或空位決定。範例以 None 作結束訊號，消費者讀到 None 後離開迴圈。</p></details>
+<p>下方的圖解把排程順序固定下來，方便你每次重播都能看清交錯是怎麼發生的；把鎖打開之後，被擋住的工作者就會等鎖釋放再重試。範例測試檔裡也真的開了多條 Thread，直接檢查計數器跟信箱最後的結果。</p>
+<div class="check-yourself"><p>鎖只包住寫回，讀取放在鎖外，ABAB 的結果會變成多少？把臨界區畫出來。</p><details><summary>看推理</summary><p>仍可能是 1。兩人都先讀到 0，即使兩次寫回互斥，也都寫入 1。臨界區應從讀取共享值開始，一直包到修改後的值寫回。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://docs.python.org/3/library/threading.html#lock-objects" target="_blank" rel="noopener">Python：Lock</a></p>
+<p class="unit-sources">延伸閱讀：<a href="https://docs.python.org/3/library/threading.html#condition-objects" target="_blank" rel="noopener">Python：Condition 與 wait_for</a></p></section><section class="lesson-unit" data-lesson="c23-interactive"><h3 id="c23-interactive" data-syllabus="Interactive oracle query budget binary search">用有限次提問找出隱藏數字</h3><p class="lesson-question">評測程式藏了一個 1 到 n 之間的整數。你每次猜 middle，它只回覆「答案更小、相同、更大」。n=100 時，最多 7 次提問就能找到答案。</p>
+<div class="topic-lab" data-model="oracle-search"></div>
+<p>這一類 Interactive 題目透過問答取得資訊。把所有仍可能的答案保存為閉區間 [low, high]，詢問中點。回覆更大就把 low 改成 middle+1；更小就把 high 改成 middle−1；相同就結束。每次至少排除中點以及一側候選。</p>
+<pre><code class="language-python">def query_secret(n, query):
+    if n &lt; 1:
+        raise ValueError(&quot;n 至少為 1&quot;)
+    low, high = 1, n
+    while low &lt;= high:
+        middle = (low + high) // 2
+        answer = query(middle)
+        if answer == 0:
+            return middle
+        if answer &gt; 0:
+            low = middle + 1
+        else:
+            high = middle - 1
+    raise ValueError(&quot;回覆與候選區間矛盾&quot;)</code></pre>
+<table><caption>n=20，隱藏答案 14；正值表示答案比猜測大</caption><thead><tr><th scope="col">候選區間</th><th scope="col">猜測</th><th scope="col">回覆</th><th scope="col">下一個區間</th></tr></thead><tbody><tr><td>[1,20]</td><td>10</td><td>+1</td><td>[11,20]</td></tr><tr><td>[11,20]</td><td>15</td><td>−1</td><td>[11,14]</td></tr><tr><td>[11,14]</td><td>12</td><td>+1</td><td>[13,14]</td></tr><tr><td>[13,14]</td><td>13</td><td>+1</td><td>[14,14]</td></tr><tr><td>[14,14]</td><td>14</td><td>0</td><td>完成</td></tr></tbody></table>
+<p>最壞提問數是 ⌊log₂ n⌋+1，也就是 Python 的 <code>n.bit_length()</code>，時間 O(log n)、額外空間 O(1)。每題的 oracle 格式由題面定義，寫解法時把它隔離成 query 函式，搜尋邏輯就能用本機的假評測程式測試所有隱藏答案。</p>
+<p>走標準輸入／輸出的題目，每次輸出提問後要 flush，評測端收到問題才會回覆。例如題面若規定用「? 數字」提問，可寫 <code>print("?", middle, flush=True)</code>，再讀一行回應；完成時依題面輸出答案標記。診斷訊息放到 stderr，問答通道保留協定要求的內容。</p>
+<div class="check-yourself"><p>n=1 時需要幾次提問？回覆「更大」後，為什麼用 middle+1，不能留 middle？</p><details><summary>看推理</summary><p>本範例提問一次確認唯一候選。更大的回覆已排除 middle，下一段從 middle+1 開始才會縮小區間；若 low=middle，剩兩個候選時可能反覆詢問同一個數字。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://docs.python.org/3/library/functions.html#print" target="_blank" rel="noopener">Python：print 的 flush 參數</a></p>
+<p class="unit-sources">延伸閱讀：<a href="https://leetcode.com/problems/guess-number-higher-or-lower/" target="_blank" rel="noopener">LeetCode：Guess Number Higher or Lower 的 oracle 定義</a></p></section></article>

@@ -1,0 +1,168 @@
+<article id="chapter-18" data-title="區間更新與有序查詢"><h2>18 · 區間更新與有序查詢</h2><p class="chapter-intro">資料三不五時就會改動，同時又一直有人來查一段區間的總和或最小值，每次重掃肯定來不及。這章把部分結果先存進樹和陣列裡，讓修改跟查詢都只走少數幾個節點。</p><section class="lesson-unit" data-lesson="c18-segment-tree"><h3 id="c18-segment-tree">每天都在修改的數列，怎麼快速查一段總和</h3><p class="lesson-question">六間店的今日訂單數是 [2,1,5,3,4,6]。第 2 間又收到訂單，要改成 9；同時有人一直問「第 1 到第 4 間合計多少？」把一個節點交給一段區間，父節點保存兩個孩子的總和，查詢就能一次收下一整段。</p>
+<p>Segment Tree（線段樹）把位置範圍對半拆到單一元素。底層補到 2 的次方，補出的值放 0。修改索引 2 時，沿葉子到根重算；其餘子樹的數字都還正確。整棵樹有 O(n) 個節點，底部往上建樹只算每個父節點一次，建置 O(n)。</p>
+<p>查詢使用半開區間 [left,right)。左端若是右孩子，左兄弟落在範圍外，就收下左端並往右一格；右端若是右孩子，退一格收下它的左兄弟。剩餘範圍再一起升一層。每層最多收兩個節點，查詢與單點修改都是 O(log n)，儲存 O(n)。</p><figure><svg viewBox="0 0 720 300" role="img" aria-labelledby="c18-segment-figure"><title id="c18-segment-figure">線段樹把四個值分成兩半，查詢中間兩格收下值一與五</title><rect width="720" height="300" rx="12" fill="#fffaf4"/><g font-family="sans-serif" font-size="17" fill="#27362e"><line x1="360" y1="50" x2="190" y2="125" stroke="#84918c" stroke-width="2"/><line x1="360" y1="50" x2="530" y2="125" stroke="#84918c" stroke-width="2"/><line x1="190" y1="125" x2="105" y2="215" stroke="#84918c" stroke-width="2"/><line x1="190" y1="125" x2="275" y2="215" stroke="#84918c" stroke-width="2"/><line x1="530" y1="125" x2="445" y2="215" stroke="#84918c" stroke-width="2"/><line x1="530" y1="125" x2="615" y2="215" stroke="#84918c" stroke-width="2"/><circle cx="360" cy="50" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="360" y="56" text-anchor="middle">11</text><circle cx="190" cy="125" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="190" y="131" text-anchor="middle">3</text><circle cx="530" cy="125" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="530" y="131" text-anchor="middle">8</text><circle cx="105" cy="215" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="105" y="221" text-anchor="middle">2</text><circle cx="275" cy="215" r="25" fill="#d5e9e1" stroke="#53675d" stroke-width="2"/><text x="275" y="221" text-anchor="middle">1</text><circle cx="445" cy="215" r="25" fill="#d5e9e1" stroke="#53675d" stroke-width="2"/><text x="445" y="221" text-anchor="middle">5</text><circle cx="615" cy="215" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="615" y="221" text-anchor="middle">3</text><g text-anchor="middle" font-size="15"><text x="360" y="91">[0,4)</text><text x="190" y="164">[0,2)</text><text x="530" y="164">[2,4)</text><text x="105" y="266">[0,1)</text><text x="275" y="266">[1,2)</text><text x="445" y="266">[2,3)</text><text x="615" y="266">[3,4)</text></g></g></svg><figcaption>查 [1,3) 時，兩側父節點都跨出範圍；只收索引 1 與 2 的葉子，答案是 1+5=6。</figcaption></figure><table><caption>同一段範圍，修改前後只差一條祖先路徑</caption><thead><tr><th scope="col">動作</th><th scope="col">受影響的區塊</th><th scope="col">答案</th></tr></thead><tbody><tr><td>查 [1,5)</td><td>[1,2)、[2,4)、[4,5)</td><td>1+8+4=13</td></tr><tr><td>索引 2 改成 9</td><td>包含索引 2 的葉子與祖先</td><td>整段和從 21 變 25</td></tr><tr><td>再查 [1,5)</td><td>同樣三個區塊</td><td>1+12+4=17</td></tr><tr><td>查 [3,3)</td><td>沒有元素</td><td>0</td></tr></tbody></table><pre><code class="language-python">class SegmentTree:
+    def __init__(self, values):
+        self.n = len(values)
+        self.size = 1
+        while self.size &lt; self.n:
+            self.size *= 2
+        self.tree = [0] * (2 * self.size)
+        self.tree[self.size:self.size + self.n] = values
+        for p in range(self.size - 1, 0, -1):
+            self.tree[p] = self.tree[2 * p] + self.tree[2 * p + 1]
+
+    def assign(self, index, value):
+        if not 0 &lt;= index &lt; self.n:
+            raise IndexError(index)
+        p = self.size + index
+        self.tree[p] = value
+        while p &gt; 1:
+            p //= 2
+            self.tree[p] = self.tree[2 * p] + self.tree[2 * p + 1]
+
+    def sum(self, left, right):
+        if not 0 &lt;= left &lt;= right &lt;= self.n:
+            raise IndexError((left, right))
+        left += self.size
+        right += self.size
+        answer = 0
+        while left &lt; right:
+            if left &amp; 1:
+                answer += self.tree[left]
+                left += 1
+            if right &amp; 1:
+                right -= 1
+                answer += self.tree[right]
+            left //= 2
+            right //= 2
+        return answer</code></pre><p>要查最小值時，把合併改成 min，空區塊的單位元素換成 ∞；最大值用 max 與 −∞。合併要有結合律。若保存字串拼接等有順序的結果，查詢分成左累積與右累積，右側新區塊放到右累積的前面，再依順序合併。</p>
+<p>遇到「整段加值、整段查總和」，可以在完整命中的節點保存 lazy 增量，該節點總和增加「區間長度 × 增量」；下探孩子時再推送。判斷是否需要 lazy，要看更新是否每次跨很多葉子。</p><div class="check-yourself"><p>把索引 0 改成 −2 後，查 [0,0) 與 [0,1) 各是多少？空區間會走進查詢迴圈嗎？</p><details><summary>看推理</summary><p>答案分別是 0 與 −2。空區間左右邊界相同，while left &lt; right 一開始就結束，保留加總的單位元素 0。</p></details></div><p class="unit-sources">延伸閱讀：<a href="https://www.cs.cmu.edu/~15451-s21/lectures/lec20b-powerful-arrays.pdf" target="_blank" rel="noopener">CMU：Segment Trees 與 Fenwick Trees</a></p><div class="topic-lab" data-model="segment-tree"></div></section><section class="lesson-unit" data-lesson="c18-fenwick"><h3 id="c18-fenwick">清掉最低位的 1，就走到下一塊前綴</h3><p class="lesson-question">商品庫存一直增減，查詢只需要「前幾項合計」。Binary Indexed Tree，也叫 Fenwick Tree，把幾段大小為 2 的次方的區塊藏進一個陣列，靠索引位元找下一站。</p>
+<p>內部第 i 格涵蓋原數列 [i−lowbit(i),i)，其中 lowbit(i)=i &amp; −i。索引 6 的二進位是 110，最低位的 1 代表 2，所以 BIT[6] 保存 [4,6)。讀前 7 項時，索引走 7→6→4→0，收下長度 1、2、4 的三塊。</p><figure><svg viewBox="0 0 720 300" role="img" aria-labelledby="c18-fenwick-figure"><title id="c18-fenwick-figure">Fenwick 索引一到八分別涵蓋的區塊，前七項由四、六、七三格組成</title><rect width="720" height="300" rx="12" fill="#fffaf4"/><g font-family="sans-serif" font-size="17" fill="#27362e"><text x="12" y="45">BIT[1]</text><rect x="125" y="28" width="62" height="23" rx="4" fill="#efddce" stroke="#7b8b81"/><text x="12" y="74">BIT[2]</text><rect x="125" y="57" width="124" height="23" rx="4" fill="#efddce" stroke="#7b8b81"/><text x="12" y="103">BIT[3]</text><rect x="249" y="86" width="62" height="23" rx="4" fill="#efddce" stroke="#7b8b81"/><text x="12" y="132">BIT[4]</text><rect x="125" y="115" width="248" height="23" rx="4" fill="#c6e1d7" stroke="#7b8b81"/><text x="12" y="161">BIT[5]</text><rect x="373" y="144" width="62" height="23" rx="4" fill="#efddce" stroke="#7b8b81"/><text x="12" y="190">BIT[6]</text><rect x="373" y="173" width="124" height="23" rx="4" fill="#c6e1d7" stroke="#7b8b81"/><text x="12" y="219">BIT[7]</text><rect x="497" y="202" width="62" height="23" rx="4" fill="#c6e1d7" stroke="#7b8b81"/><text x="12" y="248">BIT[8]</text><rect x="125" y="231" width="496" height="23" rx="4" fill="#efddce" stroke="#7b8b81"/><text x="125" y="285">前 7 項：[0,4) + [4,6) + [6,7)</text></g></svg><figcaption>BIT[7]、BIT[6]、BIT[4] 三塊首尾相接。減掉 lowbit，剛好退到尚未計入的前綴右端。</figcaption></figure><p>增加原索引 2 的值時，從內部索引 3 開始，路徑是 3→4→8。每次加 lowbit，跳到下一個包含這個位置的大區塊。查詢則每次減 lowbit；兩種操作都只需 O(log n)。下列建樹把每格累積值送到父區塊，整體 O(n)，儲存 n+1 格。</p><table><caption>介面用 0 起算，只有內部迴圈換成 1 起算</caption><thead><tr><th scope="col">需求</th><th scope="col">呼叫</th><th scope="col">換算</th></tr></thead><tbody><tr><td>前五項總和</td><td>prefix(5)</td><td>原索引 0…4</td></tr><tr><td>索引 2 加四</td><td>add(2,4)</td><td>內部從 3 開始</td></tr><tr><td>查 [1,5)</td><td>sum(1,5)</td><td>prefix(5) − prefix(1)</td></tr><tr><td>索引 2 改成九</td><td>add(2,9−舊值)</td><td>更新採增量</td></tr></tbody></table><pre><code class="language-python">class Fenwick:
+    def __init__(self, values):
+        self.n = len(values)
+        self.bit = [0] + list(values)
+        for i in range(1, self.n + 1):
+            parent = i + (i &amp; -i)
+            if parent &lt;= self.n:
+                self.bit[parent] += self.bit[i]
+
+    def add(self, index, delta):
+        if not 0 &lt;= index &lt; self.n:
+            raise IndexError(index)
+        i = index + 1
+        while i &lt;= self.n:
+            self.bit[i] += delta
+            i += i &amp; -i
+
+    def prefix(self, end):
+        if not 0 &lt;= end &lt;= self.n:
+            raise IndexError(end)
+        answer = 0
+        while end:
+            answer += self.bit[end]
+            end -= end &amp; -end
+        return answer
+
+    def sum(self, left, right):
+        if not 0 &lt;= left &lt;= right &lt;= self.n:
+            raise IndexError((left, right))
+        return self.prefix(right) - self.prefix(left)</code></pre><p>從兩個前綴相減能得到任意區間的和，也能處理次數。一般區間最小值需要另一種合併方式，這時可直接用上一節的 Segment Tree。若值域巨大、實際只有少數值，先把值排序成名次，再用 Fenwick 保存各名次的出現次數。</p><div class="check-yourself"><p>BIT[12] 涵蓋哪一段原數列？prefix(13) 會讀哪些內部索引？</p><details><summary>看推理</summary><p>12 的二進位是 1100，lowbit 為 4，因此涵蓋 [8,12)。prefix(13) 走 13→12→8→0，三塊長度分別是 1、4、8。</p></details></div><p class="unit-sources">延伸閱讀：<a href="https://www.cs.cmu.edu/~15451-s21/lectures/lec20b-powerful-arrays.pdf" target="_blank" rel="noopener">CMU：Segment Trees 與 Fenwick Trees</a></p><div class="topic-lab" data-model="fenwick-tree"></div></section><section class="lesson-unit" data-lesson="c18-ordered-set"><h3 id="c18-ordered-set">預約時間一直插入，還要立即找下一個時段</h3><p class="lesson-question">已預約 10、20、30、40 分，你想找第一個不早於 21 分的時段，答案是 30。Ordered Set（有序集合）讓每個鍵只出現一次，並支援按大小找前後鄰居。資料持續增刪時，用平衡搜尋樹維持這個順序。</p>
+<p>lower_bound(x) 從根出發。眼前的鍵至少為 x，就先存成候選，再往左找更小的；眼前的鍵小於 x，就往右。每走一步，都排除一整棵不會改善答案的子樹。插入相同鍵時保留原節點；刪除缺席的鍵時集合維持原樣。</p>
+<p>普通 BST 的成本是樹高 h。AVL 每個節點保存高度，要求左右高度差至多 1。這個局部條件使高度保持 O(log n)：高度每多兩層，最少節點數至少翻倍。插入、刪除與 lower_bound 因而都有 O(log n) 最壞時間，整棵樹 O(n) 空間。</p><figure><svg viewBox="0 0 720 300" role="img" aria-labelledby="c18-avl-figure"><title id="c18-avl-figure">插入三十十與二十造成左右折彎，兩次旋轉後二十成為根</title><rect width="720" height="300" rx="12" fill="#fffaf4"/><g font-family="sans-serif" font-size="17" fill="#27362e"><line x1="150" y1="60" x2="85" y2="135" stroke="#84918c" stroke-width="2"/><line x1="85" y1="135" x2="120" y2="215" stroke="#84918c" stroke-width="2"/><line x1="505" y1="125" x2="440" y2="215" stroke="#84918c" stroke-width="2"/><line x1="505" y1="125" x2="570" y2="215" stroke="#84918c" stroke-width="2"/><circle cx="150" cy="60" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="150" y="66" text-anchor="middle">30</text><circle cx="85" cy="135" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="85" y="141" text-anchor="middle">10</text><circle cx="120" cy="215" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="120" y="221" text-anchor="middle">20</text><circle cx="505" cy="125" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="505" y="131" text-anchor="middle">20</text><circle cx="440" cy="215" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="440" y="221" text-anchor="middle">10</text><circle cx="570" cy="215" r="25" fill="#f4e5d9" stroke="#53675d" stroke-width="2"/><text x="570" y="221" text-anchor="middle">30</text><text x="285" y="125" text-anchor="middle">左旋 10</text><text x="285" y="157" text-anchor="middle">再右旋 30</text><text x="360" y="285" text-anchor="middle">兩邊中序走訪都是 10 → 20 → 30</text></g></svg><figcaption>30→10→20 是折彎路徑，先把 10 左旋，轉直後再把 30 右旋。鍵的排序保持不變，搜尋仍可沿大小方向走。</figcaption></figure><p>插入完成後，沿回程更新高度。偏左且左孩子偏右時先左旋孩子，再右旋根；其他方向對稱。刪除兩個孩子都在的節點時，以右子樹最小鍵補位，再刪掉那個後繼節點。高度變動可能一路傳到根，回程的每層都檢查平衡。</p><pre><code class="language-python">class OrderedSet:
+    def __init__(self):
+        self.root = None
+
+    def add(self, key):
+        def insert(node):
+            if node is None:
+                return AVLNode(key)
+            if key &lt; node.key:
+                node.left = insert(node.left)
+            elif key &gt; node.key:
+                node.right = insert(node.right)
+            return balance(node)
+        self.root = insert(self.root)
+
+    def discard(self, key):
+        def remove(node, value):
+            if node is None:
+                return None
+            if value &lt; node.key:
+                node.left = remove(node.left, value)
+            elif value &gt; node.key:
+                node.right = remove(node.right, value)
+            elif node.left is None:
+                return node.right
+            elif node.right is None:
+                return node.left
+            else:
+                successor = node.right
+                while successor.left:
+                    successor = successor.left
+                node.key = successor.key
+                node.right = remove(node.right, successor.key)
+            return balance(node)
+        self.root = remove(self.root, key)
+
+    def lower_bound(self, key):
+        node, answer = self.root, None
+        while node:
+            if node.key &gt;= key:
+                answer, node = node.key, node.left
+            else:
+                node = node.right
+        return answer
+
+    def values(self):
+        def walk(node):
+            if node:
+                yield from walk(node.left)
+                yield node.key
+                yield from walk(node.right)
+        return list(walk(self.root))</code></pre><details><summary>展開節點、旋轉與平衡的完整實作</summary><pre><code class="language-python">class AVLNode:
+    def __init__(self, key):
+        self.key = key
+        self.left = self.right = None
+        self.height = 1
+
+def height(node):
+    return node.height if node else 0
+
+def refresh(node):
+    node.height = 1 + max(height(node.left), height(node.right))
+    return node
+
+def rotate_right(top):
+    root = top.left
+    top.left = root.right
+    root.right = refresh(top)
+    return refresh(root)
+
+def rotate_left(top):
+    root = top.right
+    top.right = root.left
+    root.left = refresh(top)
+    return refresh(root)
+
+def balance(node):
+    refresh(node)
+    if height(node.left) - height(node.right) &gt; 1:
+        if height(node.left.left) &lt; height(node.left.right):
+            node.left = rotate_left(node.left)
+        return rotate_right(node)
+    if height(node.right) - height(node.left) &gt; 1:
+        if height(node.right.right) &lt; height(node.right.left):
+            node.right = rotate_right(node.right)
+        return rotate_left(node)
+    return node</code></pre></details><table><caption>查詢多且資料很少改，排序陣列通常更短；頻繁增刪時，樹維持較穩定的成本</caption><thead><tr><th scope="col">操作</th><th scope="col">AVL 有序集合</th><th scope="col">已排序 Python list</th></tr></thead><tbody><tr><td>lower_bound</td><td>O(log n)</td><td>bisect_left：O(log n)</td></tr><tr><td>插入或刪除</td><td>O(log n)</td><td>移動後面的元素：O(n)</td></tr><tr><td>完整排序列舉</td><td>O(n)</td><td>O(n)</td></tr><tr><td>同鍵重複</td><td>此實作忽略</td><td>依題目決定是否保留</td></tr></tbody></table><div class="check-yourself"><p>插入 4、4、2、6，移除 4，再問 lower_bound(3) 與 lower_bound(9)，會得到什麼？</p><details><summary>看推理</summary><p>集合是 {2,6}。第一個至少為 3 的鍵是 6；沒有鍵達到 9，回傳 None。兩次插入 4 只建立一個節點。</p></details></div><p class="unit-sources">延伸閱讀：<a href="https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-spring-2020/resources/lecture-7-binary-trees-part-2-avl/" target="_blank" rel="noopener">MIT 6.006：AVL 的旋轉與高度</a></p><div class="topic-lab" data-model="ordered-set"></div></section><section class="lesson-unit" data-lesson="c18-compression"><h3 id="c18-compression">數值到十億，陣列只需要保存它們的名次</h3><p class="lesson-question">依序看到 [1000000000,2,−1000000000,2]，每次都問「前面有幾個值比這次小？」這題只在乎誰大誰小，不在乎數字本身隔多遠。把不同值排序後編成 0、1、2，就能用三格 Fenwick 累積次數。</p>
+<p>座標壓縮先收齊可能出現的鍵，排序去重建立 rank。每個值到來時，查 rank 左邊的前綴，再增加自己的次數。這裡需要嚴格小於，因此查 prefix(rank)；相等的值同名次，留在查詢範圍外。若題目問小於等於，查 prefix(rank+1)。</p><table><caption>相等的兩個 2 共用名次，但出現次數仍累加</caption><thead><tr><th scope="col">新值</th><th scope="col">壓縮名次</th><th scope="col">前面更小的個數</th><th scope="col">加入後名次次數</th></tr></thead><tbody><tr><td>1000000000</td><td>2</td><td>0</td><td>[0,0,1]</td></tr><tr><td>2</td><td>1</td><td>0</td><td>[0,1,1]</td></tr><tr><td>−1000000000</td><td>0</td><td>0</td><td>[1,1,1]</td></tr><tr><td>2</td><td>1</td><td>1</td><td>[1,2,1]</td></tr></tbody></table><pre><code class="language-python">def compressed_counts(values):
+    coordinates = sorted(set(values))
+    rank = {value: i for i, value in enumerate(coordinates)}
+    counts = Fenwick([0] * len(coordinates))
+    answer = []
+    for value in values:
+        i = rank[value]
+        answer.append(counts.prefix(i))
+        counts.add(i, 1)
+    return answer</code></pre><p>排序 O(n log n)，每次查詢與加入 O(log m)，m 是不同值的數量；總時間 O(n log n)，額外空間 O(n)。需要任意新鍵隨時抵達時，上一節的平衡樹可直接接受新鍵；鍵集合預先已知時，壓縮後的陣列實作更直接。</p>
+<p>排名保留大小關係。遇到「覆蓋長度」之類需要距離的問題，要保留原座標，段長使用 coordinates[i+1]−coordinates[i]，再交給樹維護；名次相差 1 的兩段，實際距離可能差很多。</p><div class="check-yourself"><p>把問題換成「前面有幾個值大於這次」，若目前已看過 seen 個值，查詢怎麼改？</p><details><summary>看推理</summary><p>答案是 seen−prefix(rank+1)。這次值的相等者包含在 prefix(rank+1) 裡，一起扣掉後只留下嚴格較大者。</p></details></div><p class="unit-sources">延伸閱讀：<a href="https://www.cs.cmu.edu/~15451-s21/lectures/lec20b-powerful-arrays.pdf" target="_blank" rel="noopener">CMU：Segment Trees 與 Fenwick Trees</a></p></section></article>

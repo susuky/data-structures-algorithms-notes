@@ -1,0 +1,205 @@
+
+/* Interactive algorithm states. */
+.algorithm-lab { container-type: inline-size; min-inline-size: 0; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 16px; margin-block: 1.5rem; padding: clamp(1rem, 3cqi, 1.5rem); }
+.algorithm-lab .lab-heading {display:flex;align-items:baseline;gap:.8rem;flex-wrap:wrap;margin-block-end:1rem}
+.algorithm-lab .lab-heading h4 {font-size:1.15rem;margin:0}
+.algorithm-lab .lab-heading p {margin:.2rem 0;color:var(--muted);font-size:.9rem}
+.algorithm-lab .lab-inputs {display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto;gap:.7rem;align-items:end;margin-block:1rem}
+.algorithm-lab .lab-inputs label {display:grid;gap:.3rem;font-size:.85rem}
+.algorithm-lab :is(input,select,button) {font:inherit}
+.algorithm-lab :is(input:not([type=range]),select) {min-block-size:42px;max-inline-size:100%;inline-size:100%;box-sizing:border-box;border:1px solid var(--muted);background:var(--surface);color:var(--ink);border-radius:7px;padding:.45rem .65rem}
+.algorithm-lab :is(button,select) {min-block-size:42px}
+.algorithm-lab button {border:1px solid var(--line);border-radius:7px;padding:.45rem .8rem;background:var(--surface);color:var(--ink);cursor:pointer}
+.algorithm-lab button:hover {border-color:var(--accent);background:var(--tint)}
+.algorithm-lab button:disabled {opacity:.4;cursor:default}
+.algorithm-lab :is(button,input,select):focus-visible {outline:2px solid var(--accent);outline-offset:3px}
+.algorithm-lab .lab-presets {display:flex;gap:.4rem;flex-wrap:wrap}
+.algorithm-lab .lab-presets button {font-size:.8rem;min-block-size:36px}
+.algorithm-lab .lab-controls {display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;border-block:1px solid var(--line);padding-block:.8rem;margin-block:1rem}
+.algorithm-lab .lab-controls [data-action=next],.algorithm-lab .lab-controls [data-action=play] {background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.algorithm-lab .lab-step {font-variant-numeric:tabular-nums;font-size:.8rem;color:var(--muted);margin-inline:auto .3rem}
+.algorithm-lab .lab-speed-label {display:flex;align-items:center;gap:.4rem;font-size:.8rem;white-space:nowrap}
+.algorithm-lab .lab-speed {inline-size:4.5rem;min-block-size:36px}
+.algorithm-lab .lab-progress {flex-basis:100%;inline-size:100%;accent-color:var(--accent);min-block-size:28px;cursor:pointer}
+.algorithm-lab .lab-stage {display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:1.25rem;align-items:start;min-block-size:240px}
+.algorithm-lab .lab-visual,.algorithm-lab .lab-narrative {min-inline-size:0}
+.algorithm-lab .lab-visual {padding:.5rem;background:var(--paper);border-radius:10px;overflow:auto}
+.algorithm-lab .lab-vars {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem;margin:0 0 .8rem}
+.algorithm-lab .lab-vars>div {padding:.45rem .6rem;border:1px solid var(--line);border-radius:7px;min-inline-size:0}
+.algorithm-lab .lab-vars dt {font-size:.73rem;color:var(--muted)}
+.algorithm-lab .lab-vars dd {font-size:1rem;font-weight:650;margin:0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.algorithm-lab .lab-explanation {margin:.8rem 0;font-size:.95rem;line-height:1.8}
+.algorithm-lab .lab-operation {font: .8rem/1.7 ui-monospace,Consolas,monospace;background:var(--tint);border-inline-start:3px solid var(--accent);padding:.7rem;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink)}
+.algorithm-lab .lab-error {grid-column:1/-1;margin:.2rem 0;color:#a52b23}
+.algorithm-lab .lab-principle {margin-block-start:1rem;padding-block-start:1rem;border-block-start:1px solid var(--line)}
+.algorithm-lab .lab-principle strong {font-size:.8rem;color:var(--muted)}
+.algorithm-lab .lab-principle p {margin:.2rem 0;font-size:.9rem}
+.algorithm-lab .lab-principle small {color:var(--muted)}
+.algorithm-lab .trace-scroll {overflow-x:auto}
+.algorithm-lab .trace-scroll svg {display:block;inline-size:100%;min-inline-size:390px;max-block-size:390px}
+.algorithm-lab svg text {fill:var(--ink);font:16px/1.3 system-ui,sans-serif}
+.algorithm-lab svg .trace-small {font-size:13px}
+.algorithm-lab .trace-edge {fill:none;stroke:var(--muted);stroke-width:2}
+.algorithm-lab .trace-node circle {fill:var(--surface);stroke:var(--muted);stroke-width:1.6}
+.algorithm-lab .trace-node.current circle {fill:var(--tint);stroke:var(--accent);stroke-width:3}
+.algorithm-lab .trace-stream {display:flex;gap:.3rem;flex-wrap:wrap;padding:.6rem}
+.algorithm-lab .trace-stream>span {padding:.2rem .5rem;border:1px solid var(--line);border-radius:5px}
+.algorithm-lab .trace-stream>.current {border:2px solid var(--accent);background:var(--tint);font-weight:700}
+.algorithm-lab .trace-stream>.visited {color:var(--muted)}
+.algorithm-lab .pair-matrix {display:grid;grid-template-columns:repeat(var(--n),minmax(25px,1fr));gap:4px;max-inline-size:360px;margin:1rem auto}
+.algorithm-lab .pair-cell {display:grid;place-items:center;aspect-ratio:1;border:1px solid var(--line);background:var(--surface);font:.7rem ui-monospace,monospace;border-radius:4px}
+.algorithm-lab .pair-cell.unused {opacity:.3}
+.algorithm-lab .pair-cell.visited {background:var(--tint);border-color:var(--accent)}
+.algorithm-lab .pair-cell.current {outline:2px solid var(--accent);font-weight:700}
+.algorithm-lab .map-view {margin-block:1rem}
+.algorithm-lab .map-view>strong {font-size:.8rem}
+.algorithm-lab .map-view>div {display:flex;gap:.4rem;flex-wrap:wrap;margin-block-start:.5rem}
+.algorithm-lab .map-entry {display:flex;gap:.6rem;align-items:center;border:1px solid var(--line);padding:.35rem .65rem;border-radius:6px;background:var(--surface);font: .9rem ui-monospace,monospace}
+.algorithm-lab .stack-state {display:grid;gap:1rem;margin-block:1rem}
+.algorithm-lab .stack-state strong {font-size:.8rem}
+.algorithm-lab .stack-row,.algorithm-lab .answer-row {display:flex;gap:.35rem;flex-wrap:wrap;margin-block-start:.5rem}
+.algorithm-lab .stack-row>span,.algorithm-lab .answer-row>span {display:grid;place-items:center;min-inline-size:40px;padding:.3rem;border:1px solid var(--line);border-radius:5px;background:var(--surface)}
+.algorithm-lab .stack-row small,.algorithm-lab .answer-row small {font-size:.65rem;color:var(--muted)}
+.algorithm-lab .interval-row rect {fill:var(--surface);stroke:var(--muted)}
+.algorithm-lab .interval-row.selected rect {fill:var(--tint);stroke:var(--accent);stroke-width:2}
+.algorithm-lab .interval-row.rejected rect {stroke-dasharray:4 3;opacity:.45}
+.algorithm-lab .union-groups {display:flex;gap:.6rem;flex-wrap:wrap;margin-block:.6rem}
+.algorithm-lab .union-group {border:1px solid var(--line);border-radius:8px;padding:.6rem;background:var(--surface)}
+.algorithm-lab .union-group strong,.algorithm-lab .union-group small {display:block;font-size:.75rem}
+.algorithm-lab .union-group>div {display:flex;gap:.25rem;margin-block:.4rem}
+.algorithm-lab .union-group span {display:grid;place-items:center;border:1px solid var(--line);border-radius:50%;inline-size:30px;block-size:30px}
+.algorithm-lab .union-group span.current {border:2px solid var(--accent);background:var(--tint)}
+.algorithm-lab .parent-table {font-size:.8rem;margin-block:1rem}
+.algorithm-lab .parent-table caption {text-align:start;margin-block-end:.3rem}
+.algorithm-lab .parent-table :is(td,th) {padding:.35rem;text-align:center}
+.algorithm-lab .trace-empty {padding:3rem;text-align:center;font-family:ui-monospace,monospace}
+.algorithm-lab .array-value {color:var(--ink);background:var(--surface)}
+.algorithm-lab .array-item.active .array-value {background:var(--tint);border-color:var(--accent)}
+.algorithm-lab .visual-legend {font-size:.75rem;color:var(--muted);line-height:1.6}
+.lesson-unit>.lesson-question {font-size:1.08rem;line-height:1.85;color:var(--ink);margin-block:1rem}
+.lesson-unit .worked-detail {margin-block:1rem;border-block-start:1px solid var(--line);padding-block-start:.7rem}
+.lesson-unit .worked-detail summary {cursor:pointer;font-size:.9rem;color:var(--accent);padding:.3rem 0}
+.lesson-unit .unit-sources {font-size:.8rem;color:var(--muted);margin-block:1.5rem 0}
+.lesson-unit .unit-sources a {margin-inline-end:.75rem}
+.lesson-unit .check-yourself {margin-block:1.5rem;padding:1rem 1.2rem;background:var(--paper);border-inline-start:3px solid var(--accent);border-radius:0 8px 8px 0}
+.lesson-unit .check-yourself>p {margin:0 0 .5rem}
+.lesson-unit .check-yourself summary {cursor:pointer;color:var(--accent)}
+@container (max-width:700px) {
+ .algorithm-lab .lab-stage {grid-template-columns:minmax(0,1fr)}
+ .algorithm-lab .lab-inputs {grid-template-columns:minmax(0,1fr)}
+ .algorithm-lab .lab-inputs button {justify-self:start}
+ .algorithm-lab .lab-vars {grid-template-columns:repeat(3,minmax(0,1fr))}
+ .algorithm-lab .lab-visual {max-block-size:400px}
+}
+@media (max-width:600px) {
+ .algorithm-lab .lab-stage {grid-template-columns:minmax(0,1fr)}
+ .algorithm-lab .lab-inputs {grid-template-columns:minmax(0,1fr)}
+ .algorithm-lab .lab-controls {gap:.4rem}
+ .algorithm-lab .lab-vars {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (pointer:coarse) { .algorithm-lab :is(button,select,input:not([type=range])) {min-block-size:48px} }
+@media (prefers-reduced-motion:no-preference) { .algorithm-lab .lab-visual>* {animation:trace-in .18s ease-out} @keyframes trace-in {from{opacity:.55;transform:translateY(3px)}to{opacity:1;transform:none}} }
+@media print { .algorithm-lab .lab-presets,.algorithm-lab .lab-controls,.algorithm-lab .lab-inputs {display:none!important} .algorithm-lab .lab-stage {display:block} }
+
+
+/* Lab controls and diagrams share the course workspace palette. */
+.algorithm-lab {
+  border-radius:17px;
+  box-shadow:0 12px 28px #0e292510;
+}
+.algorithm-lab .lab-heading {
+  margin-block-end:.85rem;
+}
+.algorithm-lab .lab-heading h3,.algorithm-lab .lab-heading h4 {
+  font-size:clamp(1.13rem,.95rem + 1.3cqi,1.53rem);
+  font-weight:750;
+  line-height:1.45;
+}
+.algorithm-lab .lab-presets {
+  margin-block-end:.8rem;
+}
+.algorithm-lab .lab-presets button {
+  background:var(--paper);
+  font-weight:600;
+}
+.algorithm-lab .lab-stage {
+  min-block-size:0;
+}
+.algorithm-lab .lab-visual {
+  --paper:var(--course-stage);
+  --surface:#264239;
+  --ink:var(--course-stage-ink);
+  --muted:var(--course-stage-muted);
+  --line:var(--course-stage-line);
+  --accent:var(--course-stage-accent);
+  --accent-deep:var(--course-stage-accent);
+  --tint:#56382f;
+  color:var(--ink);
+  background-color:var(--paper);
+  background-image:radial-gradient(circle,var(--course-stage-grid) 1px,transparent 1px);
+  background-size:18px 18px;
+  padding:.7rem;
+}
+.algorithm-lab .lab-stats,.algorithm-lab .lab-narrative {
+  min-inline-size:0;
+}
+.algorithm-lab .lab-narrative {
+  padding-inline-start:.7rem;
+  border-inline-start:2px solid var(--accent);
+}
+.algorithm-lab .lab-controls {
+  gap:.36rem;
+  padding:.5rem;
+  margin-block:1rem .7rem;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:var(--paper);
+}
+.algorithm-lab .lab-controls [data-action=play] {
+  background:var(--accent-deep);
+  border-color:var(--accent-deep);
+  color:var(--surface);
+}
+.algorithm-lab .lab-controls [data-action=next] {
+  background:var(--tint);
+  border-color:var(--accent);
+  color:var(--accent-deep);
+}
+.algorithm-lab .lab-controls .lab-speed {
+  min-inline-size:3.6rem;
+  padding-inline:.35rem;
+}
+.algorithm-lab .lab-settings {
+  border:0;
+  border-block-start:1px solid var(--line);
+  border-radius:0;
+  padding:0;
+  margin:1rem 0 0;
+  background:transparent;
+}
+.algorithm-lab .lab-settings > summary {
+  display:list-item;
+  min-block-size:40px;
+  padding:.57rem .05rem;
+  font-size:.83rem;
+  font-weight:670;
+  color:var(--accent-deep);
+  cursor:pointer;
+}
+.algorithm-lab .lab-settings .lab-inputs {
+  margin:0;
+  padding:.8rem;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:var(--paper);
+}
+@media(pointer:coarse) {
+  .algorithm-lab .lab-settings > summary {min-block-size:44px;}
+}
+@media print {
+  .algorithm-lab .lab-settings {display:none!important;}
+  .algorithm-lab .lab-visual {
+    --paper:#fff;--surface:#fff;--ink:#000;--muted:#333;--line:#bbb;
+    --accent:#164b38;--accent-deep:#164b38;--tint:#eee;
+  }
+}

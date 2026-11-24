@@ -30,13 +30,20 @@ jobs:
       - name: Run Python tests
         run: |
           python tests/test_build.py
+          python tests/test_category_coverage.py
           for f in tests/examples_*.py; do python "$f"; done
       - name: Run JavaScript tests
         run: |
+          node --check source/reader.js
           node --check source/app.js
           node --check source/labs.js
           node tests/test_labs.js
+          node tests/test_extended_labs.js
+          node --check source/exploration-studio.js
+          node tests/test_exploration_studio.js
           node tests/test_dom.mjs
+          for f in source/models-*.js source/topic-labs.js source/category-ui.js; do node --check "$f"; done
+          for f in tests/test_models_*.js; do node "$f"; done
       - name: Pack current source files
         run: |
           python - <<'PY'

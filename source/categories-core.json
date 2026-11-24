@@ -1,0 +1,219 @@
+[
+  {
+    "name": "Array",
+    "label": "陣列",
+    "group": "陣列與字串",
+    "lesson": "c02-two-pointers",
+    "model": "two-pointers"
+  },
+  {
+    "name": "String",
+    "label": "字串",
+    "group": "陣列與字串",
+    "lesson": "c03-unique-window",
+    "model": "unique-string"
+  },
+  {
+    "name": "Hash Table",
+    "label": "雜湊表",
+    "group": "陣列與字串",
+    "lesson": "c03-complement",
+    "model": "hash-lookup"
+  },
+  {
+    "name": "Dynamic Programming",
+    "label": "動態規劃",
+    "group": "搜尋與狀態",
+    "lesson": "c11-tabulation",
+    "model": "dp"
+  },
+  {
+    "name": "Greedy",
+    "label": "貪婪法",
+    "group": "搜尋與狀態",
+    "lesson": "c08-intervals",
+    "model": "interval-greedy"
+  },
+  {
+    "name": "Binary Search",
+    "label": "二分搜尋",
+    "group": "搜尋與狀態",
+    "lesson": "c09-invariant",
+    "model": "binary-search"
+  },
+  {
+    "name": "Depth-First Search",
+    "label": "深度優先搜尋",
+    "group": "樹與圖",
+    "lesson": "c06-dfs",
+    "model": "tree-dfs"
+  },
+  {
+    "name": "Bit Manipulation",
+    "label": "位元運算",
+    "group": "數學與位元",
+    "lesson": "c13-bits",
+    "model": "bitmask-set"
+  },
+  {
+    "name": "Matrix",
+    "label": "矩陣",
+    "group": "陣列與字串",
+    "lesson": "c11-matrix",
+    "model": "matrix-cost"
+  },
+  {
+    "name": "Prefix Sum",
+    "label": "前綴和",
+    "group": "陣列與字串",
+    "lesson": "c02-prefix",
+    "model": "prefix-sum"
+  },
+  {
+    "name": "Tree",
+    "label": "樹",
+    "group": "樹與圖",
+    "lesson": "c06-dfs",
+    "model": "tree-dfs"
+  },
+  {
+    "name": "Two Pointers",
+    "label": "雙指標",
+    "group": "陣列與字串",
+    "lesson": "c02-two-pointers",
+    "model": "two-pointers"
+  },
+  {
+    "name": "Breadth-First Search",
+    "label": "廣度優先搜尋",
+    "group": "樹與圖",
+    "lesson": "c06-graph-bfs",
+    "model": "bfs"
+  },
+  {
+    "name": "Heap (Priority Queue)",
+    "label": "堆積／優先佇列",
+    "group": "線性與優先結構",
+    "lesson": "c07-topk",
+    "model": "heap-top-k"
+  },
+  {
+    "name": "Counting",
+    "label": "計數",
+    "group": "數學與位元",
+    "lesson": "c03-frequency",
+    "model": "frequency-count"
+  },
+  {
+    "name": "Graph Theory",
+    "label": "圖論",
+    "group": "樹與圖",
+    "lesson": "c06-graph-bfs",
+    "model": "bfs"
+  },
+  {
+    "name": "Stack",
+    "label": "堆疊",
+    "group": "線性與優先結構",
+    "lesson": "c05-monotonic-stack",
+    "model": "monotonic-stack"
+  },
+  {
+    "name": "Binary Tree",
+    "label": "二元樹",
+    "group": "樹與圖",
+    "lesson": "c06-dfs",
+    "model": "tree-dfs"
+  },
+  {
+    "name": "Sliding Window",
+    "label": "滑動視窗",
+    "group": "陣列與字串",
+    "lesson": "c02-fixed-window",
+    "model": "sliding-window"
+  },
+  {
+    "name": "Backtracking",
+    "label": "回溯",
+    "group": "搜尋與狀態",
+    "lesson": "c10-tree",
+    "model": "backtracking"
+  },
+  {
+    "name": "Union-Find",
+    "label": "聯集查找",
+    "group": "樹與圖",
+    "lesson": "c13-union-find",
+    "model": "union-find"
+  },
+  {
+    "name": "Linked List",
+    "label": "鏈結串列",
+    "group": "線性與優先結構",
+    "lesson": "c04-reverse",
+    "model": "linked-reverse"
+  },
+  {
+    "name": "Monotonic Stack",
+    "label": "單調堆疊",
+    "group": "線性與優先結構",
+    "lesson": "c05-monotonic-stack",
+    "model": "monotonic-stack"
+  },
+  {
+    "name": "Trie",
+    "label": "字首樹",
+    "group": "樹與圖",
+    "lesson": "c13-trie",
+    "model": "trie-prefix"
+  },
+  {
+    "name": "Queue",
+    "label": "佇列",
+    "group": "線性與優先結構",
+    "lesson": "c06-graph-bfs",
+    "model": "bfs"
+  },
+  {
+    "name": "Bitmask",
+    "label": "位元遮罩",
+    "group": "數學與位元",
+    "lesson": "c13-bits",
+    "model": "bitmask-set"
+  },
+  {
+    "name": "Recursion",
+    "label": "遞迴",
+    "group": "搜尋與狀態",
+    "lesson": "c01-recursion",
+    "model": "recursion-sum"
+  },
+  {
+    "name": "Memoization",
+    "label": "記憶化",
+    "group": "搜尋與狀態",
+    "lesson": "c11-memo",
+    "model": "memo-coins"
+  },
+  {
+    "name": "Binary Search Tree",
+    "label": "二元搜尋樹",
+    "group": "樹與圖",
+    "lesson": "c06-bst",
+    "model": "bst-search"
+  },
+  {
+    "name": "Topological Sort",
+    "label": "拓樸排序",
+    "group": "樹與圖",
+    "lesson": "c06-topological",
+    "model": "topological-sort"
+  },
+  {
+    "name": "Monotonic Queue",
+    "label": "單調佇列",
+    "group": "線性與優先結構",
+    "lesson": "c05-monotonic-deque",
+    "model": "monotonic-queue"
+  }
+]

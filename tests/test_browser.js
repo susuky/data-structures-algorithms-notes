@@ -1,90 +1,221 @@
 #!/usr/bin/env node
-/* Optional REAL browser regression test. Requires Playwright + an installed Chromium.
- * Run: CHROMIUM_PATH=/usr/bin/chromium node tests/test_browser.js [path/to/index.html]
- * Screenshots are written only when DSA_SCREENSHOTS points at a directory.
+/* Optional real Chromium regression suite. Requires Playwright and Chromium.
+ * CHROMIUM_PATH selects an installed browser; COURSE_SCREENSHOTS saves review images.
  */
 'use strict';
-const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
-const {pathToFileURL} = require('node:url');
-const {chromium} = require('playwright');
-const file = path.resolve(process.argv[2] || path.join(__dirname, '../index.html'));
-const screenshots = process.env.DSA_SCREENSHOTS;
-const checks = [], errors = [], requests = [];
-function pass(label) {checks.push(label);}
-async function run() {
-  const browser = await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH ? {executablePath:process.env.CHROMIUM_PATH} : {})});
-  const context = await browser.newContext({viewport:{width:1440,height:1000}});
-  const page = await context.newPage();
-  page.on('pageerror', e=>errors.push(e.message));
-  page.on('request', r=>{if(/^https?:/.test(r.url()))requests.push(r.url());});
-  const url=pathToFileURL(file).href;
-  if(screenshots)fs.mkdirSync(screenshots,{recursive:true});
-  const shot=async(name)=>{if(screenshots)await page.screenshot({path:path.join(screenshots,name+'.png'),fullPage:false});};
-  await page.goto(url);
-  assert.equal(await page.locator('#chapters>article').count(),13);
-  assert.equal(await page.locator('[data-lab]').count(),6);
-  assert.ok(await page.locator('#course-home').isVisible());
-  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-  await shot('desktop-home');pass('Standalone desktop home, 13 chapters, 6 labs, no page overflow');
-  await page.locator('.hero-actions a').first().click();
-  await page.waitForURL(/#chapter-01$/);
-  assert.ok(await page.locator('#chapter-01').isVisible());
-  await page.locator('#next-chapter').click();await page.waitForURL(/#chapter-02$/);
-  await page.goBack();assert.ok(await page.locator('#chapter-01').isVisible());
-  await page.locator('.skip-link').focus();await page.keyboard.press('Enter');
-  assert.ok(await page.locator('#chapter-01').isVisible());pass('Chapter navigation, browser Back, skip link');
-  await page.locator('#bookmark-button').click();await page.locator('#complete-button').click();await page.reload();
-  assert.equal(await page.locator('#bookmark-button').getAttribute('aria-pressed'),'true');
-  assert.equal(await page.locator('#course-progress-text').innerText(),'1 / 13');
-  await page.locator('#show-bookmarks').click();assert.equal(await page.locator('#bookmark-list a').count(),1);
-  await page.locator('#bookmark-list a').click();assert.ok(await page.locator('#bookmark-dialog').isHidden());pass('Bookmark, completion, reload, and bookmark dialog');
-  await page.keyboard.press('/');await page.locator('#search-input').fill('binary search');
-  assert.ok(await page.locator('.search-result').count()>0);await page.locator('.search-result').first().click();
-  assert.ok(await page.locator('#chapter-09').isVisible());
-  await page.locator('#search-button').click();await page.locator('#search-input').fill('zzzzz找不到987654321');
-  assert.equal(await page.locator('.search-result').count(),0);await page.keyboard.press('Escape');pass('English alias search, result routing, empty state, Escape');
-  await page.locator('#theme-select').selectOption('dark');await page.reload();
-  assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');await shot('desktop-dark-reader');
-  await page.locator('#theme-select').selectOption('light');
-  const topic=await page.locator('#chapter-11 h3').first().getAttribute('id');
-  await page.goto(url+'#'+topic);assert.ok(await page.locator('#chapter-11').isVisible());pass('Theme persistence and direct topic URL');
-  await page.evaluate(()=>window.dispatchEvent(new Event('beforeprint')));
-  assert.equal(await page.locator('#chapters details:not([open])').count(),0);
-  await page.emulateMedia({media:'print'});
-  assert.ok(await page.locator('#chapter-01').isVisible());assert.ok(await page.locator('#chapter-13').isVisible());
-  await page.emulateMedia({media:'screen'});await page.evaluate(()=>window.dispatchEvent(new Event('afterprint')));
-  assert.ok(await page.locator('#chapters details:not([open])').count()>0);pass('Print shows all chapters and answers, then restores disclosures');
-  await page.goto(url+'#algorithm-labs');
-  for(const key of ['two-pointers','sliding-window','binary-search','bfs','backtracking','dp']){
-    const lab=page.locator('#lab-'+key),next=lab.locator('[data-action="next"]');
-    await lab.scrollIntoViewIfNeeded();assert.ok(await lab.locator('[data-action="prev"]').isDisabled());
-    await next.click();assert.equal(await lab.getAttribute('data-step'),'1');
-    await lab.locator('[data-action="prev"]').click();assert.equal(await lab.getAttribute('data-step'),'0');
-    let count=0;while(!await next.isDisabled()&&count++<500)await next.click();
-    assert.ok(count<500);assert.equal(await lab.getAttribute('data-done'),'true');
-    await shot('lab-'+key);await lab.locator('[data-action="reset"]').click();assert.equal(await lab.getAttribute('data-step'),'0');
-    pass(key+': next, previous, termination, reset');
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {pathToFileURL}=require('node:url');
+const {chromium}=require('playwright');
+const file=path.resolve(process.argv[2]||path.join(__dirname,'../index.html'));
+const screenshots=process.env.COURSE_SCREENSHOTS||process.env.DSA_SCREENSHOTS;
+const checks=[],errors=[],requests=[];
+function pass(label){checks.push(label);console.log('PASS '+label);}
+async function run(){
+ const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{})});
+ try{
+ const context=await browser.newContext({viewport:{width:1280,height:900},reducedMotion:'reduce'});
+ const page=await context.newPage();
+ page.setDefaultTimeout(10000);
+ page.on('pageerror',e=>errors.push(e.message));
+ page.on('request',r=>{if(/^https?:/.test(r.url()))requests.push(r.url());});
+ const url=pathToFileURL(file).href;
+ await page.goto(url);
+ const kind=await page.locator('body').getAttribute('data-course');
+ const chapters=await page.locator('#course-meta').evaluate(e=>JSON.parse(e.textContent));
+ const topics=chapters.flatMap(c=>c.topics);
+ const count=kind==='sd'?16:24;
+ const gallery=kind==='sd'?'system-labs':'algorithm-labs';
+ if(screenshots)fs.mkdirSync(screenshots,{recursive:true});
+ const shot=async name=>{if(screenshots)await page.screenshot({path:path.join(screenshots,kind+'-'+name+'.png'),fullPage:false});};
+ const overflow=async label=>assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),label+' document overflow');
+ const waitUnit=id=>page.waitForFunction(id=>{const e=document.getElementById(id);return e&&!e.closest('[hidden]');},id);
+ const visibleUnits=()=>page.locator('#chapters .lesson-unit').evaluateAll(es=>es.filter(e=>!e.closest('[hidden]')).map(e=>e.dataset.lesson));
+ async function go(id){
+  await page.evaluate(id=>{if(location.hash==='#'+id)window.dispatchEvent(new HashChangeEvent('hashchange'));else location.hash=id;},id);
+  await page.waitForFunction(id=>{const e=document.getElementById(id);return e&&!e.closest('[hidden]');},id);
+ }
+ assert.equal(chapters.length,count);
+ assert.equal(await page.locator('#chapters>article').count(),count);
+ assert.equal(await page.locator('#chapters .lesson-unit').count(),topics.length);
+ assert.ok(await page.locator('#course-home').isVisible());
+ await overflow('desktop home');await shot('desktop-home');
+ pass('Standalone home, chapter and unit inventory');
+ await page.locator('.hero-actions a[href="#chapter-01"]').first().click();
+ await page.waitForURL(/#chapter-01$/);await waitUnit(topics[0].id);
+ assert.deepEqual(await visibleUnits(),[topics[0].id]);
+ await page.locator('#next-chapter').click();await page.waitForURL(new RegExp('#'+topics[1].id+'$'));await waitUnit(topics[1].id);
+ assert.deepEqual(await visibleUnits(),[topics[1].id]);
+ await page.goBack();await waitUnit(topics[0].id);assert.deepEqual(await visibleUnits(),[topics[0].id]);
+ await page.locator('button[data-reading-view="chapter"]').click();
+ assert.equal((await visibleUnits()).length,chapters[0].topics.length);
+ assert.equal(await page.locator('#next-chapter').getAttribute('href'),'#chapter-02');
+ await page.locator('button[data-reading-view="unit"]').click();
+ assert.deepEqual(await visibleUnits(),[topics[0].id]);
+ await page.locator('.skip-link').focus();await page.keyboard.press('Enter');
+ assert.ok(await page.locator('#chapter-01').isVisible());
+ pass('Unit next, browser Back, whole chapter toggle, skip link');
+ await page.locator('#bookmark-button').click();await page.locator('#complete-button').click();await page.reload();
+ assert.equal(await page.locator('#bookmark-button').getAttribute('aria-pressed'),'true');
+ assert.equal(await page.locator('#course-progress-text').innerText(),'1 / '+count);
+ await page.locator('#show-bookmarks').click();
+ assert.equal(await page.locator('#bookmark-list a').count(),1);
+ await page.locator('#bookmark-list a').click();assert.ok(await page.locator('#bookmark-dialog').isHidden());
+ pass('Bookmark, chapter completion, reload and bookmark route');
+ await page.keyboard.press('/');await page.locator('#search-input').fill(kind==='dsa'?'binary search':'快取旁路');
+ await page.waitForFunction(()=>document.querySelectorAll('.search-result').length>0);
+ await page.locator('.search-result').first().click();
+ assert.ok(await page.locator('#search-dialog').isHidden());
+ const foundHash=await page.evaluate(()=>location.hash.slice(1));
+ await waitUnit(foundHash);assert.ok(await page.locator('#'+foundHash).isVisible());
+ await page.locator('#search-button').click();await page.locator('#search-input').fill('zzzzz987654321');
+ await page.waitForFunction(()=>document.querySelectorAll('.search-result').length===0);
+ await page.keyboard.press('Escape');
+ pass('Search result opens its unit; empty result and Escape work');
+ await page.locator('#theme-select').selectOption('dark');await page.reload();
+ assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');await shot('dark-reader');
+ await page.locator('#theme-select').selectOption('light');
+ pass('Theme persistence');
+ await go(chapters[2].topics[0].id);
+ await page.locator('button[data-reading-view="chapter"]').click();
+ assert.equal(await page.locator('#prev-chapter').getAttribute('href'),'#chapter-02');
+ assert.equal(await page.locator('#next-chapter').getAttribute('href'),'#chapter-04');
+ await page.locator('button[data-reading-view="unit"]').click();
+ pass('Whole chapter previous and next use chapter identity');
+ await page.locator('button[data-reading-view="chapter"]').click();
+ const scrolledTopic=chapters[2].topics[2].id;
+ await page.locator('#'+scrolledTopic).evaluate(e=>e.scrollIntoView({block:'start'}));
+ // Click the sticky toolbar in place; locator auto-scroll changes the reading position.
+ const modeButton=await page.locator('button[data-reading-view="unit"]').boundingBox();
+ await page.mouse.click(modeButton.x+modeButton.width/2,modeButton.y+modeButton.height/2);await waitUnit(scrolledTopic);
+ assert.deepEqual(await visibleUnits(),[scrolledTopic]);
+ pass('Returning from whole chapter keeps the unit being read');
+ for(const topic of topics){
+  await go(topic.id);
+  assert.deepEqual(await visibleUnits(),[topic.id],topic.id);
+  await overflow(topic.id);
+ }
+ pass('All '+topics.length+' direct unit URLs show exactly one unit without desktop overflow');
+ await page.evaluate(()=>window.dispatchEvent(new Event('beforeprint')));
+ assert.equal(await page.locator('#chapters details:not([open])').count(),0);
+ await page.emulateMedia({media:'print'});
+ assert.ok(await page.locator('#chapter-01').isVisible());
+ assert.ok(await page.locator('#chapter-'+String(count).padStart(2,'0')).isVisible());
+ assert.equal(await page.locator('#chapters .lesson-unit:visible').count(),topics.length);
+ await page.emulateMedia({media:'screen'});await page.evaluate(()=>window.dispatchEvent(new Event('afterprint')));
+ assert.ok(await page.locator('#chapters details:not([open])').count()>0);
+ pass('Print shows every unit and answer, then restores disclosures');
+ await go(gallery);
+ const galleryPanels=await page.locator('#'+gallery+' [data-lab], #'+gallery+' [data-sd-lab]').evaluateAll(es=>es.map(e=>e.id));
+ assert.equal(galleryPanels.length,6);
+ for(const id of galleryPanels){
+  await go(id);
+  assert.equal(await page.locator('#'+gallery+' [data-lab]:visible, #'+gallery+' [data-sd-lab]:visible').count(),1);
+ }
+ const expectedDirectory=kind==='sd'?16:await page.evaluate(()=>new Set([...document.querySelectorAll('#chapters [data-lab], #chapters .topic-lab')].map(e=>e.dataset.lab||e.dataset.model).filter(key=>!['two-pointers','sliding-window','binary-search','bfs','backtracking','dp'].includes(key))).size);
+ assert.equal(await page.locator('.scenario-directory a').count(),expectedDirectory);
+ const directoryTarget=await page.locator('.scenario-directory a').first().getAttribute('href');
+ await page.locator('.scenario-directory a').first().click();await page.waitForURL(new RegExp(directoryTarget+'$'));await waitUnit(directoryTarget.slice(1));
+ assert.ok(await page.locator(directoryTarget).isVisible());
+ pass('Six gallery selections and chapter experiment directory');
+ if(kind==='dsa'){
+  const labs=await page.locator('#chapters [data-lab]').evaluateAll(es=>es.map(e=>({id:e.id,key:e.dataset.lab})));
+  assert.equal(new Set(labs.map(e=>e.key)).size,14);
+  for(const {id,key} of labs){
+   await go(id);const lab=page.locator('#'+id);
+   await lab.locator('[data-action="reset"]').click();
+   assert.equal(await lab.getAttribute('data-step'),'0');
+   await lab.locator('[data-action="next"]').click();assert.equal(await lab.getAttribute('data-step'),'1');
+   await lab.locator('[data-action="prev"]').click();assert.equal(await lab.getAttribute('data-step'),'0');
+   const steps=await lab.evaluate(el=>{const next=el.querySelector('[data-action="next"]');let n=0;while(!next.disabled&&n<500){next.click();n++;}return n;});
+   assert.ok(steps<500,key+' terminates');
+   assert.equal(await lab.getAttribute('data-done'),'true',key);
+   await lab.locator('[data-action="reset"]').click();
+   await overflow(key);
   }
-  await page.locator('#two-pointers-array').fill('9, 1');await page.locator('#lab-two-pointers button[type="submit"]').click();
-  assert.ok(await page.locator('#lab-two-pointers .lab-error').isVisible());
-  await page.locator('#two-pointers-array').fill('1, 9');await page.locator('#lab-two-pointers button[type="submit"]').click();
-  assert.ok(await page.locator('#lab-two-pointers .lab-error').isHidden());
-  await page.locator('#binary-search-array').fill('');await page.locator('#lab-binary-search button[type="submit"]').click();
-  await page.locator('#lab-binary-search [data-action="next"]').click();assert.equal(await page.locator('#lab-binary-search').getAttribute('data-done'),'true');pass('Invalid and valid custom inputs; empty binary search');
-  await page.setViewportSize({width:390,height:844});await page.goto(url);await shot('mobile-home');
-  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-  await page.locator('#menu-button').click();assert.equal(await page.locator('#sidebar').getAttribute('aria-modal'),'true');
-  await page.locator('.chapter-link[href="#chapter-06"]').click();assert.ok(await page.locator('#chapter-06').isVisible());
-  assert.equal(await page.locator('#main-content').evaluate(el=>el.inert),false);
-  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await shot('mobile-reader');
-  await page.goto(url+'#lab-bfs');await shot('mobile-bfs');assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-  pass('390px mobile home, drawer, reader, lab, no document overflow');
-  const nojs=await browser.newContext({javaScriptEnabled:false,viewport:{width:390,height:844}});const staticPage=await nojs.newPage();await staticPage.goto(url);
-  assert.ok(await staticPage.locator('#chapter-01').isVisible());assert.ok(await staticPage.locator('#chapter-13').isVisible());
-  assert.ok(await staticPage.locator('#search-button').isHidden());assert.ok(await staticPage.locator('noscript').first().isVisible());
-  assert.ok(await staticPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));pass('No-JS mode leaves all chapters readable and hides inert controls');
-  assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);pass('No JavaScript exceptions and no HTTP requests');
-  await browser.close();
-  console.log(JSON.stringify({file,verification:'Real Chromium browser',passed:checks.length,checks,errors,requests},null,2));
+  pass('All 14 algorithm views: next, previous, result, reset');
+  await go('lab-two-pointers');
+  const pair=page.locator('#lab-two-pointers');
+  await pair.locator('.lab-settings > summary').click();
+  await pair.locator('input[name="array"]').fill('9, 1');await pair.locator('button[type="submit"]').click();
+  assert.ok(await pair.locator('.lab-error').isVisible());
+  await pair.locator('input[name="array"]').fill('1, 9');await pair.locator('button[type="submit"]').click();
+  assert.ok(await pair.locator('.lab-error').isHidden());
+  await pair.locator('[data-action="play"]').click();
+  await page.waitForFunction(()=>+document.querySelector('#lab-two-pointers').dataset.step>0);
+  await go(topics[0].id);
+  assert.equal(await pair.locator('[data-action="play"]').innerText(),'播放');
+  await go('lab-binary-search');
+  const binary=page.locator('#lab-binary-search');
+  await binary.locator('.lab-settings > summary').click();
+  await binary.locator('input[name="array"]').fill('');await binary.locator('button[type="submit"]').click();
+  await binary.locator('[data-action="next"]').click();assert.equal(await binary.getAttribute('data-done'),'true');
+  pass('Custom input errors, empty input, playback and route pause');
+ }else{
+  for(const id of galleryPanels){
+   await go(id);const lab=page.locator('#'+id);
+   await lab.locator('[data-sd-action="reset"]').click();
+   const initial=await lab.locator('.sd-lab-phase').innerText();
+   await lab.locator('[data-sd-action="next"]').click();
+   assert.notEqual(await lab.locator('.sd-lab-phase').innerText(),initial);
+   await lab.locator('[data-sd-action="prev"]').click();
+   assert.equal(await lab.locator('.sd-lab-phase').innerText(),initial);
+   await lab.locator('[data-sd-action="last"]').click();
+   assert.ok(await lab.locator('[data-sd-action="next"]').isDisabled());
+  }
+  const scenes=await page.locator('[data-sd-scene]').evaluateAll(es=>es.map(e=>({id:e.id,key:e.dataset.sdScene})));
+  assert.equal(scenes.length,16);
+  for(const {id,key} of scenes){
+   await go(id);const scene=page.locator('#'+id);
+   assert.equal(await scene.getAttribute('data-scene-step'),'0');
+   await scene.locator('[data-scene-action="next"]').click();
+   assert.equal(await scene.getAttribute('data-scene-step'),'1');
+   await scene.locator('[data-scene-action="prev"]').click();
+   assert.equal(await scene.getAttribute('data-scene-step'),'0');
+   await scene.locator('.scene-timeline button').last().click();
+   assert.ok(await scene.locator('[data-scene-action="next"]').isDisabled());
+   await scene.locator('[data-scene-action="reset"]').click();
+   await scene.locator('select').selectOption('1');
+   await scene.locator('input[type="range"]').evaluate(e=>{e.value=e.max;e.dispatchEvent(new Event('input',{bubbles:true}));});
+   assert.equal(await scene.getAttribute('data-scene-step'),'0');
+   assert.ok((await scene.locator('.scene-why').innerText()).trim().length>0,key);
+   await overflow(key);
+  }
+  pass('Six original labs and all 16 scenarios: state, back, timeline, reset and parameter controls');
+  const first=page.locator('#'+scenes[0].id);await go(scenes[0].id);
+  await first.locator('[data-scene-action="play"]').click();
+  assert.equal(await first.locator('.scene-why').getAttribute('aria-live'),'off');
+  await page.waitForFunction(id=>+document.getElementById(id).dataset.sceneStep>0,scenes[0].id);
+  await go(topics[1].id);
+  assert.equal(await first.getAttribute('data-playing'),'false');
+  assert.equal(await first.locator('.scene-why').getAttribute('aria-live'),'polite');
+  pass('Scenario playback advances and pauses on unit navigation');
+ }
+ await page.setViewportSize({width:390,height:844});await go('course-home');await overflow('mobile home');await shot('mobile-home');
+ await page.locator('#menu-button').click();assert.equal(await page.locator('#sidebar').getAttribute('aria-modal'),'true');
+ await page.locator('.chapter-link[href="#chapter-06"]').click();await waitUnit(chapters[5].topics[0].id);
+ assert.ok(await page.locator('#chapter-06').isVisible());
+ assert.equal(await page.locator('#main-content').evaluate(e=>e.inert),false);
+ for(const topic of topics){await go(topic.id);await overflow('390px '+topic.id);}
+ pass('390px drawer and all '+topics.length+' units without document overflow');
+ await go(topics[0].id);await shot('mobile-reader');
+ await page.locator('#search-button').click();
+ assert.equal(await page.locator('#search-input').evaluate(e=>e===document.activeElement),true);
+ await page.keyboard.press('Escape');
+ await go(gallery);
+ for(const id of galleryPanels){await go(id);await overflow('390px '+id);}
+ await shot('mobile-lab');
+ pass('390px dialog focus and six gallery labs without overflow');
+ const nojs=await browser.newContext({javaScriptEnabled:false,viewport:{width:390,height:844}});
+ const staticPage=await nojs.newPage();await staticPage.goto(url);
+ assert.ok(await staticPage.locator('#chapter-01').isVisible());
+ assert.ok(await staticPage.locator('#chapter-'+String(count).padStart(2,'0')).isVisible());
+ assert.ok(await staticPage.locator('#search-button').isHidden());
+ assert.ok(await staticPage.locator('noscript').first().isVisible());
+ assert.ok(await staticPage.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ pass('No JavaScript: all chapters readable at 390px');
+ assert.deepEqual(errors,[]);assert.deepEqual(requests,[]);
+ pass('No JavaScript exceptions or external requests');
+ console.log(JSON.stringify({file,course:kind,verification:'Real Chromium',passed:checks.length,units:topics.length,checks,errors,requests},null,2));
+ }finally{await browser.close();}
 }
 run().catch(error=>{console.error(error);process.exitCode=1;});

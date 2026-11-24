@@ -1,0 +1,96 @@
+<article id="chapter-17" data-title="隨機、機率與串流取樣">
+<h2>17 · 隨機、機率與串流取樣</h2>
+<p class="chapter-intro">寫洗牌和抽樣時，直覺寫法常在不知不覺中讓某些排列偏多。這章從每一步的抽籤範圍算起，讓你把「真的公平」講出確切理由。</p>
+<section class="lesson-unit" data-lesson="c17-randomized">
+<h3 id="c17-randomized">洗牌時，尚未決定的位置各有一次公平機會</h3>
+
+<p class="lesson-question">把 A、B、C 三張牌洗亂，要讓 6 種排列各有 1/6 機率。從最後一格開始，均勻抽取尚未確定的任一位置，和最後一格交換。</p>
+<p>長度 n 時，位置 n−1 的牌從 n 張中均勻挑一張，接著位置 n−2 從剩下 n−1 張挑一張。任一指定排列的路徑機率是 1/n×1/(n−1)×⋯×1/2=1/n!。每一輪的抽取範圍都包含目前位置自身，選到自己時直接留在原處。</p>
+<figure><table><thead><tr><th scope="col">待決定位置 i</th><th scope="col">合法 j</th><th scope="col">本次 j</th><th scope="col">交換後</th></tr></thead><tbody><tr><td>2</td><td>0,1,2</td><td>0</td><td>C,B,A</td></tr><tr><td>1</td><td>0,1</td><td>1</td><td>C,B,A</td></tr></tbody></table><figcaption>一條可重播的抽籤路徑：先抽 j=0，再抽 j=1。</figcaption></figure>
+<p>Fisher–Yates 花 O(n) 時間；這份保留輸入的版本用 O(n) 空間，原地洗牌的工作空間為 O(1)。互動讓你填入 [0,1) 的抽籤值，透過 floor(u×(i+1)) 決定 j，方便重播同一路徑。程式使用 randrange 均勻選整數，機率推導採每輪獨立且均勻的抽取。</p>
+<pre><code class="language-python">import random
+
+def fisher_yates(values, rng=None):
+    result = list(values)
+    rng = rng or random.Random()
+    for i in range(len(result) - 1, 0, -1):
+        j = rng.randrange(i + 1)
+        result[i], result[j] = result[j], result[i]
+    return result</code></pre>
+<div class="topic-lab" data-model="fisher-yates"></div>
+<div class="check-yourself"><p>三張牌每一格都和 0…2 的隨機位置交換一次，為什麼很難得到每種排列恰好 1/6？</p><details><summary>看推理</summary><p>三輪各有 3 種選擇，共 27 條等機率路徑。27 無法被 6 整除，各排列收到的路徑數就會不同。Fisher–Yates 的選擇數為 3×2=6，恰好對應 6 種排列。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://docs.python.org/3/library/random.html" target="_blank" rel="noopener">Python．random</a></p>
+</section>
+<section class="lesson-unit" data-lesson="c17-probability">
+<h3 id="c17-probability">平均報酬一樣，波動可以差很多</h3>
+
+<p class="lesson-question">一次抽獎有 1/4 機率損失 3 元、1/2 機率拿回 0 元、1/4 機率得到 5 元。重複很多次時，平均每次的理論報酬是多少？</p>
+<p>期望值 E[X]=Σp(x)x，是按機率加權的平均。這裡 E[X]=−3/4+0+5/4=1/2。變異數 Var(X)=Σp(x)(x−E[X])²，衡量結果離平均值的平方距離；此例為 33/4=8.25。</p>
+<figure><table><thead><tr><th scope="col">結果 x</th><th scope="col">權重</th><th scope="col">p(x)</th><th scope="col">對 E[X] 的貢獻</th></tr></thead><tbody><tr><td>-3</td><td>1</td><td>1/4</td><td>−3/4</td></tr><tr><td>0</td><td>2</td><td>1/2</td><td>0</td></tr><tr><td>5</td><td>1</td><td>1/4</td><td>5/4</td></tr></tbody></table><figcaption>權重先除以總和 4，再各自乘上結果。每次結果可能是 −3、0、5，期望值來自整個分布。</figcaption></figure>
+<p>演算法題常把一個總數拆成指示變數：第 i 件事發生就記 Xᵢ=1，總次數 X=ΣXᵢ，因此 E[X]=ΣP(第 i 件事發生)。這個期望線性性適用於相依事件；若要把各次變異數直接相加，則要處理共變異數，獨立時這些交叉項為 0。</p>
+<p>下方用 Fraction 精確計算有限離散分布的平均與變異數，掃描 d 種結果花 O(d) 次有理數操作。觀察樣本資料時，母體變異數以 n 除、估計母體變異數的樣本公式以 n−1 除，依問題要描述整批資料或估計來源分布選用。</p>
+<pre><code class="language-python">from fractions import Fraction
+
+def weighted_moments(outcomes, weights):
+    if len(outcomes) != len(weights) or not outcomes:
+        raise ValueError(&#x27;one weight per outcome required&#x27;)
+    if any(weight &lt; 0 for weight in weights) or sum(weights) == 0:
+        raise ValueError(&#x27;nonnegative weights with positive total required&#x27;)
+    total = sum(weights)
+    mean = sum(Fraction(weight, total) * value for value, weight in zip(outcomes, weights))
+    variance = sum(Fraction(weight, total) * (value - mean) ** 2 for value, weight in zip(outcomes, weights))
+    return mean, variance</code></pre>
+<div class="topic-lab" data-model="weighted-moments"></div>
+<div class="check-yourself"><p>若每天固定得到 0.5 元，它與本例的期望、變異數各有什麼差別？</p><details><summary>看推理</summary><p>期望同為 0.5。固定報酬的變異數是 0，本例是 8.25；兩者的平均相同，單次結果的波動不同。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://ocw.mit.edu/courses/res-6-012-introduction-to-probability-spring-2018/pages/part-i-the-fundamentals/" target="_blank" rel="noopener">MIT．Introduction to Probability</a> · <a href="https://docs.python.org/3/library/statistics.html" target="_blank" rel="noopener">Python．statistics</a></p>
+</section>
+<section class="lesson-unit" data-lesson="c17-reservoir">
+<h3 id="c17-reservoir">串流多長還不知道，手上先保留 k 筆</h3>
+
+<p class="lesson-question">紀錄一筆接一筆抵達，總數還不知道，只能保留 k 筆，卻希望每一筆都有相同的入選機率。水塘取樣在串流結束時留下均勻的樣本。</p>
+<p>前 k 筆先放進 sample。之後每輪使用獨立的新抽籤：第 i 筆抵達時，以 1 起算的 i 均勻抽整數 j∈[0,i−1]；j&lt;k 就取代 sample[j]，否則略過。新資料進入水塘的機率為 k/i。</p>
+<figure><table><thead><tr><th scope="col">抵達資料</th><th scope="col">抽取範圍</th><th scope="col">j</th><th scope="col">sample</th></tr></thead><tbody><tr><td>A</td><td>直接加入</td><td>—</td><td>[A]</td></tr><tr><td>B</td><td>直接加入</td><td>—</td><td>[A,B]</td></tr><tr><td>C</td><td>0…2</td><td>1</td><td>[A,C]</td></tr><tr><td>D</td><td>0…3</td><td>3</td><td>[A,C]</td></tr><tr><td>E</td><td>0…4</td><td>0</td><td>[E,C]</td></tr></tbody></table><figcaption>k=2，指定抽籤序列 j=1、3、0，沿途只保留兩筆。</figcaption></figure>
+<p>舊資料在第 i−1 步的入選率為 k/(i−1)，這一步存活率為 1−1/i，因此兩者相乘是 k/i，與新資料一致。Algorithm R 也讓每個 k 元素子集合等機率。時間 O(n)、空間 O(k)；n&lt;k 時回傳全部資料，k=0 回傳空樣本。</p>
+<p>把 k=2 的第五筆 E 加進來，可以直接核對整組樣本的機率。看完 A、B、C、D 時六種二人組各占 1/6；新一輪的五種抽籤結果各占 1/5。</p>
+<figure><table><thead><tr><th scope="col">想留下的整組</th><th scope="col">第五筆抵達前的路徑</th><th scope="col">最後機率</th></tr></thead><tbody><tr><td>{A,B}</td><td>原本就是 {A,B}，E 抽到水塘外的 2、3、4</td><td>(1/6)×(3/5)=1/10</td></tr><tr><td>{A,E}</td><td>原本是 {A,B}、{A,C} 或 {A,D}，E 恰好替換 A 以外那筆</td><td>3×(1/6)×(1/5)=1/10</td></tr></tbody></table><figcaption>含新資料與不含新資料的兩類，都得到 1/10；其餘二人組可用同樣的對稱關係計算。</figcaption></figure>
+<pre><code class="language-python">import random
+
+def reservoir_sample(stream, k, rng=None):
+    if k &lt; 0:
+        raise ValueError(&#x27;k must be nonnegative&#x27;)
+    rng = rng or random.Random()
+    sample = []
+    for i, value in enumerate(stream):
+        if i &lt; k:
+            sample.append(value)
+        elif k:
+            j = rng.randrange(i + 1)
+            if j &lt; k:
+                sample[j] = value
+    return sample</code></pre>
+<div class="topic-lab" data-model="reservoir-sampling"></div>
+<div class="check-yourself"><p>k=1，前四筆已看完時 A 留下的機率是 1/4。第五筆到來後，A 的機率是多少？</p><details><summary>看推理</summary><p>A 要先留到第四步，再避開第五步的替換，因此是 (1/4)×(4/5)=1/5。第五筆直接入選的機率也是 1/5。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://ittc.ku.edu/~jsv/Papers/Vit85.Reservoir.pdf" target="_blank" rel="noopener">Jeffrey S. Vitter．Random Sampling with a Reservoir</a></p>
+</section>
+<section class="lesson-unit" data-lesson="c17-rejection">
+<h3 id="c17-rejection">七種等機率結果，留下能平均分配的那一段</h3>
+
+<p class="lesson-question">現有 rand7 每次獨立、均勻回傳 1…7，要產生均勻的 0…4。保留 1…5，遇到 6、7 就重抽，接受時減一。</p>
+<p>直接對 7 個結果取 mod 5，會讓其中兩個餘數各收到兩種來源，另外三個只收到一種。拒絕取樣先截出可被目標個數整除的前綴，再把每一組來源平均分配。對 bound=3，可接受 1…6：轉成 0…5 後取 mod 3，每個答案都有兩個來源。</p>
+<figure><table><thead><tr><th scope="col">rand7 結果</th><th scope="col">動作</th><th scope="col">輸出</th></tr></thead><tbody><tr><td>1</td><td>接受</td><td>0</td></tr><tr><td>2</td><td>接受</td><td>1</td></tr><tr><td>3</td><td>接受</td><td>2</td></tr><tr><td>4</td><td>接受</td><td>3</td></tr><tr><td>5</td><td>接受</td><td>4</td></tr><tr><td>6</td><td>重抽</td><td>—</td></tr><tr><td>7</td><td>重抽</td><td>—</td></tr></tbody></table><figcaption>目標 bound=5，接受率 5/7。一次拒絕後重新抽，接受條件不偏向任何一個合法結果。</figcaption></figure>
+<p>若接受率是 p，每個輸出需要的抽取次數期望為 1/p。bound=5 時是 7/5，工作空間 O(1)；抽取次數沒有固定上限。下面的函式把 rand7 當作參數傳進去，平時接真的隨機來源，測試時也能塞進固定序列來重現；下方圖解用預先準備好的抽籤清單，讓你看清每個數字是被留下還是重抽。</p>
+<pre><code class="language-python">def randbelow_from_seven(bound, rand7):
+    if not 1 &lt;= bound &lt;= 7:
+        raise ValueError(&#x27;bound must be between 1 and 7&#x27;)
+    usable = 7 // bound * bound
+    while True:
+        value = rand7() - 1
+        if not 0 &lt;= value &lt; 7:
+            raise ValueError(&#x27;rand7 must return an integer from 1 to 7&#x27;)
+        if value &lt; usable:
+            return value % bound</code></pre>
+<div class="topic-lab" data-model="rejection-sampling"></div>
+<div class="check-yourself"><p>bound=3 時，1…7 哪個值要重抽？答案 0 來自哪些抽取值？</p><details><summary>看推理</summary><p>7 要重抽。把 1…6 各減一後取 mod 3，答案 0 來自 1 與 4；答案 1 來自 2 與 5；答案 2 來自 3 與 6，各有兩種來源。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://www.cl.cam.ac.uk/teaching/2526/P79/p79-notes.pdf" target="_blank" rel="noopener">Cambridge．Generating Uniform Random Integers</a> · <a href="https://docs.python.org/3/library/random.html#random.randrange" target="_blank" rel="noopener">Python．random.randrange</a></p>
+</section>
+</article>

@@ -1,0 +1,197 @@
+<article id="chapter-14" data-title="排序、分治與第 k 小">
+<h2>14 · 排序、分治與第 k 小</h2>
+<p class="chapter-intro">把一排數字排好，方式有很多種：有的逐格挪動、有的對半拆開再合併，也有乾脆不比大小直接用桶子分堆。這章看每一種做法留下了什麼順序，又在什麼資料分布下特別省事。</p>
+<section class="lesson-unit" data-lesson="c14-sorting">
+<h3 id="c14-sorting">訂單同分時，誰排在前面？</h3>
+
+<p class="lesson-question">一列訂單要依優先權排序，同優先權的訂單保持原本先後。選排序法時，要一起決定比較鍵、相同鍵的順序，以及是否保留輸入。</p>
+<p>穩定排序會保留相同鍵的先後。Python 的 <code>sorted(orders, key=lambda order: order.priority)</code> 會產生新串列；<code>orders.sort(key=...)</code> 直接改原串列，回傳 <code>None</code>。若要依優先權再依時間排序，鍵可以用 <code>(priority, time)</code>。用資料的實際欄位表達規則，排序與業務判斷就能分開看。</p>
+<p>插入排序適合從「已排好的一段」理解比較與搬移：讀到新值時，把比它大的值往右挪，將新值放進留下的空位。相等時停止移動，因此同值的先後保留下來。</p>
+<figure><table><thead><tr><th scope="col">讀到的資料</th><th scope="col">已排好的前段</th><th scope="col">發生的搬移</th></tr></thead><tbody><tr><td>4A</td><td>4A</td><td>建立前段</td></tr><tr><td>2A</td><td>2A, 4A</td><td>4A 向右一格</td></tr><tr><td>2B</td><td>2A, 2B, 4A</td><td>4A 向右，2A 保持原位</td></tr></tbody></table><figcaption>處理 2B 時，2A 留在左邊；只搬走比 2 大的 4A。字母代表原先的身分。</figcaption></figure>
+<p>程式回傳新串列。已排序輸入只需 O(n) 次檢查；反向輸入累積 1+2+⋯+(n−1) 次搬移，最壞 O(n²)。這份保留輸入的寫法用 O(n) 空間；在原陣列內操作時，工作空間為 O(1)。大量任意資料可用 Python 內建排序，或下一節的 O(n log n) 合併排序。</p>
+<pre><code class="language-python">def insertion_sort(values):
+    result = list(values)
+    for i in range(1, len(result)):
+        value = result[i]
+        j = i
+        while j &gt; 0 and result[j - 1] &gt; value:
+            result[j] = result[j - 1]
+            j -= 1
+        result[j] = value
+    return result</code></pre>
+<div class="topic-lab" data-model="insertion-sort"></div>
+<div class="check-yourself"><p>如果 while 裡的 > 改成 >=，兩筆同分訂單會怎麼變？</p><details><summary>看推理</summary><p>後抵達的 2B 會把 2A 往右推，變成 2B、2A。兩個版本的數值都遞增；需要維持同鍵原順序時，使用 >。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://docs.python.org/3/howto/sorting.html" target="_blank" rel="noopener">Python．Sorting Techniques</a></p>
+</section>
+<section class="lesson-unit" data-lesson="c14-merge-sort">
+<h3 id="c14-merge-sort">兩列各自排好，只要比較隊伍前端</h3>
+
+<p class="lesson-question">把 [7,2,5,1] 切成兩半，各自排好後，如何用一次掃描得到整列順序？</p>
+<p>左列 [2,7] 與右列 [1,5] 各自遞增。每次從兩個隊伍前端取較小者，取出後只推進那一邊的指標。尚未取出的最小值必在某一邊的前端，已輸出的前段因此一直有序。一邊用完，另一邊整段接上。</p>
+<figure><table><thead><tr><th scope="col">左列剩下</th><th scope="col">右列剩下</th><th scope="col">已輸出</th></tr></thead><tbody><tr><td>[2,7]</td><td>[1,5]</td><td>[]</td></tr><tr><td>[2,7]</td><td>[5]</td><td>[1]</td></tr><tr><td>[7]</td><td>[5]</td><td>[1,2]</td></tr><tr><td>[7]</td><td>[]</td><td>[1,2,5]</td></tr><tr><td>[]</td><td>[]</td><td>[1,2,5,7]</td></tr></tbody></table><figcaption>每次合併只向前走，兩邊共 n 個值最多比較 n−1 次。</figcaption></figure>
+<p>切分持續到長度 0 或 1，這些小列已經有序。每層合併處理所有元素，共 O(log n) 層，時間 O(n log n)。這份使用切片與新串列的實作，峰值額外空間 O(n)，遞迴深度 O(log n)。相等時取左邊，讓兩半原先的相對順序保持穩定。</p>
+<pre><code class="language-python">def merge_sort(values):
+    if len(values) &lt; 2:
+        return list(values)
+    middle = len(values) // 2
+    left = merge_sort(values[:middle])
+    right = merge_sort(values[middle:])
+    result = []
+    i = j = 0
+    while i &lt; len(left) and j &lt; len(right):
+        if left[i] &lt;= right[j]:
+            result.append(left[i])
+            i += 1
+        else:
+            result.append(right[j])
+            j += 1
+    result.extend(left[i:])
+    result.extend(right[j:])
+    return result</code></pre>
+<div class="topic-lab" data-model="merge-sort"></div>
+<div class="check-yourself"><p>合併 [2A,4] 與 [2B,3]，第一個要取哪個 2？</p><details><summary>看推理</summary><p>取 2A。它來自原陣列較早的左半部；使用 <= 讓同值排序保持穩定。接著取 2B、3、4。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://algs4.cs.princeton.edu/22mergesort/" target="_blank" rel="noopener">Princeton．Mergesort</a></p>
+</section>
+<section class="lesson-unit" data-lesson="c14-divide-conquer">
+<h3 id="c14-divide-conquer">逆序對跨過中線時，可以整批計算</h3>
+
+<p class="lesson-question">[3,1,2] 有幾對索引 i&lt;j 卻滿足 a[i]&gt;a[j]？答案是 (3,1)、(3,2)，共 2 對。逐對比對需要 O(n²)，合併時可以一次加上一整批。</p>
+<p>每一對索引必定同在左半、同在右半，或跨越中線。遞迴先算完左右內部的對數；合併兩個有序子列時，如果右側值比左側目前值小，它也比左側所有剩餘值小。這次直接加 <code>len(left)-i</code>。</p>
+<figure><table><thead><tr><th scope="col">比較</th><th scope="col">新增跨線對</th><th scope="col">跨線累計</th></tr></thead><tbody><tr><td>2 與 1</td><td>(2,1)、(4,1)</td><td>2</td></tr><tr><td>2 與 3</td><td>取 2，新增 0</td><td>2</td></tr><tr><td>4 與 3</td><td>(4,3)</td><td>3</td></tr></tbody></table><figcaption>左列 [2,4]、右列 [1,3]：右邊的 1 一次產生兩對，3 再產生一對。</figcaption></figure>
+<p>分治的組合答案是「左側對數＋右側對數＋跨線對數」。跨線階段花 O(n)，所以 T(n)=2T(n/2)+O(n)，總時間 O(n log n)、額外空間 O(n)。相等值走左側，符合嚴格大於的逆序定義。每對只歸屬一種位置關係，因此累加時沒有重複。</p>
+<pre><code class="language-python">def count_inversions(values):
+    def solve(items):
+        if len(items) &lt; 2:
+            return list(items), 0
+        middle = len(items) // 2
+        left, count_left = solve(items[:middle])
+        right, count_right = solve(items[middle:])
+        merged = []
+        count = count_left + count_right
+        i = j = 0
+        while i &lt; len(left) and j &lt; len(right):
+            if left[i] &lt;= right[j]:
+                merged.append(left[i])
+                i += 1
+            else:
+                merged.append(right[j])
+                count += len(left) - i
+                j += 1
+        merged.extend(left[i:])
+        merged.extend(right[j:])
+        return merged, count
+    return solve(list(values))[1]</code></pre>
+<div class="topic-lab" data-model="inversion-count"></div>
+<div class="check-yourself"><p>把題目改成 a[i]≥a[j]，合併時哪個決定需要改？</p><details><summary>看推理</summary><p>相等也要由右側先取並計入剩餘左側值。比較條件改為 left[i] < right[j]；全相等且長度 n 的測例應得到 n(n−1)/2。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://algs4.cs.princeton.edu/22mergesort/" target="_blank" rel="noopener">Princeton．Mergesort</a></p>
+</section>
+<section class="lesson-unit" data-lesson="c14-counting-sort">
+<h3 id="c14-counting-sort">鍵只有幾種，直接替每一種保留位置</h3>
+
+<p class="lesson-question">訂單等級只會是 0 到 K。要把帶有身分的訂單按等級排好，可以用每個等級的數量直接算出位置。</p>
+<p><code>counts[key]</code> 一開始存數量，累加後改成「鍵 ≤ key 的筆數」。例如等級 [2,0,2,1] 的次數是 [1,1,2]，前綴總數 [1,2,4] 代表：0 的區塊結束於索引 1 之前，1 結束於 2 之前，2 結束於 4 之前。</p>
+<figure><table><thead><tr><th scope="col">取出的訂單</th><th scope="col">先減 counts[key]</th><th scope="col">寫入索引</th><th scope="col">結果</th></tr></thead><tbody><tr><td>1D</td><td>counts[1]：2→1</td><td>1</td><td>[_,1D,_,_]</td></tr><tr><td>2C</td><td>counts[2]：4→3</td><td>3</td><td>[_,1D,_,2C]</td></tr><tr><td>0B</td><td>counts[0]：1→0</td><td>0</td><td>[0B,1D,_,2C]</td></tr><tr><td>2A</td><td>counts[2]：3→2</td><td>2</td><td>[0B,1D,2A,2C]</td></tr></tbody></table><figcaption>由右往左放入，讓後出現的同鍵訂單使用較右的位置。</figcaption></figure>
+<p>時間 O(n+K)，空間 O(n+K)。鍵是稠密的小範圍整數時很合適；若只有 10 筆資料、最大鍵卻是 10⁹，改用比較排序能省下巨大計數陣列。負整數鍵也能用「key−最小鍵」平移，空間成本取決於最大鍵與最小鍵之差。</p>
+<pre><code class="language-python">def counting_sort(records, maximum):
+    if maximum &lt; 0:
+        raise ValueError(&#x27;maximum must be nonnegative&#x27;)
+    counts = [0] * (maximum + 1)
+    for key, label in records:
+        if not 0 &lt;= key &lt;= maximum:
+            raise ValueError(&#x27;key outside range&#x27;)
+        counts[key] += 1
+    for key in range(1, len(counts)):
+        counts[key] += counts[key - 1]
+    result = [None] * len(records)
+    for record in reversed(records):
+        key = record[0]
+        counts[key] -= 1
+        result[counts[key]] = record
+    return result</code></pre>
+<div class="topic-lab" data-model="counting-sort"></div>
+<div class="check-yourself"><p>同樣用前綴結束位置，改成由左往右放入會得到什麼？</p><details><summary>看推理</summary><p>2A 先被放到最後一格，2C 後來放在它左邊，兩筆同鍵訂單的順序會反轉。若要由左往右放，可改用每個鍵的起始位置，放完把位置加一。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/resources/lecture-7-counting-sort-radix-sort-lower-bounds-for-sorting/" target="_blank" rel="noopener">MIT 6.006．Counting Sort and Radix Sort</a></p>
+</section>
+<section class="lesson-unit" data-lesson="c14-bucket-sort">
+<h3 id="c14-bucket-sort">分布平均時，每個桶只剩幾個值要排</h3>
+
+<p class="lesson-question">資料是 [0,1) 之間的數值，像 0.78、0.17、0.39、0.26。把數線切成 n 個等寬區間，同一區間的值放進同一桶，再整理桶內順序。</p>
+<p>第 i 個值 x 進入 <code>floor(n*x)</code> 號桶。桶 j 的所有值都小於桶 j+1 的值，串接桶時順序已經確定。桶內採插入排序；每桶只有少量資料時，搬移次數很少。相等值會進同一個桶，依輸入順序加入，而且只有嚴格較大的值才往右移，因此這份實作也保留同鍵資料的先後。</p>
+<figure><table><thead><tr><th scope="col">桶</th><th scope="col">區間</th><th scope="col">接收順序</th><th scope="col">桶內排序</th></tr></thead><tbody><tr><td>0</td><td>[0,0.25)</td><td>0.17</td><td>0.17</td></tr><tr><td>1</td><td>[0.25,0.5)</td><td>0.39,0.26</td><td>0.26,0.39</td></tr><tr><td>2</td><td>[0.5,0.75)</td><td>空</td><td>空</td></tr><tr><td>3</td><td>[0.75,1)</td><td>0.78</td><td>0.78</td></tr></tbody></table><figcaption>n=4 時每桶寬 0.25，整理桶內後按編號接起來。</figcaption></figure>
+<p>設各桶大小為 n₁、n₂⋯，這份程式花 O(n+Σnᵢ²) 時間、O(n) 空間。獨立且均勻分布在 [0,1) 的輸入，用 n 個桶時預期 O(n)；若資料全擠同一桶且反向排列，插入排序會花 O(n²)。分桶前看值域與分布，兩者會直接決定工作量。</p>
+<pre><code class="language-python">def bucket_sort(values):
+    values = list(values)
+    if any(not 0 &lt;= value &lt; 1 for value in values):
+        raise ValueError(&#x27;values must be in [0, 1)&#x27;)
+    n = len(values)
+    if n == 0:
+        return []
+    buckets = [[] for _ in range(n)]
+    for value in values:
+        bucket = buckets[min(n - 1, int(value * n))]
+        bucket.append(value)
+        i = len(bucket) - 1
+        while i &gt; 0 and bucket[i - 1] &gt; value:
+            bucket[i] = bucket[i - 1]
+            i -= 1
+        bucket[i] = value
+    return [value for bucket in buckets for value in bucket]</code></pre>
+<div class="topic-lab" data-model="bucket-sort"></div>
+<div class="check-yourself"><p>0.99、0.98、0.97、0.96 放進 4 個桶，會有幾個非空桶？</p><details><summary>看推理</summary><p>只有編號 3 的桶非空，四個值都落在 [0.75,1)。這時主要工作是同一桶中的插入排序；換成 0.01、0.26、0.51、0.76，每桶就只有一筆。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://www.cs.cornell.edu/courses/cs212/2000sp/notes/lectures/l16-sorting.htm" target="_blank" rel="noopener">Cornell CS212．Bucket Sort</a></p>
+</section>
+<section class="lesson-unit" data-lesson="c14-radix-sort">
+<h3 id="c14-radix-sort">個位排完，再讓十位決定大區塊</h3>
+
+<p class="lesson-question">[21,13,12,22] 先按個位排，再按十位穩定排序，能得到整數順序。每一輪只讀一位數，卻沿用前一輪排好的低位資訊。</p>
+<figure><table><thead><tr><th scope="col">輪次</th><th scope="col">使用的數位</th><th scope="col">輸出</th></tr></thead><tbody><tr><td>原始</td><td>—</td><td>[21,13,12,22]</td></tr><tr><td>第一輪</td><td>個位</td><td>[21,12,22,13]</td></tr><tr><td>第二輪</td><td>十位</td><td>[12,13,21,22]</td></tr></tbody></table><figcaption>第二輪把十位相同的值放在一起，同時留下個位的相對順序。</figcaption></figure>
+<p>從低位往高位做，稱為 LSD radix sort。第 d 輪完成後，序列已按最低 d 位排序。每一輪要穩定：進桶與出桶都保持原順序；到了高位相等的區塊，低位順序就會被保留下來。</p>
+<p>這份程式處理非負整數，基數 b=10，最高位數為 d。每輪分桶與收集花 O(n+b)，總時間 O(d(n+b))、額外空間 O(n+b)。0 與空陣列直接保留。延伸到負數時，負值組按絕對值由大到小排，再還原負號，接上遞增的非負值組。例如絕對值 2、10 要接回 −10、−2。若資料還帶有標籤，相同絕對值先各自成組，反轉群組的順序、保留群內先後，就能維持穩定性。</p>
+<pre><code class="language-python">def radix_sort(values):
+    result = list(values)
+    if any(not isinstance(value, int) or value &lt; 0 for value in result):
+        raise ValueError(&#x27;values must be nonnegative integers&#x27;)
+    maximum = max(result, default=0)
+    place = 1
+    while place &lt;= maximum:
+        buckets = [[] for _ in range(10)]
+        for value in result:
+            buckets[value // place % 10].append(value)
+        result = [value for bucket in buckets for value in bucket]
+        place *= 10
+    return result</code></pre>
+<div class="topic-lab" data-model="radix-sort"></div>
+<div class="check-yourself"><p>十位相同的 12、13，在第二輪被反向取出會怎樣？</p><details><summary>看推理</summary><p>結果變成 13、12，第一輪建立的個位順序被破壞。LSD 的每一輪都必須保留同數位資料的先後。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://ocw.mit.edu/courses/6-006-introduction-to-algorithms-fall-2011/resources/lecture-7-counting-sort-radix-sort-lower-bounds-for-sorting/" target="_blank" rel="noopener">MIT 6.006．Counting Sort and Radix Sort</a></p>
+</section>
+<section class="lesson-unit" data-lesson="c14-quickselect">
+<h3 id="c14-quickselect">只要第 k 小，另一半可以立刻放下</h3>
+
+<p class="lesson-question">[7,2,5,2,9] 的第 3 小是 5。完整排序會把每個位置都排好；Quickselect 每輪只留下包含目標排名的那一群。</p>
+<p>抽一個 pivot，分成 smaller、equal、larger。若 k 落在 smaller 的長度內，就繼續處理 smaller；落在 equal 區間，答案已經確定；落在 larger，扣掉前兩群的長度後繼續。這裡 k 從 0 起算，因此第 3 小使用 k=2。</p>
+<figure><table><thead><tr><th scope="col">候選</th><th scope="col">pivot</th><th scope="col">三群</th><th scope="col">目標去向</th></tr></thead><tbody><tr><td>[7,2,5,2,9], k=2</td><td>2</td><td>[] | [2,2] | [7,5,9]</td><td>右群，k=0</td></tr><tr><td>[7,5,9], k=0</td><td>7</td><td>[5] | [7] | [9]</td><td>左群，k=0</td></tr><tr><td>[5], k=0</td><td>5</td><td>[] | [5] | []</td><td>回傳 5</td></tr></tbody></table><figcaption>以 pivot=2 開始，重複的 2 一次歸到相等區。</figcaption></figure>
+<p>每次均勻隨機選 pivot，預期時間 O(n)；連續抽到極端值時最壞 O(n²)。三路切分會把大量重複值一次處理掉。這個易讀版本保留輸入並建立三個串列，額外空間 O(n)；原地 partition 可把工作空間降到 O(1)。互動使用候選中間位置作為可重播的 pivot，直接觀察每一輪縮掉多少候選。</p>
+<pre><code class="language-python">import random
+
+def quickselect(values, k, rng=None):
+    remaining = list(values)
+    if not 0 &lt;= k &lt; len(remaining):
+        raise ValueError(&#x27;k must be a valid zero-based index&#x27;)
+    rng = rng or random.Random()
+    while True:
+        pivot = rng.choice(remaining)
+        smaller = [value for value in remaining if value &lt; pivot]
+        equal = [value for value in remaining if value == pivot]
+        larger = [value for value in remaining if value &gt; pivot]
+        if k &lt; len(smaller):
+            remaining = smaller
+        elif k &lt; len(smaller) + len(equal):
+            return pivot
+        else:
+            k -= len(smaller) + len(equal)
+            remaining = larger</code></pre>
+<div class="topic-lab" data-model="quickselect"></div>
+<div class="check-yourself"><p>候選全部是 8，長度 100，k=73，三路切分需要幾輪？</p><details><summary>看推理</summary><p>一輪。smaller 與 larger 都是空列，equal 長度 100，k 落在相等區，答案直接是 8。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://algs4.cs.princeton.edu/23quicksort/Quick.java.html" target="_blank" rel="noopener">Princeton．Quicksort and Quickselect</a></p>
+</section>
+</article>

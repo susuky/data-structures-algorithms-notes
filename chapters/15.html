@@ -1,0 +1,81 @@
+<article id="chapter-15" data-title="把數字規律變成可計算的步驟">
+<h2>15 · 把數字規律變成可計算的步驟</h2>
+<p class="chapter-intro">階乘算出來動輒幾百位數，但題目往往只問尾端幾個零、最大公因數或有幾種選法。這章把這些看起來會算到溢位的數字，縮成幾行整數除法跟餘數。</p>
+<section class="lesson-unit" data-lesson="c15-math">
+<h3 id="c15-math">算 100! 尾端的零，直接數因數 5</h3>
+
+<p class="lesson-question">100! 的十進位尾端有幾個 0？把整個階乘算出來會產生 158 位數，但答案只取決於裡面有多少組 2×5。</p>
+<p>在 1 到 n 的整數中，因數 2 的總數至少與因數 5 一樣多，因此每個因數 5 都能配到一個 2。5 的倍數貢獻一次，25 的倍數再貢獻一次，125 的倍數還要再加一次。答案是 ⌊n/5⌋+⌊n/25⌋+⌊n/125⌋+⋯。</p>
+<figure><table><thead><tr><th scope="col">因數層</th><th scope="col">倍數數量</th><th scope="col">累計零數</th></tr></thead><tbody><tr><td>5</td><td>20</td><td>20</td></tr><tr><td>25</td><td>4</td><td>24</td></tr><tr><td>125</td><td>0</td><td>24</td></tr></tbody></table><figcaption>100! 裡的 25、50、75、100 各含兩個 5；第二層補上它們的額外貢獻。</figcaption></figure>
+<p>每次直接令 n 整除 5，可把所有層累加起來。時間 O(log₅ n)、工作空間 O(1)，使用整數除法保留精確值。這個思路在問末尾零、整除性、餘數與重複週期時很常見：找出答案需要的因數或狀態，再決定要計算哪些量。</p>
+<pre><code class="language-python">def factorial_zeroes(n):
+    if n &lt; 0:
+        raise ValueError(&#x27;n must be nonnegative&#x27;)
+    total = 0
+    while n:
+        n //= 5
+        total += n
+    return total</code></pre>
+<div class="topic-lab" data-model="factorial-zeroes"></div>
+<div class="check-yourself"><p>25! 尾端有幾個零？只數 5 的倍數會少算哪一個？</p><details><summary>看推理</summary><p>有 6 個。5、10、15、20、25 提供 5 個因數 5，25=5² 再多提供 1 個，因此是 5+1。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://docs.python.org/3/library/math.html" target="_blank" rel="noopener">Python．整數與 math 函式</a></p>
+</section>
+<section class="lesson-unit" data-lesson="c15-number-theory">
+<h3 id="c15-number-theory">兩種長度要切成一樣大，餘數繼續往下問</h3>
+
+<p class="lesson-question">長度 84 與 30 的兩條繩子，要全部切成一樣長的小段且用完，每段最多多長？答案是最大公因數 gcd(84,30)。</p>
+<p>84=2×30+24。能同時整除 84 與 30 的數，也能整除餘數 24；能整除 30 與 24 的數，也能整除 2×30+24。因此 gcd(84,30)=gcd(30,24)，把較大的數替換成餘數，答案保持不變。</p>
+<figure><table><thead><tr><th scope="col">a</th><th scope="col">b</th><th scope="col">a % b</th><th scope="col">下一組</th></tr></thead><tbody><tr><td>84</td><td>30</td><td>24</td><td>(30,24)</td></tr><tr><td>30</td><td>24</td><td>6</td><td>(24,6)</td></tr><tr><td>24</td><td>6</td><td>0</td><td>(6,0)</td></tr></tbody></table><figcaption>餘數逐次變小，直到 0；最後的非零數就是最大公因數。</figcaption></figure>
+<p>整除步數為 O(log min(|a|,|b|))，工作空間 O(1)；這裡把整數除法視為基本操作。程式先取絕對值，gcd(a,0)=|a|，並約定 gcd(0,0)=0。已知 gcd，最小公倍數可用 <code>abs(a // gcd(a,b) * b)</code> 計算，任一輸入是 0 時結果設為 0。</p>
+<pre><code class="language-python">def gcd(a, b):
+    a, b = abs(a), abs(b)
+    while b:
+        a, b = b, a % b
+    return a</code></pre>
+<div class="topic-lab" data-model="euclid-gcd"></div>
+<div class="check-yourself"><p>計算 gcd(35,14) 的兩次餘數是多少？</p><details><summary>看推理</summary><p>35 % 14=7，14 % 7=0，因此 gcd=7。若要找兩個週期 35 與 14 下一次同時出現的時刻，lcm=35÷7×14=70。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://crypto.stanford.edu/pbc/notes/numbertheory/euclid.html" target="_blank" rel="noopener">Stanford．Euclid’s Algorithm</a></p>
+</section>
+<section class="lesson-unit" data-lesson="c15-prime-sieve"><h3 id="c15-prime-sieve">一次問很多質數，讓每個小質數劃掉自己的倍數</h3>
+<p class="lesson-question">要列出 1 到 n 的質數，可以讓已確定的質數共同排除合數。每個合數都有至少一個不超過平方根的質因數。</p>
+<p>從 p=2 開始，若 p 還沒被劃掉，就把 p²、p²+p、p²+2p⋯劃掉。p² 以前的 p 的倍數，早已被更小的質因數處理過。當 p²&gt;n，所有合數都已有機會被排除。</p>
+<figure><table><thead><tr><th scope="col">質數 p</th><th scope="col">從哪裡開始</th><th scope="col">這輪新增排除</th></tr></thead><tbody><tr><td>2</td><td>4</td><td>4,6,8,10,12,14,16,18,20</td></tr><tr><td>3</td><td>9</td><td>9,15</td></tr></tbody></table><figcaption>篩到 20：2 處理偶數，3 補上 9、15；5² 已超過 20，可以收集結果。</figcaption></figure>
+<p>標記表占 O(n) 空間，篩法時間 O(n log log n)。只檢查單一整數時，試除到平方根即可；要反覆查詢很多數是否為質數，篩完後查表是 O(1)。</p>
+<pre><code class="language-python">def primes_up_to(n):
+    if n &lt; 2:
+        return []
+    prime = [True] * (n + 1)
+    prime[0] = prime[1] = False
+    p = 2
+    while p * p &lt;= n:
+        if prime[p]:
+            for multiple in range(p * p, n + 1, p):
+                prime[multiple] = False
+        p += 1
+    return [value for value in range(2, n + 1) if prime[value]]</code></pre>
+<div class="topic-lab" data-model="prime-sieve"></div>
+<div class="check-yourself"><p>篩到 49，p=7 這輪會新增劃掉哪個數？</p><details><summary>看推理</summary><p>49。14、21、28、35、42 都已被 2、3 或 5 處理；從 7² 開始剛好留下尚未排除的倍數。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://introcs.cs.princeton.edu/java/14array/PrimeSieve.java.html" target="_blank" rel="noopener">Princeton．PrimeSieve</a></p></section>
+<section class="lesson-unit" data-lesson="c15-combinatorics">
+<h3 id="c15-combinatorics">最後一個人參加或不參加，兩種情況加起來</h3>
+
+<p class="lesson-question">5 個人選 2 人值班，順序不計，有幾組？把最後一個人的選擇拆開，就得到組合數的遞推。</p>
+<p>最後一人參加時，從前 4 人選 1 人；最後一人不參加時，從前 4 人選 2 人。兩類互斥且涵蓋所有選法，所以 C(n,k)=C(n−1,k−1)+C(n−1,k)。邊界 C(n,0)=C(n,n)=1。</p>
+<figure><table><thead><tr><th scope="col">n</th><th scope="col">C(n,0)</th><th scope="col">C(n,1)</th><th scope="col">C(n,2)</th></tr></thead><tbody><tr><td>0</td><td>1</td><td>0</td><td>0</td></tr><tr><td>1</td><td>1</td><td>1</td><td>0</td></tr><tr><td>2</td><td>1</td><td>2</td><td>1</td></tr><tr><td>3</td><td>1</td><td>3</td><td>3</td></tr><tr><td>4</td><td>1</td><td>4</td><td>6</td></tr><tr><td>5</td><td>1</td><td>5</td><td>10</td></tr></tbody></table><figcaption>每一格由上一列左上與正上相加，C(5,2)=4+6=10。</figcaption></figure>
+<p>壓成一列時從右往左更新，讓 <code>row[j-1]</code> 保持上一列的值。時間 O(n·min(k,n−k))、空間 O(min(k,n−k))，以整數運算次數計。Python 大整數會隨答案位數增加運算成本。若順序也計入，排列數是 C(n,k)×k!；例如 5 人選正副隊長，答案 5×4=20。</p>
+<pre><code class="language-python">def choose(n, k):
+    if n &lt; 0 or k &lt; 0 or k &gt; n:
+        return 0
+    k = min(k, n - k)
+    if k == 0:
+        return 1
+    row = [1] + [0] * k
+    for i in range(1, n + 1):
+        for j in range(min(i, k), 0, -1):
+            row[j] += row[j - 1]
+    return row[k]</code></pre>
+<div class="topic-lab" data-model="pascal-combinations"></div>
+<div class="check-yourself"><p>用一列算 C(4,2)，若 j 從左往右更新，會借到哪一列的資料？</p><details><summary>看推理</summary><p>row[j−1] 已被當輪改過，等於借到第 4 列的新值。由右往左才會同時使用上一列的兩個來源，得到正確的 6。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://docs.python.org/3/library/math.html#math.comb" target="_blank" rel="noopener">Python．math.comb 與 math.perm</a> · <a href="https://courses.csail.mit.edu/6.042/spring18/mcs.pdf" target="_blank" rel="noopener">MIT．Mathematics for Computer Science</a></p>
+</section>
+</article>

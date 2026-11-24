@@ -32,9 +32,10 @@
   }
   function refreshProgress() {
     const count = state.completed.length;
+    $('course-progress').max = meta.length;
     $('course-progress').value = count;
-    $('course-progress').textContent = `${count} / 13`;
-    $('course-progress-text').textContent = `${count} / 13`;
+    $('course-progress').textContent = `${count} / ${meta.length}`;
+    $('course-progress-text').textContent = `${count} / ${meta.length}`;
     $('bookmark-count').textContent = state.bookmarks.length;
     document.querySelectorAll('[data-chapter]').forEach(link => {
       const completed = state.completed.includes(link.dataset.chapter);
@@ -47,7 +48,7 @@
       $('bookmark-button').setAttribute('aria-pressed', String(bookmarked));
       $('bookmark-button').querySelector('span').textContent = bookmarked ? '已加入書籤' : '加入書籤';
       $('complete-button').setAttribute('aria-pressed', String(complete));
-      $('complete-button').querySelector('span').textContent = complete ? '已完成' : '標記完成';
+      $('complete-button').querySelector('span').textContent = complete ? '本章已完成' : '完成本章';
     }
     if (state.last) {
       const article = $(state.last)?.closest('article');
@@ -103,7 +104,7 @@
     });
     if (current) {
       document.title = `${current.short}｜資料結構與演算法`;
-      $('reader-position').textContent = `${current.number} / 13`;
+      $('reader-position').textContent = `${current.number} / ${meta.length}`;
       $('topic-count').textContent = `（${current.topics.length}）`;
       $('topic-list').replaceChildren(...current.topics.map(topic => {
         const li = document.createElement('li'), a = document.createElement('a');
@@ -118,6 +119,10 @@
       }
       state.last = target.id; save();
     } else document.title = '資料結構與演算法';
+    if (window.CourseReader) {
+      target = window.CourseReader.show(current, target);
+      if (current) { state.last = target.id || target.closest('.lesson-unit')?.dataset.lesson || current.id; save(); }
+    }
     refreshProgress();
     if ($('sidebar').classList.contains('is-open')) setDrawer(false, false);
     if (target.id === 'course-home') {
@@ -142,7 +147,7 @@
     const walker = document.createTreeWalker(article, NodeFilter.SHOW_ELEMENT);
     let node, section = {id: chapter.id, chapter: chapter.short, title: chapter.title, text: '', keywords: chapter.keywords, nodes: []};
     while ((node = walker.nextNode())) {
-      if (node.tagName === 'H3' && node.id) { searchIndex.push(section); section = {id: node.id, chapter: chapter.short, title: node.textContent.trim(), text: '', keywords: '', nodes: []}; }
+      if (node.tagName === 'H3' && node.id) { searchIndex.push(section); section = {id: node.id, chapter: chapter.short, title: node.textContent.trim(), text: '', keywords: node.dataset.syllabus || '', nodes: []}; }
       if (['P', 'LI', 'PRE', 'FIGCAPTION', 'TD', 'TH', 'SUMMARY', 'H2', 'H4'].includes(node.tagName)) { section.text += ' ' + node.textContent.trim(); section.nodes.push(node); }
     }
     searchIndex.push(section);

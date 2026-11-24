@@ -1,0 +1,55 @@
+<article id="chapter-24" data-title="候選很多，時間很長，怎麼少做一點"><h2>24 · 候選很多，時間很長，怎麼少做一點</h2><p class="chapter-intro">遇到暴力搜會超時的題目，不一定要硬背高深結構。先用遞增索引把列舉寫乾淨，再看能不能拆半配對，或乾脆跳過沒有事情發生的空檔時間。</p><section class="lesson-unit" data-lesson="c24-enumeration"><h3 id="c24-enumeration" data-syllabus="Enumeration exhaustive search combinations">每組只出現一次，列舉就容易檢查</h3><p class="lesson-question">從 [1,1,2,3] 選三個不同索引，找出總和為 6 的所有組合。答案有 (0,2,3) 與 (1,2,3)：前兩個 1 位在不同位置，對應兩種選法。</p>
+<div class="topic-lab" data-model="triple-enumeration"></div>
+<p>把合法候選寫成 <code>0 ≤ i &lt; j &lt; k &lt; n</code>。i 選完，j 從 i+1 開始；k 從 j+1 開始。任何三個不同索引都能排成唯一的遞增順序，因此每組都會被走到，而且只出現一次。</p>
+<pre><code class="language-python">def triples_with_sum(values, target):
+    answer = []
+    for i in range(len(values)):
+        for j in range(i + 1, len(values)):
+            for k in range(j + 1, len(values)):
+                if values[i] + values[j] + values[k] == target:
+                    answer.append((i, j, k))
+    return answer</code></pre>
+<table><caption>四個索引的所有三元素候選</caption><thead><tr><th scope="col">索引</th><th scope="col">數值</th><th scope="col">總和</th><th scope="col">接受</th></tr></thead><tbody><tr><td>(0,1,2)</td><td>1、1、2</td><td>4</td><td>否</td></tr><tr><td>(0,1,3)</td><td>1、1、3</td><td>5</td><td>否</td></tr><tr><td>(0,2,3)</td><td>1、2、3</td><td>6</td><td>是</td></tr><tr><td>(1,2,3)</td><td>1、2、3</td><td>6</td><td>是</td></tr></tbody></table>
+<p>候選數是 n(n−1)(n−2)/6，時間 O(n³)，回傳 r 個答案使用 O(r) 空間；如果只需要判斷「有沒有解」，找到第一組就能直接提早回傳，額外空間降成 O(1)。資料規模小時，這種寫法的完整性一眼就能驗證，也很適合拿來當較快演算法的對拍基準。</p>
+<p>若題目要的是「不同數值組合」，兩個索引答案都對應 [1,2,3]，要再處理重複值。若只要一組且 n 很大，排序後固定第一個值，再用雙指標處理餘下區間，可把時間降成 O(n²)。先看答案按索引還是按值區分，再決定去重位置。</p>
+<div class="check-yourself"><p>把 values 改成 [0,0,0,0]，target=0，按索引有幾個答案？按數值呢？</p><details><summary>看推理</summary><p>按索引有 C(4,3)=4 組；按數值只有 [0,0,0] 這一組。遞增索引消除的是排列重複，四個不同索引集合仍是四個合法候選。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://docs.python.org/3/library/itertools.html#itertools.combinations" target="_blank" rel="noopener">Python：combinations 按位置區分元素</a></p></section><section class="lesson-unit" data-lesson="c24-meet-in-middle"><h3 id="c24-meet-in-middle" data-syllabus="Meet in the Middle subset sum">四十個選或不選，拆成兩邊配對</h3><p class="lesson-question">給 [4,-1,6,0]，共有幾個索引子集合的總和是 9？可以選 [4,-1,6]，也可以把 0 一起選，答案是 2。每個位置只有選或不選，直接列舉 n 個位置會產生 2ⁿ 個子集合。</p>
+<div class="topic-lab" data-model="subset-mitm"></div>
+<p>把陣列拆成左右兩半，各自產生子集合總和。完整子集合恰好由「一個左半子集合」與「一個右半子集合」組成。左邊選出的總和是 a，就向右邊查 target−a 出現幾次，所有配對累加就是答案。</p>
+<pre><code class="language-python">from collections import Counter
+
+def subset_sums(values):
+    sums = [0]
+    for value in values:
+        sums += [total + value for total in sums]
+    return sums
+
+def count_subset_sums(values, target):
+    middle = len(values) // 2
+    left = subset_sums(values[:middle])
+    right = Counter(subset_sums(values[middle:]))
+    return sum(right[target - total] for total in left)</code></pre>
+<table><caption>左右子集合的總和要保留重複次數</caption><thead><tr><th scope="col">半邊</th><th scope="col">子集合</th><th scope="col">總和</th></tr></thead><tbody><tr><td>左 [4,-1]</td><td>[]、[4]、[-1]、[4,-1]</td><td>0、4、−1、3</td></tr><tr><td>右 [6,0]</td><td>[]、[6]、[0]、[6,0]</td><td>0、6、0、6</td></tr><tr><td>配對 a=3</td><td>右半需要 6</td><td>出現 2 次，所以新增 2 個答案</td></tr></tbody></table>
+<p>右半的兩個 6 分別來自 [6] 和 [6,0]。Counter 保留這個重數；換成 set 會少算選了 0 的那一組。左半也逐個子集合累加，即使總和相同，仍對應不同索引選法。負數照樣可以配對，過程只用加法與查表。</p>
+<p>令 h=⌈n/2⌉，兩半各最多 2ʰ 個總和。字典採平均 O(1) 查詢時，總時間與空間都是 O(2ʰ)。n=40 時，每半約 2²⁰ 個候選，規模比直接展開 2⁴⁰ 小得多。若記憶體有限，可排序一側總和，另一側用二分查相同值區間，花 O(2ʰ·h) 時間。</p>
+<div class="check-yourself"><p>values=[0,0,0]，target=0。每一個子集合都符合，答案是多少？空陣列 target=0 又是多少？</p><details><summary>看推理</summary><p>三個 0 各自可選或不選，共 2³=8 個子集合。空陣列也有一個子集合，就是空集合，其總和是 0，所以答案為 1。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://cses.fi/book/book.pdf" target="_blank" rel="noopener">Competitive Programmer’s Handbook：Meet in the middle</a></p>
+<p class="unit-sources">延伸閱讀：<a href="https://cses.fi/problemset/task/1628/" target="_blank" rel="noopener">CSES：Meet in the Middle 的子集合計數題</a></p></section><section class="lesson-unit" data-lesson="c24-simulation"><h3 id="c24-simulation" data-syllabus="Simulation discrete event FIFO scheduling">機器閒著時，直接跳到下一筆抵達</h3><p class="lesson-question">一台機器依到達順序處理工作，不中斷正在做的工作。三筆工作分別是（到達 0，花 3）、（到達 1，花 2）、（到達 8，花 1）。第二筆等到時間 3 才開始；做完它是時間 5，機器直接等到 8。</p>
+<div class="topic-lab" data-model="fcfs-simulation"></div>
+<p>狀態只要保存 now，也就是上一筆工作完成的時刻。下一筆的開始時間是 max(now, arrival)，結束時間加上 duration，等待時間則是 start−arrival。每筆工作只有到達、開始、完成會影響答案，時間 5、6、7 不必逐格模擬。</p>
+<pre><code class="language-python">def simulate_fcfs(jobs):
+    if any(arrival &lt; 0 or duration &lt;= 0 for arrival, duration in jobs):
+        raise ValueError(&quot;到達時間須非負，處理時間須為正&quot;)
+    ordered = sorted(enumerate(jobs), key=lambda item: (item[1][0], item[0]))
+    now, result = 0, []
+    for identifier, (arrival, duration) in ordered:
+        start = max(now, arrival)
+        finish = start + duration
+        result.append((identifier, start, finish, start - arrival))
+        now = finish
+    return result</code></pre>
+<table><caption>FCFS：同時抵達時按原輸入順序</caption><thead><tr><th scope="col">工作</th><th scope="col">到達</th><th scope="col">開始</th><th scope="col">完成</th><th scope="col">等待</th></tr></thead><tbody><tr><td>0</td><td>0</td><td>0</td><td>3</td><td>0</td></tr><tr><td>1</td><td>1</td><td>3</td><td>5</td><td>2</td></tr><tr><td>2</td><td>8</td><td>8</td><td>9</td><td>0</td></tr></tbody></table>
+<p>輸入若未按到達時間排列，先依（arrival, 原索引）排序，時間 O(n log n)；已排序的輸入只需 O(n) 掃描。保留全部結果使用 O(n) 空間，若只算平均等待時間，可一路累加等待總和。</p>
+<p>同時有到達和完成事件時，本例先釋放機器，再依原輸入順序接新工作；較早已在等待的工作仍優先。若改成多台機器，就用最小堆積保存各台的下一次可用時間，讓最早空出的機器先接工作。</p>
+<div class="check-yourself"><p>兩筆工作都是時間 4 抵達，處理時間分別為 3、1。依本例規則，開始時間與等待時間各是多少？</p><details><summary>看推理</summary><p>原索引較小的先做，開始時間是 4、7，等待時間是 0、3。若題目改成同時抵達時短工作先做，要把該排序規則寫進事件處理，才會得到另一個排程。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://algs4.cs.princeton.edu/61event/" target="_blank" rel="noopener">Princeton Algorithms：事件驅動模擬</a></p></section></article>

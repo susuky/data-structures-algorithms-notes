@@ -1,0 +1,118 @@
+<article id="chapter-21" data-title="讓資料結構跟著操作長大"><h2>21 · 讓資料結構跟著操作長大</h2><p class="chapter-intro">設計題考驗的是資料結構之間的搭配：LRU 快取要一邊 O(1) 定位、一邊 O(1) 調整新舊順序；迭代器跟資料串流則要做到每做完一步，手邊就留著剛好夠下一輪接續的狀態。</p><section class="lesson-unit" data-lesson="c21-design"><h3 id="c21-design" data-syllabus="Design LRU Cache">快取滿了，該請誰離開？</h3><p class="lesson-question">快取只能留兩筆資料。依序寫入 A、B，讀取 A，再寫入 C。應淘汰 B：最近被使用的是 A。LRU（least recently used）把「最久沒碰過」當成淘汰規則。</p>
+<p>先把介面說清楚：<code>get(key)</code> 回傳值並更新使用順序，查無鍵時回傳 <code>None</code>；<code>put(key, value)</code> 新增或覆寫，同樣把該鍵移到最新端。重複寫入既有鍵時，容量保持不變。容量為 0 時，寫入後立刻淘汰。</p>
+<div class="topic-lab" data-model="lru-cache"></div>
+<p>需求同時包含「按鍵定位」和「按時間淘汰」。字典負責從鍵找到節點，雙向串列負責維持舊到新的順序。讀到 A 時，字典直接交出 A 的節點；把它剪下，接到尾端，整條串列不必重新掃描。</p>
+<table><caption>容量 2：左邊最舊，右邊最新</caption><thead><tr><th scope="col">操作</th><th scope="col">get 回傳</th><th scope="col">串列順序</th><th scope="col">字典中的鍵</th></tr></thead><tbody><tr><td>put(A, 10)</td><td>—</td><td>A</td><td>A</td></tr><tr><td>put(B, 20)</td><td>—</td><td>A → B</td><td>A、B</td></tr><tr><td>get(A)</td><td>10</td><td>B → A</td><td>A、B</td></tr><tr><td>put(C, 30)</td><td>—</td><td>A → C</td><td>A、C</td></tr><tr><td>get(B)</td><td>None</td><td>A → C</td><td>A、C</td></tr></tbody></table>
+<p>head、tail 是固定的哨兵節點，資料放在兩者之間。每次操作結束，字典與串列應包含同一批鍵；<code>head.next</code> 是淘汰候選，<code>tail.prev</code> 是最新使用者。字典查詢採平均 O(1) 成本時，get、put 也是平均 O(1)，容量 c 使用 O(c) 空間。</p>
+<pre><code class="language-python">class Link:
+    def __init__(self, key=None, value=None):
+        self.key, self.value = key, value
+        self.prev = self.next = None
+
+class LRUCache:
+    def __init__(self, capacity):
+        if capacity &lt; 0:
+            raise ValueError(&quot;capacity 必須大於或等於 0&quot;)
+        self.capacity, self.nodes = capacity, {}
+        self.head, self.tail = Link(), Link()
+        self.head.next, self.tail.prev = self.tail, self.head
+
+    def _detach(self, node):
+        node.prev.next = node.next
+        node.next.prev = node.prev
+
+    def _append(self, node):
+        last = self.tail.prev
+        last.next = node
+        node.prev, node.next = last, self.tail
+        self.tail.prev = node
+
+    def get(self, key):
+        if key not in self.nodes:
+            return None
+        node = self.nodes[key]
+        self._detach(node)
+        self._append(node)
+        return node.value
+
+    def put(self, key, value):
+        if key in self.nodes:
+            node = self.nodes[key]
+            node.value = value
+            self._detach(node)
+        else:
+            node = Link(key, value)
+            self.nodes[key] = node
+        self._append(node)
+        if len(self.nodes) &gt; self.capacity:
+            victim = self.head.next
+            self._detach(victim)
+            del self.nodes[victim.key]</code></pre>
+<div class="check-yourself"><p>容量 2，依序 put(A,1)、put(B,2)、put(A,9)、put(C,3)。留下哪些鍵？為什麼覆寫 A 時不應先淘汰？</p><details><summary>看推理</summary><p>留下 A、C，A 的值是 9。覆寫沿用原節點，原本的兩個名額仍是 A、B；把 A 移到最新端後，新加入 C 才使數量超過容量，這時淘汰 B。</p></details></div>
+<p>Design 類題目適合用一串操作檢查介面。把「空結構、重複更新、剛好滿、超出容量」接在同一個案例裡，常能直接看出狀態在哪一步走歪。</p>
+<p class="unit-sources">延伸閱讀：<a href="https://docs.python.org/3/library/collections.html#ordereddict-objects" target="_blank" rel="noopener">Python：OrderedDict 的重新排序與快取範例</a></p></section>
+<section class="lesson-unit" data-lesson="c21-doubly-linked"><h3 id="c21-doubly-linked" data-syllabus="Doubly-Linked List">把中間節點搬到新位置</h3><p class="lesson-question">串列目前是 A ⇄ B ⇄ C ⇄ D。已經拿到 B 與 D 的節點，要把 B 移到 D 後面。雙向連結讓 B 自己就能找到前驅 A，剪下時可直接把 A 與 C 接回。</p>
+<div class="topic-lab" data-model="list-splice"></div>
+<p>一次搬移包含兩段工作：原位置的左右鄰居互相接上，再把 node 塞進 anchor 與 anchor.next 之間。先保存新位置的 following，接線時就有固定的兩個端點。移到自己後面、或已經緊鄰 anchor 後面時，原順序就是答案。</p>
+<figure><svg role="img" aria-labelledby="c21-splice-figure-title" viewBox="0 0 720 200" xmlns="http://www.w3.org/2000/svg"><title id="c21-splice-figure-title">B 從 A 與 C 之間移到 D 後面</title><g fill="none" stroke="currentColor" stroke-width="2"><path d="M150 60H210 M300 60H360 M450 60H510 M150 145H210 M300 145H360 M450 145H510"/></g><g font-family="system-ui,sans-serif" font-size="20" fill="currentColor"><text x="10" y="66">原順序</text><text x="120" y="66">A</text><text x="265" y="66">B</text><text x="410" y="66">C</text><text x="555" y="66">D</text><text x="10" y="151">搬移後</text><text x="120" y="151">A</text><text x="265" y="151">C</text><text x="410" y="151">D</text><text x="555" y="151">B</text><text x="235" y="105" font-size="16">原位置接回 A ⇄ C；新位置接成 D ⇄ B ⇄ tail</text></g></svg><figcaption>節點 B 保持同一個身分，改變的是它前後的連結。A、C 接回後，原串列便能繼續走訪。</figcaption></figure>
+<pre><code class="language-python">def move_after(node, anchor):
+    if node is anchor or anchor.next is node:
+        return
+    node.prev.next = node.next
+    node.next.prev = node.prev
+    following = anchor.next
+    anchor.next = node
+    node.prev, node.next = anchor, following
+    following.prev = node</code></pre>
+<p>這段函式使用上一節的 Link 與兩個哨兵：node、anchor 都是同一條串列裡的資料節點。每個相鄰關係同時維持 <code>x.next.prev is x</code> 與 <code>x.prev.next is x</code>。已持有兩個節點時只改固定數量的指標，時間與額外空間都是 O(1)；按值搜尋節點則沿串列花 O(n)。</p>
+<table><caption>把 B 移到 D 後面的改線順序</caption><thead><tr><th scope="col">步驟</th><th scope="col">設定</th><th scope="col">效果</th></tr></thead><tbody><tr><td>剪下</td><td>A.next = C；C.prev = A</td><td>原位置接回</td></tr><tr><td>保存</td><td>following = D.next</td><td>保留尾端哨兵</td></tr><tr><td>接入</td><td>D.next = B；B.prev = D</td><td>接上左邊</td></tr><tr><td>完成</td><td>B.next = tail；tail.prev = B</td><td>接上右邊</td></tr></tbody></table>
+<div class="check-yourself"><p>把 C 移到 A 後面，結果應是 A、C、B、D。若只改 A.next=C，哪兩個方向會出錯？</p><details><summary>看推理</summary><p>B.prev 仍指向 A，C.prev 仍指向 B；向前與向後走會得到不同順序。剪下時先讓 B 與 D 接回，再在 A 與 B 之間插入 C，兩邊都要更新。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://docs.python.org/3/library/collections.html#ordereddict-objects" target="_blank" rel="noopener">Python：高頻重新排序操作的容器選擇</a></p></section>
+<section class="lesson-unit" data-lesson="c21-iterator"><h3 id="c21-iterator" data-syllabus="Iterator lazy iteration">只取下一筆，空列也能跨過</h3><p class="lesson-question">資料分批送來：<code>[[1,2], [], [3], []]</code>。呼叫一次 next 就拿一個整數，讀到空列時繼續找下一列。若讀者只要第一筆，就讓後面的批次留在來源裡。</p>
+<div class="topic-lab" data-model="lazy-iterator"></div>
+<p>迭代器保存「外層讀到哪一列」與「這一列讀到哪一格」。目前的列耗盡後，向外層取得下一列，換一個內層迭代器。外層也耗盡時，StopIteration 自然往呼叫端傳出去；Python 的 for 會用這個訊號結束。</p>
+<pre><code class="language-python">class FlatIterator:
+    def __init__(self, rows):
+        self.rows = iter(rows)
+        self.current = iter(())
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        while True:
+            try:
+                return next(self.current)
+            except StopIteration:
+                self.current = iter(next(self.rows))</code></pre>
+<table><caption>逐次呼叫 next 的狀態</caption><thead><tr><th scope="col">呼叫</th><th scope="col">內部跨過的列</th><th scope="col">回傳</th></tr></thead><tbody><tr><td>1</td><td>進入 [1,2]</td><td>1</td></tr><tr><td>2</td><td>留在同一列</td><td>2</td></tr><tr><td>3</td><td>[] 耗盡，進入 [3]</td><td>3</td></tr><tr><td>4</td><td>末尾 [] 耗盡，外層耗盡</td><td>StopIteration</td></tr></tbody></table>
+<p>n 個元素分在 r 列，完整走完花 O(n+r) 時間，迭代器本身額外空間 O(1)。單次 next 可能連續跨過許多空列；把這些跳過成本分攤到整趟走訪，每列只被處理一次。這裡的 rows 也可以是逐批產生資料的 generator。</p>
+<p><code>__iter__</code> 回傳自己，讓同一個物件可放進 for；<code>__next__</code> 每次推進一次。耗盡後再次呼叫 next，仍然回報 StopIteration。兩個讀者需要獨立進度時，各自建立一個迭代器。</p>
+<div class="check-yourself"><p>把 rows 改成 [[], [], [7]]，第一次 next 需要跨幾列？初始化時該不該先攤平成 [7]？</p><details><summary>看推理</summary><p>第一次會跳過前兩個空列，進入第三列後回傳 7。保留外層與內層迭代器即可逐步消耗來源；初始化不必讀完整批資料。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://docs.python.org/3/library/stdtypes.html#iterator-types" target="_blank" rel="noopener">Python：Iterator Types 與 StopIteration 協定</a></p></section>
+<section class="lesson-unit" data-lesson="c21-data-stream"><h3 id="c21-data-stream" data-syllabus="Data Stream median two heaps">每來一筆，都能報出目前中位數</h3><p class="lesson-question">延遲值依序抵達 8、2、5、10。每次都要回答中位數：8、5、5、6.5。資料持續新增，適合維持左右兩半，讓中間兩個值隨時位於堆頂。</p>
+<div class="topic-lab" data-model="stream-median"></div>
+<p>low 保存較小的一半，用負值把 heapq 的最小堆積變成最大堆積；high 保存較大的一半。low 的大小與 high 相同，或多一筆。low 最大值也要小於或等於 high 最小值，因此兩個堆頂就是分界。</p>
+<p>新增 x 時先放 low，再把 low 最大值移到 high。若 high 因而比較大，就把它的最小值送回 low。這個固定流程一起維持數值順序與大小平衡。奇數筆讀 low 堆頂；偶數筆取兩個堆頂平均。</p>
+<pre><code class="language-python">import heapq
+
+class MedianStream:
+    def __init__(self):
+        self.low, self.high = [], []
+
+    def add(self, value):
+        heapq.heappush(self.low, -value)
+        heapq.heappush(self.high, -heapq.heappop(self.low))
+        if len(self.high) &gt; len(self.low):
+            heapq.heappush(self.low, -heapq.heappop(self.high))
+
+    def median(self):
+        if not self.low:
+            raise ValueError(&quot;加入至少一筆資料後再讀取中位數&quot;)
+        if len(self.low) &gt; len(self.high):
+            return -self.low[0]
+        return (-self.low[0] + self.high[0]) / 2</code></pre>
+<table><caption>兩半內容以數值順序展示；實作內部使用堆積</caption><thead><tr><th scope="col">新增</th><th scope="col">較小半 low</th><th scope="col">較大半 high</th><th scope="col">中位數</th></tr></thead><tbody><tr><td>8</td><td>8</td><td>空</td><td>8</td></tr><tr><td>2</td><td>2</td><td>8</td><td>(2+8)/2 = 5</td></tr><tr><td>5</td><td>2、5</td><td>8</td><td>5</td></tr><tr><td>10</td><td>2、5</td><td>8、10</td><td>(5+8)/2 = 6.5</td></tr></tbody></table>
+<p>每筆資料最多做固定次數的堆積操作，新增 O(log n)，讀中位數 O(1)，已接收的 n 筆資料使用 O(n) 空間。負數與重複值沿用同一套順序。若需求改成「只看最近 100 筆」，還需要處理過期資料；這一節保留自串流開始以來的所有值。</p>
+<div class="check-yourself"><p>再加入 -4、5，中位數各是多少？從左右大小與堆頂直接推。</p><details><summary>看推理</summary><p>加入 -4 後排序為 [-4,2,5,8,10]，中位數為 5；再加入 5 後為 [-4,2,5,5,8,10]，兩個中央值都是 5，中位數仍為 5。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://docs.python.org/3/library/heapq.html" target="_blank" rel="noopener">Python：heapq 的堆積不變量與 push／pop</a></p></section></article>

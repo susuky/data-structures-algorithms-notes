@@ -5,106 +5,82 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; connect-src 'none'; base-uri 'none'; form-action 'none'">
-<meta name="description" content="繁體中文資料結構與演算法教材：13 章圖解、Python 範例、練習與 6 個互動實驗。">
+<meta name="description" content="資料結構與演算法互動教材：以逐步情境、可調參數與完整推導學習。">
 <title>資料結構與演算法</title>
 <style>{{STYLES}}</style>
 </head>
-<body class="no-js">
+<body class="no-js" data-course="dsa">
 <a class="skip-link" href="#main-content">跳至主要內容</a>
 <header class="topbar">
-  <button class="icon-button menu-button js-only" id="menu-button" type="button" aria-label="開啟章節目錄" aria-controls="sidebar" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-  <a class="brand" href="#course-home" aria-label="資料結構與演算法首頁"><svg class="brand-symbol" viewBox="0 0 28 28" aria-hidden="true"><rect x="2" y="9" width="7" height="10" rx="1"/><rect x="11" y="4" width="7" height="15" rx="1"/><rect x="20" y="9" width="6" height="10" rx="1"/><path d="M5 23h18"/></svg><span>資料結構與演算法</span></a>
-  <div class="topbar-actions js-only">
-    <button class="search-trigger" id="search-button" type="button" aria-label="搜尋全書"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><span>搜尋全書</span><kbd aria-hidden="true">/</kbd></button>
-    <label class="theme-control"><span class="sr-only">顯示主題</span><select id="theme-select"><option value="system">跟隨系統</option><option value="light">淺色</option><option value="dark">深色</option></select></label>
-    <button class="icon-button" id="print-button" type="button" aria-label="列印全書與答案" title="列印全書與答案"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8V3h10v5M7 17H4V8h16v9h-3M7 14h10v7H7zM16 11h1"/></svg></button>
-  </div>
+<button class="icon-button menu-button js-only" id="menu-button" type="button" aria-label="開啟章節目錄" aria-controls="sidebar" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+<a class="brand" href="#course-home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 7-6 8m6-8 6 8"/><circle cx="12" cy="5.5" r="2.4"/><circle cx="5.5" cy="17" r="2.4"/><circle cx="18.5" cy="17" r="2.4"/></svg><span>資料結構與演算法</span></a>
+<nav class="course-switch" aria-label="切換課程"><a href="../system-design-notes/index.html">系統設計</a><a href="../data-structures-algorithms-notes/index.html" aria-current="page">演算法</a></nav>
+<div class="topbar-actions js-only">
+<button class="search-trigger" id="search-button" type="button" aria-label="搜尋全書"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><span>搜尋</span><kbd>/</kbd></button>
+<label class="theme-control" for="theme-select"><span class="sr-only">顯示主題</span><select id="theme-select" aria-label="顯示主題"><option value="system">跟隨系統</option><option value="light">淺色</option><option value="dark">深色</option></select></label>
+<button class="icon-button" id="print-button" type="button" aria-label="列印全書與答案" title="列印全書與答案"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8V3h10v5M7 17H4V8h16v9h-3M7 14h10v7H7zM16 11h1"/></svg></button></div>
 </header>
-<button class="drawer-backdrop" id="drawer-backdrop" tabindex="-1" aria-label="關閉章節目錄" hidden></button>
+<button class="drawer-backdrop" id="drawer-backdrop" type="button" tabindex="-1" aria-label="關閉章節目錄" hidden></button>
 <aside class="sidebar" id="sidebar" aria-label="教材導覽">
-  <div class="sidebar-top"><span>目錄</span><button class="icon-button sidebar-close js-only" id="sidebar-close" type="button" aria-label="關閉章節目錄"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
-  <a class="home-link" href="#course-home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8M5 9v12h5v-7h4v7h5V9"/></svg>章節目錄</a>
-  <a class="home-link" href="#algorithm-labs"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v7l-6 9a1 1 0 0 0 1 2h14a1 1 0 0 0 1-2l-6-9V3M7 15h10"/></svg>互動實驗</a>
-  <nav aria-label="全部章節"><ol class="chapter-nav">{{SIDEBAR}}</ol></nav>
-  <div class="sidebar-bottom js-only">
-    <div class="course-progress-label"><span>完成章節</span><strong id="course-progress-text">0 / 13</strong></div>
-    <progress id="course-progress" max="13" value="0" aria-label="已完成章節">0 / 13</progress>
-    <button class="text-button" id="show-bookmarks" type="button">書籤 <span id="bookmark-count">0</span></button>
-    <button class="text-button sidebar-print" id="sidebar-print" type="button">列印全書與答案</button>
-    <p class="local-note" id="storage-note" role="status" hidden></p>
-  </div>
+<div class="sidebar-top"><span>目錄</span><button class="icon-button sidebar-close js-only" id="sidebar-close" type="button" aria-label="關閉章節目錄"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+<div class="sidebar-links"><a class="home-link" href="#course-home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16M15 5v16"/></svg>課程地圖</a><a class="home-link" href="#topic-categories"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>73 類別</a><a class="home-link" href="#algorithm-labs"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v7l-6 9a1 1 0 0 0 1 2h14a1 1 0 0 0 1-2l-6-9V3M7 15h10"/></svg>互動實驗</a><a class="home-link mobile-course-link" href="../system-design-notes/index.html">系統設計</a></div>
+<nav aria-label="全部章節"><ol class="chapter-nav">{{SIDEBAR}}</ol></nav>
+<div class="sidebar-bottom js-only"><div class="course-progress-label"><span>已完成章節</span><strong id="course-progress-text">0 / {{CHAPTER_COUNT}}</strong></div><progress id="course-progress" max="{{CHAPTER_COUNT}}" value="0" aria-label="已完成章節">0 / {{CHAPTER_COUNT}}</progress><div class="sidebar-actions"><button class="text-button" id="show-bookmarks" type="button">書籤 <span id="bookmark-count">0</span></button><button class="text-button sidebar-print" id="sidebar-print" type="button">列印</button></div><p class="local-note" id="storage-note" hidden></p></div>
 </aside>
 <div class="reading-line js-only" aria-hidden="true"><span id="reading-progress"></span></div>
 <main id="main-content" tabindex="-1">
-<noscript><div class="notice">JavaScript 已停用。可用下方目錄閱讀全部章節；互動實驗、書籤與進度需啟用 JavaScript。</div></noscript>
+<noscript><div class="notice">完整教材在下方，使用目錄跳到章節。</div></noscript>
 <section id="course-home" class="home-page" aria-labelledby="course-title" tabindex="-1">
-  <div class="home-hero">
-    <div class="hero-copy">
-      <h1 id="course-title">資料結構<br>與演算法</h1>
-      <nav class="hero-actions" id="learning-path" aria-label="閱讀起點">
-        <a class="button primary" href="#chapter-01">從第 01 章開始 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6"/></svg></a>
-        <a class="button secondary" href="#chapter-12">面試工具箱</a>
-        <a class="button secondary" href="#algorithm-labs">互動實驗</a>
-      </nav>
-      <a class="resume-link js-only" id="resume-link" href="#chapter-01" hidden>繼續閱讀</a>
-    </div>
-    <div class="hero-diagram">
-      <svg viewBox="0 0 430 280" role="img" aria-labelledby="hero-title hero-desc">
-        <title id="hero-title">雙指標尋找總和 11</title>
-        <desc id="hero-desc">有序陣列 2、4、7、9、12。兩端 2 加 12 得 14，大於目標 11，將 right 從 12 移到 9，得到答案 2 加 9 等於 11。</desc>
-        <g class="diagram-type"><text x="48" y="24" class="hero-pointer">left</text><text x="324" y="24" class="hero-pointer">right</text></g>
-        <g class="diagram-box"><rect x="48" y="38" width="58" height="52" rx="3"/><rect x="116" y="38" width="58" height="52" rx="3"/><rect x="184" y="38" width="58" height="52" rx="3"/><rect x="252" y="38" width="58" height="52" rx="3"/><rect x="320" y="38" width="58" height="52" rx="3"/></g>
-        <g class="diagram-type" text-anchor="middle"><text x="77" y="71">2</text><text x="145" y="71">4</text><text x="213" y="71">7</text><text x="281" y="71">9</text><text x="349" y="71">12</text><text x="213" y="121">2 + 12 = 14 &gt; 11</text></g>
-        <path d="M349 134v17h-68m7-6-7 6 7 6" fill="none" stroke="currentColor" stroke-width="1.5"/>
-        <g class="diagram-box"><rect x="48" y="172" width="58" height="52" rx="3"/><rect x="116" y="172" width="58" height="52" rx="3"/><rect x="184" y="172" width="58" height="52" rx="3"/><rect x="252" y="172" width="58" height="52" rx="3"/><rect x="320" y="172" width="58" height="52" rx="3" stroke-dasharray="3 4" opacity=".45"/></g>
-        <g class="diagram-type" text-anchor="middle"><text x="77" y="205">2</text><text x="145" y="205">4</text><text x="213" y="205">7</text><text x="281" y="205">9</text><text x="349" y="205" opacity=".45">12</text><text x="213" y="261" class="hero-answer">2 + 9 = 11</text></g>
-      </svg>
-    </div>
+<div class="course-overview" data-home-overview>
+  <div><h1 id="course-title">資料結構與演算法</h1><div class="course-facts"><span>{{CHAPTER_COUNT}} 章</span><a href="#topic-categories">{{CATEGORY_COUNT}} 類別</a><span>{{TOPIC_COUNT}} 個單元</span></div></div>
+  <div class="hero-actions">
+    <a class="button hero-read" href="#chapter-01">閱讀原理 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6"/></svg></a>
+    <a class="button primary hero-labs js-only" href="#algorithm-labs">互動實驗 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7z"/></svg></a>
+    <a class="resume-link js-only" id="resume-link" href="#chapter-01" hidden>繼續上次閱讀</a>
   </div>
-  <section class="home-section chapter-directory" aria-labelledby="map-title">
-    <div class="section-heading"><h2 id="map-title">章節目錄</h2></div>
-    <ol class="chapter-map">{{CHAPTER_MAP}}</ol>
-  </section>
-  <section class="home-section" id="algorithm-labs" aria-labelledby="labs-title">
-    <div class="section-heading"><h2 id="labs-title">互動實驗</h2></div>
-    <nav class="lab-index" aria-label="演算法實驗"><a href="#lab-two-pointers">01 雙指標</a><a href="#lab-sliding-window">02 滑動視窗</a><a href="#lab-binary-search">03 二分搜尋</a><a href="#lab-bfs">04 廣度優先</a><a href="#lab-backtracking">05 回溯</a><a href="#lab-dp">06 動態規劃</a></nav>
+</div>
+<section class="home-section" id="algorithm-labs" aria-labelledby="labs-title">
+  <h2 id="labs-title" class="sr-only">互動實驗</h2>
+  <div data-exploration-studio class="gallery-studio js-only"></div>
+  <section class="gallery-lessons" aria-labelledby="gallery-lessons-title">
+    <h3 id="gallery-lessons-title">逐步推演</h3>
+    <nav class="lab-index" aria-label="資料結構與演算法實驗">
+      <a href="#lab-two-pointers">雙指標</a><a href="#lab-sliding-window">滑動視窗</a><a href="#lab-binary-search">二分搜尋</a><a href="#lab-bfs">BFS</a><a href="#lab-backtracking">回溯</a><a href="#lab-dp">動態規劃</a>
+    </nav>
     {{LABS}}
   </section>
-  <section class="home-section editorial-note" aria-labelledby="editorial-title">
-    <h2 id="editorial-title">閱讀與範例</h2>
-    <p>程式使用 Python 3.10 以上版本。各節附題目連結與延伸閱讀；輸入、輸出與範例列在正文中。</p>
-    <p>互動實驗以小型輸入顯示每一步；複雜度分析計算演算法本身的成本。書籤與進度保存在目前瀏覽器，清除網站資料也會移除紀錄。</p>
-  </section>
+</section>
+<section class="home-section chapter-directory" data-home-overview aria-labelledby="directory-title"><div class="section-heading"><h2 id="directory-title">課程地圖</h2></div><ol class="chapter-map">{{CHAPTER_MAP}}</ol></section>
+<section class="home-section" id="topic-categories" aria-labelledby="categories-title">
+<div class="section-heading"><h2 id="categories-title">73 類別</h2></div>
+<search class="js-only"><form id="category-filter-form" class="category-search" aria-label="篩選類別"><label for="category-search">找類別<input id="category-search" name="query" type="search" placeholder="Segment Tree、線段樹…" spellcheck="false" autocapitalize="none"></label><label for="category-group-filter">範圍<select id="category-group-filter" name="group"><option value="">全部類別</option></select></label></form></search>
+<p id="category-count" class="category-count js-only" role="status" aria-live="polite">{{CATEGORY_COUNT}} / {{CATEGORY_COUNT}} 類</p>
+<div class="category-directory">{{CATEGORIES}}</div><p id="category-empty" class="category-empty js-only" hidden>沒有符合的類別，試試英文名稱或較短的關鍵字。</p></section>
+
+<section class="home-section editorial-note" data-home-overview aria-labelledby="editorial-title"><h2 id="editorial-title">來源與下載</h2><p>各單元附原始文件與課程來源。<a href="https://github.com/susuky/data-structures-algorithms-notes">原始碼</a> · <a href="data-structures-algorithms-source.zip">下載教材</a></p></section>
 </section>
 <div class="reader" id="reader">
-  <div class="reader-tools js-only">
-    <a href="#course-home" class="back-to-map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m6-6-6 6 6 6"/></svg>章節目錄</a>
-    <span class="reader-position" id="reader-position"></span>
-    <div class="reader-tool-buttons">
-      <button class="small-button" id="bookmark-button" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span>加入書籤</span></button>
-      <button class="small-button" id="complete-button" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><span>標記完成</span></button>
-    </div>
-  </div>
-  <details class="topic-toc js-only" id="topic-toc"><summary>本章小節 <span id="topic-count"></span></summary><nav aria-label="本章小節"><ol id="topic-list"></ol></nav></details>
-  <div id="chapters">{{CHAPTERS}}</div>
-  <nav class="chapter-pagination js-only" aria-label="章節導覽"><a id="prev-chapter" href="#course-home"><span>回到首頁</span><strong>章節目錄</strong></a><a id="next-chapter" href="#chapter-02"><span>下一章</span><strong>02 陣列與字串</strong></a></nav>
+<div class="reader-tools js-only"><div class="reader-location"><a href="#course-home" class="back-to-map">課程</a><span class="reader-position" id="reader-position"></span><span id="reader-context"></span></div><div class="reader-tool-buttons"><div class="reading-view" role="group" aria-label="閱讀方式"><button type="button" data-reading-view="unit" aria-pressed="true">單元</button><button type="button" data-reading-view="chapter" aria-pressed="false">全章</button></div><button class="small-button" id="bookmark-button" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span>加入書籤</span></button><button class="small-button" id="complete-button" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><span>完成本章</span></button></div></div>
+<details class="topic-toc js-only" id="topic-toc"><summary>本章單元 <span id="topic-count"></span></summary><nav aria-label="本章小節"><ol id="topic-list"></ol></nav></details>
+<nav class="unit-steps js-only" id="unit-steps" aria-label="本章單元進度"></nav>
+<div id="chapters">{{CHAPTERS}}</div>
+<nav class="chapter-pagination js-only" aria-label="單元導覽"><a id="prev-chapter" href="#course-home"><span>上一節</span><strong>課程地圖</strong></a><div class="unit-position" id="unit-position"></div><a id="next-chapter" href="#chapter-02"><span>下一節</span><strong>繼續學習</strong></a></nav>
 </div>
-<footer class="site-footer"><a href="#course-home">章節目錄</a><a href="https://github.com/susuky/data-structures-algorithms-notes">GitHub</a></footer>
+<footer class="site-footer"><span>資料結構與演算法</span><a href="#course-home">課程地圖</a></footer>
 </main>
-<dialog class="search-dialog" id="search-dialog" aria-labelledby="search-title">
-  <div class="search-header"><h2 id="search-title">搜尋全書</h2><button class="icon-button" id="close-search" type="button" aria-label="關閉搜尋"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
-  <div class="search-field"><label class="sr-only" for="search-input">輸入關鍵字</label><input id="search-input" type="search" placeholder="概念、程式或英文名詞" autocomplete="off"><kbd aria-hidden="true">Esc</kbd></div>
-  <p class="search-status" id="search-status" role="status" aria-live="polite"></p>
-  <ol class="search-results" id="search-results"></ol>
-</dialog>
-<dialog class="bookmark-dialog" id="bookmark-dialog" aria-labelledby="bookmark-title">
-  <div class="search-header"><h2 id="bookmark-title">書籤</h2><button class="icon-button" id="close-bookmarks" type="button" aria-label="關閉書籤"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
-  <p class="empty-bookmarks" id="empty-bookmarks">還沒有書籤。閱讀時可按「加入書籤」。</p>
-  <ol class="bookmark-list" id="bookmark-list"></ol>
-</dialog>
-<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<dialog class="search-dialog" id="search-dialog" aria-labelledby="search-title"><div class="search-header"><h2 id="search-title">搜尋</h2><button class="icon-button" id="close-search" type="button" aria-label="關閉搜尋"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div class="search-field"><label class="sr-only" for="search-input">搜尋關鍵字</label><input id="search-input" type="search" placeholder="二分搜尋、heap、滑動視窗…" autocomplete="off"><kbd>Esc</kbd></div><p class="search-status" id="search-status" role="status" aria-live="polite"></p><ol class="search-results" id="search-results"></ol></dialog>
+<dialog class="bookmark-dialog" id="bookmark-dialog" aria-labelledby="bookmark-title"><div class="search-header"><h2 id="bookmark-title">書籤</h2><button class="icon-button" id="close-bookmarks" type="button" aria-label="關閉書籤"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><p class="empty-bookmarks" id="empty-bookmarks">尚無書籤</p><ol class="bookmark-list" id="bookmark-list"></ol></dialog>
+<div id="toast" role="status" hidden></div>
 <script id="course-meta" type="application/json">{{CHAPTER_META}}</script>
+
 <script>{{LABS_JS}}</script>
+
+<script id="category-meta" type="application/json">{{CATEGORY_META}}</script>
+<script>{{MODEL_JS}}</script>
+<script>{{TOPIC_LABS_JS}}</script>
+<script>{{CATEGORY_JS}}</script>
+<script>{{EXPLORATION_STUDIO_JS}}</script>
+<script>{{READER_JS}}</script>
 <script>{{APP_JS}}</script>
 </body>
 </html>

@@ -21,9 +21,12 @@ def fixture(root):
     root.mkdir(parents=True, exist_ok=True)
     (root / 'chapters').mkdir(exist_ok=True)
     shutil.copytree(ROOT / 'source', root / 'source', dirs_exist_ok=True)
-    for i in range(1, 14):
+    for i in range(1, len(builder.CHAPTERS) + 1):
         number = f'{i:02}'
         (root / 'chapters' / f'{number}.html').write_text(f'''<article id="chapter-{number}" data-title="測試章 {number}"><h2>第 {number} 章測試</h2><p>這只是測試資料，不是正式教材。</p><h3 id="c{number}-intro">測試概念 binary search {number}</h3><p>不變量與邊界是解題的重要工具。</p><figure><svg viewBox="0 0 600 220" role="img" aria-labelledby="test-svg-{number}"><title id="test-svg-{number}">測試用圖</title><rect x="20" y="30" width="560" height="160" fill="#edf5f2"/><text x="70" y="115" fill="#183d33">狀態 → 不變量 → 正確性</text></svg></figure><h3 id="c{number}-exercise">測試練習</h3><details><summary>參考解答</summary><p id="c{number}-answer">這是供搜尋與列印測試的答案。</p><pre><code class="language-python">assert 1 + 1 == 2</code></pre></details><table><tr><th>變數</th><th>值</th></tr><tr><td>left</td><td>0</td></tr></table></article>''', encoding='utf-8')
+    for part in (root / 'source').glob('categories-*.json'):
+        part.write_text('[]', encoding='utf-8')
+    (root / 'source' / 'category-order.json').write_text('[]', encoding='utf-8')
     return root
 
 
@@ -36,8 +39,8 @@ class BuildTests(unittest.TestCase):
     def test_build_is_standalone_and_deterministic(self):
         info = builder.build(self.root)
         output = (self.root / 'index.html').read_text(encoding='utf-8')
-        self.assertEqual(info['chapters'], 13)
-        self.assertEqual(info['topics'], 26)
+        self.assertEqual(info['chapters'], len(builder.CHAPTERS))
+        self.assertEqual(info['topics'], 2 * len(builder.CHAPTERS))
         self.assertEqual(output.count('data-lab="'), 6)
         self.assertNotIn('<script src=', output)
         self.assertNotIn('<link rel="stylesheet"', output)
@@ -72,19 +75,25 @@ class BuildTests(unittest.TestCase):
 
 
 class CodeBlocks(HTMLParser):
-    def __init__(self):
+    def __init__(self, python_only=False):
         super().__init__()
         self.current = None
         self.blocks = []
+        self.python_only = python_only
+        self.is_python = False
     def handle_starttag(self, tag, attrs):
         if tag == 'pre':
             self.current = []
+            self.is_python = False
+        if tag == 'code' and self.current is not None:
+            self.is_python = 'language-python' in dict(attrs).get('class', '').split()
     def handle_data(self, data):
         if self.current is not None:
             self.current.append(data)
     def handle_endtag(self, tag):
         if tag == 'pre' and self.current is not None:
-            self.blocks.append(''.join(self.current))
+            if not self.python_only or self.is_python:
+                self.blocks.append(''.join(self.current))
             self.current = None
 
 
@@ -105,7 +114,7 @@ class ChapterExamplesTests(unittest.TestCase):
 
     def test_displayed_python_matches_executable_examples(self):
         for chapter in sorted((ROOT / 'chapters').glob('*.html')):
-            parser = CodeBlocks()
+            parser = CodeBlocks(python_only=True)
             parser.feed(chapter.read_text(encoding='utf-8'))
             examples = ast.parse((ROOT / 'tests' / f'examples_{chapter.stem}.py').read_text(encoding='utf-8'))
             definitions = {node.name: ast.dump(node) for node in examples.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))}

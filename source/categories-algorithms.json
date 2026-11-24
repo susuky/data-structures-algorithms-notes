@@ -1,0 +1,131 @@
+[
+  {
+    "name": "Sorting",
+    "label": "排序",
+    "group": "排序與分治",
+    "lesson": "c14-sorting",
+    "model": "insertion-sort"
+  },
+  {
+    "name": "Merge Sort",
+    "label": "合併排序",
+    "group": "排序與分治",
+    "lesson": "c14-merge-sort",
+    "model": "merge-sort"
+  },
+  {
+    "name": "Divide and Conquer",
+    "label": "分治",
+    "group": "排序與分治",
+    "lesson": "c14-divide-conquer",
+    "model": "inversion-count"
+  },
+  {
+    "name": "Counting Sort",
+    "label": "計數排序",
+    "group": "排序與分治",
+    "lesson": "c14-counting-sort",
+    "model": "counting-sort"
+  },
+  {
+    "name": "Bucket Sort",
+    "label": "桶排序",
+    "group": "排序與分治",
+    "lesson": "c14-bucket-sort",
+    "model": "bucket-sort"
+  },
+  {
+    "name": "Radix Sort",
+    "label": "基數排序",
+    "group": "排序與分治",
+    "lesson": "c14-radix-sort",
+    "model": "radix-sort"
+  },
+  {
+    "name": "Quickselect",
+    "label": "快速選取",
+    "group": "排序與分治",
+    "lesson": "c14-quickselect",
+    "model": "quickselect"
+  },
+  {
+    "name": "Math",
+    "label": "數學",
+    "group": "數學與計數",
+    "lesson": "c15-math",
+    "model": "factorial-zeroes"
+  },
+  {
+    "name": "Number Theory",
+    "label": "數論",
+    "group": "數學與計數",
+    "lesson": "c15-number-theory",
+    "model": "euclid-gcd",
+    "related": [
+      "c15-prime-sieve"
+    ]
+  },
+  {
+    "name": "Combinatorics",
+    "label": "組合數學",
+    "group": "數學與計數",
+    "lesson": "c15-combinatorics",
+    "model": "pascal-combinations"
+  },
+  {
+    "name": "String Matching",
+    "label": "字串比對",
+    "group": "字串索引",
+    "lesson": "c16-string-matching",
+    "model": "kmp-matching"
+  },
+  {
+    "name": "Hash Function",
+    "label": "雜湊函數",
+    "group": "字串索引",
+    "lesson": "c16-hash-function",
+    "model": "polynomial-hash"
+  },
+  {
+    "name": "Rolling Hash",
+    "label": "滾動雜湊",
+    "group": "字串索引",
+    "lesson": "c16-rolling-hash",
+    "model": "rolling-hash"
+  },
+  {
+    "name": "Suffix Array",
+    "label": "後綴陣列",
+    "group": "字串索引",
+    "lesson": "c16-suffix-array",
+    "model": "suffix-array"
+  },
+  {
+    "name": "Randomized",
+    "label": "隨機化",
+    "group": "隨機與取樣",
+    "lesson": "c17-randomized",
+    "model": "fisher-yates"
+  },
+  {
+    "name": "Probability and Statistics",
+    "label": "機率與統計",
+    "group": "隨機與取樣",
+    "lesson": "c17-probability",
+    "model": "weighted-moments"
+  },
+  {
+    "name": "Reservoir Sampling",
+    "label": "水塘取樣",
+    "group": "隨機與取樣",
+    "lesson": "c17-reservoir",
+    "model": "reservoir-sampling"
+  },
+  {
+    "name": "Rejection Sampling",
+    "label": "拒絕取樣",
+    "group": "隨機與取樣",
+    "lesson": "c17-rejection",
+    "model": "rejection-sampling"
+  }
+]

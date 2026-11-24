@@ -1,26 +1,30 @@
-<article id="chapter-08" data-title="貪心：選擇、交換證明與反例">
-<h2>08　貪心：先證明，再相信直覺</h2>
-<p>貪心演算法（Greedy Algorithm）具備一種極具吸引力的簡潔性：在演算法執行的每一步，它都只根據當前資訊做出「看似最划算」的局部最優決策，並且一經選定便絕不回頭。然而，這種「目光短淺」的策略往往也是演算法設計中最容易讓人踩坑的溫床。直覺會告訴你「挑便宜的準沒錯」，但現實卻常常是前期的自私選擇直接封死了全域最優解的道路。要讓貪心演算法成立，核心絕不在於寫出短短幾行的迴圈，而在於<mark>嚴格證明局部最優決策必然能導向全域最優解</mark>。本章將帶你從目標定義、交換論證（Exchange Argument）、前鋒可達性到反例實驗室，徹底鍛鍊看穿問題本質的演算法直覺。</p>
-<div class="callout"><strong>核心學習目標：</strong>學會用極小反例推翻不可靠的直覺；掌握「交換論證」與「領先性質（Greedy Stays Ahead）」的證明架構；精準分辨「選取最多數量」、「累積最大總價值」與「最小化總等待時間」屬於完全不同性質的決策問題。</div>
+<article id="chapter-08" data-title="把眼前的選擇證明成完整解">
+<h2>08 · 把眼前的選擇證明成完整解</h2>
+<p class="chapter-intro">貪婪法每一步只看當下做一個決定。它能省下大量搜尋，全靠你能證明這個決定不會把最佳解排除在外。</p>
+<section class="lesson-unit" data-lesson="c08-choice">
+<h3 id="c08-choice">把選擇規則說成一句可檢查的話</h3>
+<p class="lesson-question">排活動時可以按開始最早、時間最短，或結束最早選第一場。這些規則看起來都有道理，答案由目標與限制決定。本章目標是「安排最多場互不重疊活動」。</p>
 
-<h3 id="c08-choice">1. 一個貪心主張，必須回答四件事</h3>
-<p>當你想提出一個貪心策略時，切勿直接動手寫程式，請先冷靜回答以下四個核心問題：</p>
-<ol><li><strong>目標函式是什麼？</strong>我們是要最大化選取的活動數量、最小化資源消耗總成本，還是單純判斷終點是否可達？目標不同，排序鍵值就會天差地別。</li><li><strong>可行性約束為何？</strong>做出這一步選擇之後，剩餘的系統狀態是否依然滿足容量上限、時間先後順序或不重疊等硬性限制？</li><li><strong>安全選擇性質（Greedy-Choice Property）：</strong><mark>是否至少存在一個全域最優解，正好包含了當下的這個貪心選擇</mark>？這是貪心之所以能成立的關鍵基石。</li><li><strong>最優子結構（Optimal Substructure）：</strong>做出當前選擇並將其固定後，剩餘的子問題是否能在相同的規則下繼續遞迴求解，且子問題的最優解與當前選擇結合後依然是最優的？</li></ol>
-<p>很多工程師容易把「最優子結構」與「貪心法」畫上等號，但這其實是常見的觀念混淆。動態規劃（DP）同樣具備最優子結構，然而動態規劃在每一步必須同時保留多個可能的分支並比較整體收益；貪心法則是更為苛刻的特例——它要求我們能明確證明「只要無腦鎖定當下某個特定選擇，就絕對不會比其他任何選擇差」，從而完全不必探索其他分支。如果你只能憑感覺說「我覺得先選最小的比較合適」，那它充其量只能算是一個未經證實的猜想。</p>
+<p>一個可推導的貪婪規則會說清楚：現在可選誰、按照什麼指標選、選了之後剩下哪個子問題，以及最優解如何接受這個選擇。</p>
+<p>最常用的證法是交換：從某個最優解出發，把它的一項換成貪婪選擇，並證明總目標不變差。交換後，剩下部分仍是同類問題，就能反覆使用。</p>
+<div class="check-yourself"><p>活動每場收入不同，原本「最多場」的評分方式要改哪裡？</p><details><summary>看推理</summary><p>目標改成收入加總。場數相同的兩種安排可能價值差很多，要重新推導狀態與選擇規則。</p></details></div>
+</section>
+<section class="lesson-unit" data-lesson="c08-intervals">
+<h3 id="c08-intervals">最早結束，留下最多後續時間</h3>
+<p class="lesson-question">一間工作室有多個活動申請，使用半開區間 [start,end)。挑最早結束的相容活動，接著再選開始時間不早於上一場結束的下一場。</p>
+<section class="algorithm-lab" id="inline-interval-greedy" data-lab="interval-greedy"><div class="lab-heading"><h4 id="inline-interval-greedy-title">活動怎麼排最多</h4></div><form class="lab-inputs js-only" novalidate><label for="inline-interval-greedy-intervals">活動區間（1–10 組）<input id="inline-interval-greedy-intervals" name="intervals" type="text" value="1-4, 3-5, 0-6, 5-7, 8-9, 5-9" autocomplete="off" spellcheck="false"></label><button type="submit">套用輸入</button><p class="lab-error" role="status" hidden></p></form><div class="lab-controls js-only"><button type="button" data-action="prev" aria-label="活動怎麼排最多上一步">上一步</button><button type="button" data-action="next" aria-label="活動怎麼排最多下一步">下一步 →</button><button type="button" data-action="reset" aria-label="活動怎麼排最多重設">重設</button><span class="lab-step" aria-live="off"></span></div><div class="lab-stage js-only"><div class="lab-visual"></div><dl class="lab-vars"></dl><p class="lab-explanation" role="status" aria-live="polite" aria-atomic="true"></p></div><div class="lab-principle"><strong>每一步維持的關係</strong><p>每次挑相容且最早結束的活動，保留後面的可用時間。</p><small>排序 O(n log n)，掃描 O(n)；半開區間允許端點相接。</small></div><noscript><p>本單元的圖解、步驟與 Python 實作可直接閱讀。</p></noscript></section>
+<p>互動把活動依結束時間排列。接受一場後，觀察它的結束時間如何成為下一次的門檻；端點相接的活動可以連排。長活動即使最早開始，也可能擋掉好幾個短活動。</p>
+<p>每個區間需要 start&lt;end，輸出最多場的其中一組。排序 O(n log n)，之後只掃一次 O(n)，保存排序與答案的空間 O(n)。</p>
+<figure><svg role="img" aria-label="最早結束的選擇保留最多後續時間" viewBox="0 0 780 320" xmlns="http://www.w3.org/2000/svg"><title>最早結束的選擇保留最多後續時間</title><rect width="780" height="320" rx="16" fill="#f3f7fc"/><g font-family="system-ui, sans-serif" font-size="18" fill="#132b45"><text x="25" y="32" font-weight="bold">同一間工作室：選最多場，允許前一場結束即開始</text><line x1="75" y1="68" x2="715" y2="68" stroke="#5b6b80" stroke-width="2"/><text x="70" y="59">0</text><text x="140" y="59">1</text><text x="210" y="59">2</text><text x="280" y="59">3</text><text x="350" y="59">4</text><text x="420" y="59">5</text><text x="490" y="59">6</text><text x="560" y="59">7</text><text x="630" y="59">8</text><text x="700" y="59">9</text><text x="15" y="117">A</text><rect x="75" y="97" width="280" height="26" rx="5" fill="#bed1e4"/><text x="363" y="117">略過</text><text x="15" y="152">B</text><rect x="145" y="132" width="140" height="26" rx="5" fill="#256e61"/><text x="293" y="152">選</text><text x="15" y="187">C</text><rect x="285" y="167" width="140" height="26" rx="5" fill="#256e61"/><text x="433" y="187">選</text><text x="15" y="222">D</text><rect x="355" y="202" width="210" height="26" rx="5" fill="#bed1e4"/><text x="573" y="222">略過</text><text x="15" y="257">E</text><rect x="425" y="237" width="210" height="26" rx="5" fill="#256e61"/><text x="643" y="257">選</text><text x="15" y="292">F</text><rect x="565" y="272" width="140" height="26" rx="5" fill="#bed1e4"/><text x="713" y="292">略過</text></g></svg><figcaption>依結束時間挑選 B、C、E；每次留下最早空出的時間，下一場的開始時間只需與最後一次結束比較。</figcaption></figure>
+<div class="check-yourself"><p>[0,10)、[1,3)、[3,5)、[5,7)，最多能安排幾場？</p><details><summary>看推理</summary><p>選後面三場，共 3 場。先選最早開始的 [0,10) 只會留下 1 場。</p></details></div>
+<p class="unit-sources">原始文件與題目：<a href="https://leetcode.com/problems/non-overlapping-intervals/" target="_blank" rel="noopener">LeetCode 435 · Non-overlapping Intervals</a> · <a href="https://www.cs.princeton.edu/~wayne/kleinberg-tardos/" target="_blank" rel="noopener">Princeton · Greedy Algorithms I 講義</a></p>
+</section>
+<section class="lesson-unit" data-lesson="c08-proof">
+<h3 id="c08-proof">把最優解的第一場換掉</h3>
+<p class="lesson-question">設 g 是全體最早結束的活動，某個最優解第一場選 o。因為 g.end≤o.end，把 o 換成 g 後，原本排在 o 後面的每場活動仍然排得下。</p>
 
-<h3 id="c08-intervals">2. 工作室排程：最多不重疊區間</h3>
-<p class="problem-source"><a href="https://leetcode.com/problems/non-overlapping-intervals/">LeetCode 435 · Non-overlapping Intervals</a> 求最少刪除數。本節求最多能留下的活動清單；若 n 場中留下 m 場，最少刪除數就是 n−m。</p>
-<p>情境如下：某間熱門會議室收到許多租借申請，每個活動皆以半開區間 $[start, end)$ 表示，且滿足 $start < end$。兩場活動若有重疊就不能同時舉行，但邊界相接（例如 $[1, 3)$ 與 $[3, 5)$）是允許的。所有活動的租金與重要性完全相同，我們的目標是「排入最多場互不衝突的活動」。面對這個問題，標準的貪心策略是：<mark>將所有活動依照結束時間由早到晚排序，並由左至右掃描；只要當前活動的開始時間不早於前一場的結束時間，就毫不猶豫地接納它</mark>。</p>
-<figure class="diagram"><svg role="img" aria-label="最早結束的選擇保留最多後續時間" viewBox="0 0 780 320" xmlns="http://www.w3.org/2000/svg"><title>最早結束的選擇保留最多後續時間</title><rect width="780" height="320" rx="16" fill="#f3f7fc"/><g font-family="system-ui, sans-serif" font-size="18" fill="#132b45"><text x="25" y="32" font-weight="bold">同一間工作室：選最多場，允許前一場結束即開始</text><line x1="75" y1="68" x2="715" y2="68" stroke="#5b6b80" stroke-width="2"/><text x="70" y="59">0</text><text x="140" y="59">1</text><text x="210" y="59">2</text><text x="280" y="59">3</text><text x="350" y="59">4</text><text x="420" y="59">5</text><text x="490" y="59">6</text><text x="560" y="59">7</text><text x="630" y="59">8</text><text x="700" y="59">9</text><text x="15" y="117">A</text><rect x="75" y="97" width="280" height="26" rx="5" fill="#bed1e4"/><text x="363" y="117">略過</text><text x="15" y="152">B</text><rect x="145" y="132" width="140" height="26" rx="5" fill="#256e61"/><text x="293" y="152">選</text><text x="15" y="187">C</text><rect x="285" y="167" width="140" height="26" rx="5" fill="#256e61"/><text x="433" y="187">選</text><text x="15" y="222">D</text><rect x="355" y="202" width="210" height="26" rx="5" fill="#bed1e4"/><text x="573" y="222">略過</text><text x="15" y="257">E</text><rect x="425" y="237" width="210" height="26" rx="5" fill="#256e61"/><text x="643" y="257">選</text><text x="15" y="292">F</text><rect x="565" y="272" width="140" height="26" rx="5" fill="#bed1e4"/><text x="713" y="292">略過</text></g></svg><figcaption>最早結束的選擇保留最多後續時間</figcaption></figure>
-<p>為什麼貪心規則是挑「最早結束」而不是「最早開始」？試想反例：一個從 0 開始、長度為 10 的長活動 $[0, 10)$，會蠻橫地佔滿整天，直接封殺掉 $[1, 2)$、$[2, 3)$、$[3, 4)$ 三個短活動。那為什麼不是挑「耗時最短」的活動？再看反例：給定 $[0, 3)$、$[2, 4)$、$[3, 6)$ 三個區間，其中最短的是長度為 2 的 $[2, 4)$，但若選了它，兩側的活動都被干擾，最終只能排入 1 場；反之若不選它，兩側長度為 3 的活動可以完美並存，合計 2 場！挑選「最早結束」的根本哲學在於：<mark>越早結束，留給後續活動的時間裕度就越大</mark>。這是一種純粹為了極大化後續可行解空間的精妙策略。</p>
-
-<h3 id="c08-proof">3. 交換論證：把某個最優解改成貪心開頭</h3>
-<p>如何從數學上嚴謹證明「挑最早結束」永遠不會讓你吃虧？我們使用經典的「交換論證（Exchange Argument）」：</p>
-<p>設所有候選活動中結束時間最早的活動為 $g$。假設存在一個能夠安排最多場次的全域最優解 $O$，其按時間排序的第一場活動記為 $o$。現在我們把 $O$ 中的第一場活動 $o$ 拿掉，直接換成我們的貪心選擇 $g$：</p>
-<ol><li><strong>可行性維持：</strong>因為 $g$ 是所有活動中結束時間最早的，所以 $g.end \le o.end$。既然原最優解中 $o$ 後方的所有活動都不早於 $o.end$ 開始，那麼它們自然也絕不會早於更早結束的 $g.end$ 開始。換言之，把 $o$ 換成 $g$ 之後，後面的所有活動完全不需要任何更動，依然百分之百互不衝突！</li><li><strong>品質不降：</strong>替換前後，排入的活動總場數完全沒有變少。因此，修改後的解依然是一個合法的全域最優解。</li></ol>
-<p>這項推導得出了一個無可撼動的結論：<mark>在所有可能的最優解中，至少存在一個是以貪心選擇 g 作為第一步的</mark>。既然最優解的世界裡本來就包含了 $g$，那我們在第一步大膽固定選擇 $g$，就絕對不會錯失找到最優解的機會！隨後，我們把與 $g$ 衝突的活動全部剃除，剩餘的活動依然構成一個完全同構的子問題。透過數學歸納法，整個貪心演算法的正確性便水到渠成。</p>
-<figure class="diagram"><svg role="img" aria-label="交換第一場，最優場數保持不變" viewBox="0 0 780 290" xmlns="http://www.w3.org/2000/svg"><title>交換第一場，最優場數保持不變</title><rect width="780" height="290" rx="16" fill="#f3f7fc"/><g font-family="system-ui, sans-serif" font-size="18" fill="#132b45"><text x="25" y="34" font-weight="bold">交換第一場：更早結束，後面的工作仍放得下</text><text x="25" y="85">某個最優解</text><rect x="165" y="62" width="240" height="38" fill="#d98745" rx="5"/><text x="184" y="88" fill="white">o：結束於 5</text><rect x="455" y="62" width="115" height="38" fill="#59799c" rx="5"/><rect x="610" y="62" width="120" height="38" fill="#59799c" rx="5"/><text x="25" y="168">交換後</text><rect x="165" y="145" width="140" height="38" fill="#256e61" rx="5"/><text x="178" y="171" fill="white">g：結束於 3</text><rect x="455" y="145" width="115" height="38" fill="#59799c" rx="5"/><rect x="610" y="145" width="120" height="38" fill="#59799c" rx="5"/><line x1="305" y1="195" x2="455" y2="195" stroke="#256e61" stroke-width="3"/><text x="287" y="224">空間增加；後綴不用改</text><text x="25" y="261">關鍵前提：只比較場數，每場價值相同。</text></g></svg><figcaption>交換第一場，最優場數保持不變</figcaption></figure>
-<div class="callout"><strong>掃描不變量：</strong>在掃描過程中，<code>chosen</code> 清單中的所有活動互不重疊；<code>last_end</code> 忠實記錄已納入排程的最後結束時間；任何被跳過的活動，都確定與當前排程衝突，未來也絕不可能再被撿回。<mark class="mark-pitfall">請記住：迴圈不變量只能保證產生出來的排程「合法可行」，但要證明該排程「達到數量上限」，必須依賴交換論證的數學支撐</mark>。</div>
+<p>交換後場數相同，而且最優解已經採用貪婪的第一場。刪去與 g 衝突的活動，餘下問題與原題相同；重複這個交換理由，就得到整個貪婪序列的最優性。</p>
+<p>這個證明靠的是活動數量與結束時間。select_intervals 先按 (end,start) 排序，逐一接上 start≥last_end 的活動。</p>
 <pre><code class="language-python">def select_intervals(intervals):
     """選最多個互不重疊半開區間 [start, end)；要求 start < end。"""
     ordered = sorted(intervals, key=lambda x: (x[1], x[0]))
@@ -33,21 +37,26 @@
             chosen.append((start, end))
             last_end = end
     return chosen</code></pre>
-<p class="complexity">效能分析：排序耗費 $O(n \log n)$，隨後的單次線性掃描耗費 $O(n)$，整體時間複雜度為 $O(n \log n)$。在空間方面，<code>sorted()</code> 會產生新的排序清單，且 <code>chosen</code> 儲存了最終結果，額外空間複雜度為 $O(n)$。若業務場景只需要知道「最大活動場數」而不需要保留名單，雖然可以省去 <code>chosen</code>，但 Python 的 <code>sorted()</code> 依然會配置內部陣列，因此切勿隨意宣稱其為 $O(1)$ 空間。</p>
+<figure><svg role="img" aria-label="交換第一場，最優場數保持不變" viewBox="0 0 780 290" xmlns="http://www.w3.org/2000/svg"><title>交換第一場，最優場數保持不變</title><rect width="780" height="290" rx="16" fill="#f3f7fc"/><g font-family="system-ui, sans-serif" font-size="18" fill="#132b45"><text x="25" y="34" font-weight="bold">交換第一場：更早結束，後面的工作仍放得下</text><text x="25" y="85">某個最優解</text><rect x="165" y="62" width="240" height="38" fill="#d98745" rx="5"/><text x="184" y="88" fill="white">o：結束於 5</text><rect x="455" y="62" width="115" height="38" fill="#59799c" rx="5"/><rect x="610" y="62" width="120" height="38" fill="#59799c" rx="5"/><text x="25" y="168">交換後</text><rect x="165" y="145" width="140" height="38" fill="#256e61" rx="5"/><text x="178" y="171" fill="white">g：結束於 3</text><rect x="455" y="145" width="115" height="38" fill="#59799c" rx="5"/><rect x="610" y="145" width="120" height="38" fill="#59799c" rx="5"/><line x1="305" y1="195" x2="455" y2="195" stroke="#256e61" stroke-width="3"/><text x="287" y="224">空間增加；後綴不用改</text><text x="25" y="261">關鍵前提：只比較場數，每場價值相同。</text></g></svg><figcaption>將最優解的第一場 o 換成更早結束的 g，原本後續場次仍放得下；場數保持相同，於是第一步可以放心選 g。</figcaption></figure>
+<div class="check-yourself"><p>交換 g 與 o 時，哪一個不等式保證後面的活動仍可保留？</p><details><summary>看推理</summary><p>g.end≤o.end。任何原本能在 o 之後開始的活動，也能在 g 之後開始。</p></details></div>
+</section>
+<section class="lesson-unit" data-lesson="c08-example-intervals">
+<h3 id="c08-example-intervals">接得上就選，衝突就略過</h3>
+<p class="lesson-question">按結束時間讀活動，每一輪只問 start 是否至少為 last_end。接受後更新 last_end；略過時維持原值，讓下一個候選仍與最後一場已選活動比較。</p>
 
-<h3 id="c08-example-intervals">4. 逐步範例：接受、略過、邊界相接</h3>
-<div class="example"><p>給定輸入活動集合：A=(0,4)、B=(1,3)、C=(3,5)、D=(4,7)、E=(5,8)、F=(7,9)。依據結束時間遞增排序後，檢查序列為 B、A、C、D、E、F：</p>
-<table><thead><tr><th>檢查活動</th><th>原 last_end</th><th>判斷</th><th>已選</th></tr></thead><tbody>
+<p>例如已選 [1,4)，接著看到 [3,5) 會衝突，last_end 繼續是 4；再看到 [4,6) 則可以接受，更新成 6。</p>
+<p>排序中的候選與真正已選活動是兩份不同角色。狀態只需記住最後已選活動的結束時間與答案清單。</p>
+<p>以下沿用活動圖的 A–F：A=(0,4)、B=(1,3)、C=(3,5)、D=(4,7)、E=(5,8)、F=(7,9)。依結束時間檢查。</p>
+<table><thead><tr><th scope="col">檢查活動</th><th scope="col">原 last_end</th><th scope="col">判斷</th><th scope="col">已選</th></tr></thead><tbody>
 <tr><td>B=(1,3)</td><td>None</td><td>第一場，接受</td><td>B</td></tr><tr><td>A=(0,4)</td><td>3</td><td>0 &lt; 3，略過</td><td>B</td></tr><tr><td>C=(3,5)</td><td>3</td><td>3 ≥ 3，接受</td><td>B、C</td></tr><tr><td>D=(4,7)</td><td>5</td><td>4 &lt; 5，略過</td><td>B、C</td></tr><tr><td>E=(5,8)</td><td>5</td><td>5 ≥ 5，接受</td><td>B、C、E</td></tr><tr><td>F=(7,9)</td><td>8</td><td>7 &lt; 8，略過</td><td>B、C、E</td></tr></tbody></table>
-<p>最終挑選出 [B, C, E] 共 3 場活動。值得注意的是，[B, C, F] 同樣也是合法的 3 場最優解。在演算法測試中，若題目只詢問最大數量，兩者皆為正確解答；本程式在結束時間相同時進一步依開始時間排序，只是為了確保輸出具備確定性，並不影響最大數量的本質。</p></div>
+<div class="check-yourself"><p>略過 [3,5) 後，若把 last_end 改成 5，會漏掉什麼？</p><details><summary>看推理</summary><p>會誤判 [4,6) 不相容。真正已選活動在 4 結束，這一場原本排得進去。</p></details></div>
+</section>
+<section class="lesson-unit" data-lesson="c08-waiting">
+<h3 id="c08-waiting">總等待時間，短工作先做</h3>
+<p class="lesson-question">所有工作在時間 0 都可開始，只有一台機器、工作不拆開，目標是總等待時間最少。相鄰兩項工時 a、b，在共同等待時間 t 之後執行：a 先做時，它們總等待為 2t+a；b 先做則為 2t+b。</p>
 
-<h3 id="c08-waiting">5. 第二種貪心：短工作先做，總等待最少</h3>
-<p class="problem-source">輸入非負工時，回傳 (處理順序, 最小總等待時間)。空輸入回傳 ([],0)；[6,2,4] 回傳 ([2,4,6],8)。</p>
-<p>考慮單處理器排程問題：所有任務在時間 0 時均已就緒，每個任務一旦開始就必須一次執行完畢不可中斷（Non-preemptive），且每件任務每等待 1 個時間單位的痛苦成本完全相同。若給定各任務所需工時為 [6, 2, 4]，我們該如何安排執行先後順序，才能讓「所有任務在開始執行前的等待時間總和」達到最小？直覺告訴我們：工時越短的應該越先做（Shortest Job First, SJF）。我們同樣透過「相鄰逆序交換」來給予嚴密證明。</p>
-<figure class="diagram"><svg role="img" aria-label="相鄰逆序交換證明短工時優先" viewBox="0 0 780 285" xmlns="http://www.w3.org/2000/svg"><title>相鄰逆序交換證明短工時優先</title><rect width="780" height="285" rx="16" fill="#f3f7fc"/><g font-family="system-ui, sans-serif" font-size="18" fill="#132b45"><text x="25" y="34" font-weight="bold">相鄰逆序交換：長工時 a = 6，短工時 b = 2</text><text x="25" y="91">a → b</text><rect x="150" y="65" width="360" height="44" fill="#d98745"/><rect x="510" y="65" width="120" height="44" fill="#256e61"/><text x="290" y="94" fill="white">a = 6</text><text x="535" y="94" fill="white">b = 2</text><text x="25" y="169">b → a</text><rect x="150" y="143" width="120" height="44" fill="#256e61"/><rect x="270" y="143" width="360" height="44" fill="#d98745"/><text x="175" y="172" fill="white">b = 2</text><text x="410" y="172" fill="white">a = 6</text><text x="150" y="227">兩者等待總和：2t + 6 → 2t + 2，減少 4</text><text x="150" y="259">後續開始時間皆為 t + 8，因此不受影響。</text></g></svg><figcaption>相鄰逆序交換證明短工時優先</figcaption></figure>
-<p>假設在某個排程中，存在相鄰的兩件工作 $a$ 與 $b$ 滿足 $a > b$（也就是長工時被排在短工時前面）。假設這兩件工作在時間 $t$ 開始連續執行：</p>
-<ul><li><strong>若維持 a 先於 b：</strong>工作 $a$ 等待了 $t$，工作 $b$ 必須等待 $a$ 執行完畢，等待了 $t + a$。兩者合計等待時間為 $2t + a$。</li><li><strong>若交換順序讓 b 先於 a：</strong>工作 $b$ 等待了 $t$，工作 $a$ 等待了 $t + b$。兩者合計等待時間為 $2t + b$。</li></ul>
-<p>因為 $a > b$，交換後這兩件工作的總等待時間足足減少了 $a - b$！更關鍵的是：<mark class="mark-invariant">不論誰先誰後，兩件工作合計佔用的總時間都是 a + b，因此排在它們之後的所有其他工作的開始時間與等待時間，完全沒有受到任何影響</mark>。這意味著：只要排程中存在任何逆序對，將其對調必定能使整體成本單調下降。持續消除所有逆序對，最終必然收斂至純粹的工時升冪排列！</p>
+<p>a≤b 時，把 a 放前面不會增加這兩項的總等待；後面的工作開始時間仍是 t+a+b。反覆交換逆序相鄰項，就得到工時由短到長的順序。</p>
+<p>schedule_shortest_first 回傳排序後工時與總等待時間。每項的等待等於之前工時累計；排序 O(n log n)，掃描 O(n)，工時允許 0、拒絕負數。</p>
 <pre><code class="language-python">def schedule_shortest_first(durations):
     """所有工作在時間 0 可開始，回傳順序及總等待時間。"""
     order = sorted(durations)
@@ -58,12 +67,17 @@
         total_wait += elapsed
         elapsed += duration
     return order, total_wait</code></pre>
-<div class="example"><p><strong>逐步範例：</strong>針對工時 [6, 2, 4]，升冪排列為 [2, 4, 6]：</p><table><thead><tr><th>工時</th><th>開始前 elapsed</th><th>累加後 total_wait</th><th>完成後 elapsed</th></tr></thead><tbody><tr><td>2</td><td>0</td><td>0</td><td>2</td></tr><tr><td>4</td><td>2</td><td>2</td><td>6</td></tr><tr><td>6</td><td>6</td><td>8</td><td>12</td></tr></tbody></table><p>按短工時優先排程，總等待時間僅為 0 + 2 + 6 = 8；若按原本順序 [6, 2, 4]，總等待時間則高達 0 + 6 + 8 = 14。請特別體會：機器處理完全部工作的總時間始終都是 12，這套演算法改善的是「排隊群眾的總委屈時間」，而不是機器的下班時間。</p></div>
-<p class="complexity">時間複雜度由排序主導，為 $O(n \log n)$；線性掃描耗時 $O(n)$，額外空間為 $O(n)$。若輸入含有負工時，程式將引發 <code>ValueError</code>。但請務必留意邊界前提：如果工作具備不同的到達時間（Release Time）或是不同的緊急權重（Weight），相鄰交換的式子將會改寫，無法再直接生搬硬套純工時排序。</p>
+<figure><svg role="img" aria-label="相鄰逆序交換證明短工時優先" viewBox="0 0 780 285" xmlns="http://www.w3.org/2000/svg"><title>相鄰逆序交換證明短工時優先</title><rect width="780" height="285" rx="16" fill="#f3f7fc"/><g font-family="system-ui, sans-serif" font-size="18" fill="#132b45"><text x="25" y="34" font-weight="bold">相鄰逆序交換：長工時 a = 6，短工時 b = 2</text><text x="25" y="91">a → b</text><rect x="150" y="65" width="360" height="44" fill="#d98745"/><rect x="510" y="65" width="120" height="44" fill="#256e61"/><text x="290" y="94" fill="white">a = 6</text><text x="535" y="94" fill="white">b = 2</text><text x="25" y="169">b → a</text><rect x="150" y="143" width="120" height="44" fill="#256e61"/><rect x="270" y="143" width="360" height="44" fill="#d98745"/><text x="175" y="172" fill="white">b = 2</text><text x="410" y="172" fill="white">a = 6</text><text x="150" y="227">兩者等待總和：2t + 6 → 2t + 2，減少 4</text><text x="150" y="259">後續開始時間皆為 t + 8，因此不受影響。</text></g></svg><figcaption>把相鄰的 6、2 換成 2、6，兩者總等待時間減少 4；後續工作的開始時間仍是 t + 8，交換只帶來這一項改善。</figcaption></figure>
+<p>工時 [6,2,4] 排成 [2,4,6] 後，總等待是 0 + 2 + 6 = 8。</p>
+<table><thead><tr><th scope="col">工時</th><th scope="col">開始前 elapsed</th><th scope="col">累加後 total_wait</th><th scope="col">完成後 elapsed</th></tr></thead><tbody><tr><td>2</td><td>0</td><td>0</td><td>2</td></tr><tr><td>4</td><td>2</td><td>2</td><td>6</td></tr><tr><td>6</td><td>6</td><td>8</td><td>12</td></tr></tbody></table>
+<div class="check-yourself"><p>工時 [3,1,2] 改成 [1,2,3]，總等待各是多少？</p><details><summary>看推理</summary><p>原順序等待是 0+3+4=7；短工作先做為 0+1+3=4。</p></details></div>
+</section>
+<section class="lesson-unit" data-lesson="c08-frontier">
+<h3 id="c08-frontier">把所有可達位置縮成最遠邊界</h3>
+<p class="lesson-question">jumps[i] 表示從 i 最多往右走幾格。維護 farthest，代表目前已處理位置能到達的最遠索引。只要 i≤farthest，就能從位置 i 繼續更新 <code>max(farthest,i+jumps[i])</code>。</p>
 
-<h3 id="c08-frontier">6. 用可達範圍決定能否繼續前進</h3>
-<p class="problem-source"><a href="https://leetcode.com/problems/jump-game/">LeetCode 55 · Jump Game</a>：由開頭能否到最後一格。本節另定義空序列回傳 True。</p>
-<p>這是一類不需要排序、直接在線性掃描中透過維持「前鋒境界（Frontier）」來實現貪心決策的經典問題。陣列中每個位置 <code>jumps[i]</code> 代表在此處最多能往右跳躍的步數。我們不需要枚舉所有可能的跳躍路徑，只需要在向右走訪時，動態維護一個指標 <code>farthest</code>，代表當前「所能觸及的最遠極限座標」。當走到座標 <code>i</code> 時，若發現 <mark class="mark-pitfall">i > farthest</mark>，代表我們竟然走到了連之前所有跳躍都碰觸不到的死胡同，此時便可斷定永遠不可能抵達終點。</p>
+<p>若遇到 i&gt;farthest，前面所有能出發的位置都接不上它，搜尋便停下。若 farthest 已達最後一格，就知道存在路徑。</p>
+<p>這裡只問能否抵達，空陣列視為完成，跳躍距離為非負。每個位置看一次，時間 O(n)、額外空間 O(1)。若題目改成回傳路徑或最少跳數，狀態需要增加對應資訊。</p>
 <pre><code class="language-python">def can_reach_end(jumps):
     """jumps[i] 是由 i 往右最多前進的步數；空陣列視為可完成。"""
     if any(jump < 0 for jump in jumps):
@@ -76,23 +90,32 @@
         if farthest >= len(jumps) - 1:
             return True
     return True</code></pre>
-<p>這段程式背後的嚴格不變量是：在準備檢查索引 <code>i</code> 之前，<mark class="mark-invariant">從座標 0 到 farthest 之間的所有整數座標，全都是確定可達的連續區間</mark>。這項性質之所以能成立，是因為規則允許我們自由選擇跳躍「1 到 jumps[i]」的任意步數。如果今天規則改為「必須嚴格跳剛好 jumps[i] 步」，那麼可達的位置就會支離破碎成不連續的孤立點，單一的 <code>farthest</code> 邊界貪心將徹底失效，必須轉向 BFS 或圖走訪。此演算法僅需 $O(n)$ 時間與極致的 $O(1)$ 額外空間。</p>
+<div class="check-yourself"><p>[2,0,0,1] 會在哪裡發現接不上？</p><details><summary>看推理</summary><p>前面最遠只能到索引 2，走到 i=3 時 i>farthest，回傳 False。</p></details></div>
+<p class="unit-sources">原始文件與題目：<a href="https://leetcode.com/problems/jump-game/" target="_blank" rel="noopener">LeetCode 55 · Jump Game</a></p>
+</section>
+<section class="lesson-unit" data-lesson="c08-counterexamples">
+<h3 id="c08-counterexamples">換了目標，拿最小例子重試</h3>
+<p class="lesson-question">活動若有收入，[0,2) 收入 2、[2,4) 收入 2、[0,4) 收入 10，最多場會選前兩個，最大收入則選第三個。原本交換第一場的證明會損失收入，因此要改成帶權區間排程。</p>
 
-<h3 id="c08-counterexamples">7. 反例實驗室：別把成功規則帶到不同目標</h3>
-<p class="problem-source">加權區間可練習 <a href="https://leetcode.com/problems/maximum-profit-in-job-scheduling/">LeetCode 1235 · Maximum Profit in Job Scheduling</a>；不限次硬幣可練習 <a href="https://leetcode.com/problems/coin-change/">LeetCode 322 · Coin Change</a>。</p>
-<p>在學習貪心演算法的過程中，看清「什麼時候不能用貪心」往往比「背誦貪心模板」更具價值。以下是四個極其經典的直覺陷阱：</p>
-<ul><li><strong>加權區間排程（Weighted Interval Scheduling）：</strong>若活動帶有價值，例如活動 A=[0,2) 價值 2，活動 B=[2,4) 價值 2，而活動 C=[0,4) 價值 9。若繼續照「最早結束」貪心選取，我們會選到 A 與 B（總價值 4），但最佳解其實是選 C（總價值 9）！交換論證在此失效，因為交換第一場不再保證總收益不降，必須轉用動態規劃。</li><li><strong>任意幣值的零錢兌換：</strong>在日常生活中，先挑面額最大的硬幣往往是對的（如 50、10、5、1 元）；但若面額設定為 {1, 4, 6} 且目標為 8 元：貪心策略會先選 6 元，隨後只能補兩枚 1 元，共需 3 枚；但最優解其實是選兩枚 4 元（只需 2 枚）。這證明了貪心策略高度依賴幣值系統的特殊代數性質（Matroid），不可任意套用。</li><li><strong>0/1 背包問題：</strong>背包耐重 4，物品分別為 (重 3, 值 5)、(重 2, 值 3)、(重 2, 值 3)。若依單位價值密度貪心，第一件密度 1.67 最高，選了之後背包剩重 1 啥也裝不下，總價值僅 5；而最佳選擇是捨棄第一件，選後兩件（總重 4，總價值 6）。分數背包可貪心，整數 0/1 背包絕不可貪心！</li><li><strong>忽略邊界測試：</strong>長度為 0 的空輸入、完全重複的區間、起迄點相等、負座標時間等，都是生產環境中容易引發崩潰的邊界。座標值可以為負，但區間長度與工時絕不可為負，兩者概念必須嚴格劃清界線。</li></ul>
+<p>找最少硬幣時，面額 [1,3,4]、總額 6，先選最大面額會得到 4+1+1 共三枚；3+3 只要兩枚。後面動態規劃會直接比較各種最後一枚的選擇。</p>
+<p>反例把失效的原因縮小到可以手算的尺寸。得到反例後，沿著目標與狀態修正模型。</p>
+<div class="check-yourself"><p>活動改算收入後，原交換理由在哪一步改變？</p><details><summary>看推理</summary><p>把第一場換成更早結束的活動，可能同時把高收入換成低收入。後續可行性保留下來，但總收入已改變；需要把價值納入比較。</p></details></div>
+<p class="unit-sources">原始文件與題目：<a href="https://leetcode.com/problems/maximum-profit-in-job-scheduling/" target="_blank" rel="noopener">LeetCode 1235 · Maximum Profit in Job Scheduling</a> <a href="https://leetcode.com/problems/coin-change/" target="_blank" rel="noopener">LeetCode 322 · Coin Change</a></p>
+</section>
+<section class="lesson-unit" data-lesson="c08-practice">
+<h3 id="c08-practice">從一個交換，看見整體規則</h3>
+<p class="lesson-question">拿兩個相鄰工作 a、b 比較次序，寫出它們對總目標的貢獻；如果交換後後面部分完全相同，就只需比較這兩項。短工作先做的證明正是如此。</p>
 
-<h3 id="c08-practice">8. 練習：先寫理由，再寫程式</h3>
-<section class="exercise"><h4>練習一：最少刪幾場？</h4>
-<p>給定活動清單 [(0,2),(1,3),(2,4),(4,5)]，我們至少需要刪除幾場活動才能讓其餘活動互不重疊？請說明此問題與「挑選最多不重疊活動」之間的對偶關係。</p><details><summary>參考解答</summary><p>最少刪除場數等於「總場數減去最多可保留場數」。本題最多可保留 [(0,2),(2,4),(4,5)] 共 3 場，因此最少只需刪除 $4 - 3 = 1$ 場。其背後邏輯在於：每刪除一場活動就等於少保留一場，兩者互為補集。若能用貪心法在 $O(n \log n)$ 內算出最多保留 $m$ 場，最少刪除量就保證是 $n - m$。</p></details></section>
-<section class="exercise"><h4>練習二：帶權等待打破規則</h4>
-<p>假設任務 A 工時 1、每單位時間等待成本為 1；任務 B 工時 3、每單位時間等待成本高達 10。此時優先處理短工時任務 A 是否依然最優？</p><details><summary>參考解答</summary><p>不再最優。若先做 A 再做 B，A 等待 0，B 等待 1，加權等待為 $0 \times 1 + 1 \times 10 = 10$；反之若先做 B 再做 A，B 等待 0，A 等待 3，加權等待僅為 $0 \times 10 + 3 \times 1 = 3$！這說明在有權重的情況下，相鄰交換比較的是 $p_a \times w_b$ 與 $p_b \times w_a$。最佳的排序鍵值不再是純工時 $p$，而是「工時與權重之比」$p / w$ 升冪排序（Smith's Rule）。</p></details></section>
-<section class="exercise"><h4>練習三：可達邊界手算</h4>
-<p>請分別手算推演跳躍陣列 [2,1,0,1] 與 [2,2,0,1] 是否能成功抵達終點。為什麼我們不能只盯著陣列中最大的跳躍數看？</p><details><summary>參考解答</summary><p>在 [2,1,0,1] 中：$i=0$ 時最遠邊界更新為 2；$i=1$ 時邊界仍為 $1+1=2$；$i=2$ 時邊界仍為 $2+0=2$；走到 $i=3$ 時因 $3 > 2$ 斷裂失敗。而在 [2,2,0,1] 中：$i=1$ 時最遠邊界成功推展為 $1+2=3$，成功跨越 0 的陷阱抵達末端。如果單看最大跳躍數，例如 [0, 100]，即使後方數字再大，起點根本踩不過去，終究是空中樓閣。</p></details></section>
-<section class="exercise"><h4>練習四：排序之後一定能貪心嗎？</h4>
-<p>有開發者主張：「遇到最佳化問題，只要先把資料排好序，然後每次無腦挑最便宜的，就一定是最優解。」你會提出哪三點質疑？</p><details><summary>參考解答</summary><p>首先，必須追問「目標函式與限制條件到底是什麼」；其次，必須追問「先挑最便宜的是否會排除掉其他更高性價比的組合」（如背包問題）；最後，必須要求對方提出「交換論證」——能否在數學上證明將任意最優解的第一個選擇換成最便宜者，整體解品質絕不下降。若無法給出交換證明，排序後的貪心充其量只是賭博。</p></details></section>
+<p>區間排程則從最優解第一場交換成 g，確認後續仍可行。兩種證法分別處理「排序次序」與「保留哪些項目」。</p>
+<p>試著把約束增加一項：工作有不同到達時間、活動有收入、跳躍要付代價。每次都回到交換後的目標，看看原不等式是否還成立。</p>
+<div class="check-yourself"><p>短工作先做若加上工作尚未到達的限制，原推導哪一步需要重查？</p><details><summary>看推理</summary><p>原推導假設 a、b 在同一時間 t 都可開始。有不同到達時間時，交換可能造成空等，後續開始時間也可能改變。</p></details></div>
+</section>
+<section class="lesson-unit" data-lesson="c08-checklist">
+<h3 id="c08-checklist">讓規則與證明使用同一個目標</h3>
+<p class="lesson-question">選之前說清楚評分：最多場、最短等待、能否到達，還是總收入。接著把當前決策寫成具體條件，並指出保留哪些狀態給下一輪。</p>
 
-<h3 id="c08-checklist">9. 章末決策卡</h3>
-<p>當你遇到「每一步做一個單向選擇」的問題時，請依循以下標準作業流程：明確定義目標與限制 → 嘗試構造微型反例自我推翻 → 建構交換論證（證明任意最優解皆可無痛置換為貪心選擇）→ 確定剩餘子問題結構不變 → 實作排序與線性維護 → 妥善處理邊界與平手規則。若在交換過程中發現會犧牲整體價值或違反容量限制，請立刻踩剎車，果斷轉向動態規劃或搜尋回溯！</p>
+<p>若交換能維持可行性且目標不變差，就能把局部決策串成全局解。若小例子已經找到反例，就保留必要選擇，改用搜尋或動態規劃。</p>
+<p>實作時的平手、端點與空輸入，應與證明裡的條件一致。半開區間的接續判斷就是 start≥end。</p>
+<div class="check-yourself"><p>最快開始、最短時長、最早結束，哪個是本章活動數最大化的規則？</p><details><summary>看推理</summary><p>最早結束。它保留後續可用時間，交換證明能把任意最優解的第一場換成這個選擇。</p></details></div>
+</section>
 </article>

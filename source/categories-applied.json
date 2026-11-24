@@ -1,0 +1,100 @@
+[
+  {
+    "name": "Design",
+    "label": "資料結構設計",
+    "group": "設計與串流",
+    "lesson": "c21-design",
+    "model": "lru-cache"
+  },
+  {
+    "name": "Doubly-Linked List",
+    "label": "雙向鏈結串列",
+    "group": "設計與串流",
+    "lesson": "c21-doubly-linked",
+    "model": "list-splice"
+  },
+  {
+    "name": "Iterator",
+    "label": "迭代器",
+    "group": "設計與串流",
+    "lesson": "c21-iterator",
+    "model": "lazy-iterator"
+  },
+  {
+    "name": "Data Stream",
+    "label": "資料串流",
+    "group": "設計與串流",
+    "lesson": "c21-data-stream",
+    "model": "stream-median"
+  },
+  {
+    "name": "Game Theory",
+    "label": "賽局理論",
+    "group": "博弈與推理",
+    "lesson": "c22-game-theory",
+    "model": "stone-game"
+  },
+  {
+    "name": "Minimax",
+    "label": "極大極小搜尋",
+    "group": "博弈與推理",
+    "lesson": "c22-minimax",
+    "model": "minimax-tree"
+  },
+  {
+    "name": "Brainteaser",
+    "label": "推理與不變量",
+    "group": "博弈與推理",
+    "lesson": "c22-brainteaser",
+    "model": "parity-lights"
+  },
+  {
+    "name": "Database",
+    "label": "資料庫查詢",
+    "group": "查詢與協作",
+    "lesson": "c23-database",
+    "model": "sql-ranking"
+  },
+  {
+    "name": "Shell",
+    "label": "Shell 文字處理",
+    "group": "查詢與協作",
+    "lesson": "c23-shell",
+    "model": "shell-frequency"
+  },
+  {
+    "name": "Concurrency",
+    "label": "並行與同步",
+    "group": "查詢與協作",
+    "lesson": "c23-concurrency",
+    "model": "thread-interleaving"
+  },
+  {
+    "name": "Interactive",
+    "label": "互動問答題",
+    "group": "查詢與協作",
+    "lesson": "c23-interactive",
+    "model": "oracle-search"
+  },
+  {
+    "name": "Enumeration",
+    "label": "列舉",
+    "group": "列舉與模擬",
+    "lesson": "c24-enumeration",
+    "model": "triple-enumeration"
+  },
+  {
+    "name": "Meet in the Middle",
+    "label": "折半搜尋",
+    "group": "列舉與模擬",
+    "lesson": "c24-meet-in-middle",
+    "model": "subset-mitm"
+  },
+  {
+    "name": "Simulation",
+    "label": "模擬",
+    "group": "列舉與模擬",
+    "lesson": "c24-simulation",
+    "model": "fcfs-simulation"
+  }
+]

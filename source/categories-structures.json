@@ -1,0 +1,89 @@
+[
+  {
+    "name": "Segment Tree",
+    "label": "線段樹",
+    "group": "區間與有序結構",
+    "lesson": "c18-segment-tree",
+    "model": "segment-tree",
+    "related": []
+  },
+  {
+    "name": "Binary Indexed Tree",
+    "label": "Fenwick 樹",
+    "group": "區間與有序結構",
+    "lesson": "c18-fenwick",
+    "model": "fenwick-tree",
+    "related": [
+      "c18-compression"
+    ]
+  },
+  {
+    "name": "Ordered Set",
+    "label": "有序集合",
+    "group": "區間與有序結構",
+    "lesson": "c18-ordered-set",
+    "model": "ordered-set",
+    "related": []
+  },
+  {
+    "name": "Minimum Spanning Tree",
+    "label": "最小生成樹",
+    "group": "進階圖論",
+    "lesson": "c19-mst",
+    "model": "kruskal",
+    "related": []
+  },
+  {
+    "name": "Eulerian Circuit",
+    "label": "歐拉迴路",
+    "group": "進階圖論",
+    "lesson": "c19-euler",
+    "model": "euler-circuit",
+    "related": []
+  },
+  {
+    "name": "Strongly Connected Component",
+    "label": "強連通分量",
+    "group": "進階圖論",
+    "lesson": "c19-scc",
+    "model": "tarjan-scc",
+    "related": []
+  },
+  {
+    "name": "Biconnected Component",
+    "label": "雙連通分量",
+    "group": "進階圖論",
+    "lesson": "c19-biconnected",
+    "model": "biconnected",
+    "related": []
+  },
+  {
+    "name": "Shortest Path",
+    "label": "最短路徑",
+    "group": "進階圖論",
+    "lesson": "c19-bellman-ford",
+    "model": "bellman-ford",
+    "related": [
+      "c13-dijkstra",
+      "c19-zero-one-bfs"
+    ]
+  },
+  {
+    "name": "Geometry",
+    "label": "幾何",
+    "group": "幾何與掃描",
+    "lesson": "c20-convex-hull",
+    "model": "convex-hull",
+    "related": [
+      "c20-orientation"
+    ]
+  },
+  {
+    "name": "Sweep Line",
+    "label": "掃描線",
+    "group": "幾何與掃描",
+    "lesson": "c20-sweep-line",
+    "model": "sweep-line",
+    "related": []
+  }
+]

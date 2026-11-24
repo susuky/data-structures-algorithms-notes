@@ -1,0 +1,125 @@
+<article id="chapter-16" data-title="字串比對與索引">
+<h2>16 · 字串比對與索引</h2>
+<p class="chapter-intro">字串比對怕的就是每次失敗都退回原點重頭掃。KMP 把剛比對過的資訊留成前綴表，滾動雜湊讓視窗往右一格就能算出新指紋，後綴陣列則乾脆把所有尾巴排好讓查詢變二分。</p>
+<section class="lesson-unit" data-lesson="c16-string-matching">
+<h3 id="c16-string-matching">比對失敗後，已經相同的字可以留下多少？</h3>
+
+<p class="lesson-question">在長文字裡找出所有 <code>ababaca</code>。遇到失敗時，KMP 讓文字指標繼續向前，從已比對字串的相同字首與字尾找下一個起點。</p>
+<p><code>pi[i]</code> 是 pattern[0:i+1] 的最長真字首、且同時也是字尾的長度。「真字首」的長度嚴格小於整段。例如 <code>ababa</code> 的共同字首字尾是 <code>aba</code>，所以 pi[4]=3。若下一字元比對失敗，已匹配長度 j 改為 pi[j−1]，先沿用這 3 個字。</p>
+<figure><table><thead><tr><th scope="col">文字索引／字元</th><th scope="col">匹配長度變化</th><th scope="col">原因</th></tr></thead><tbody><tr><td>0…4：ababa</td><td>0→5</td><td>連續符合</td></tr><tr><td>5：b</td><td>5→3→4</td><td>回到 aba，再接 b</td></tr><tr><td>6：a</td><td>4→5</td><td>接成 ababa</td></tr><tr><td>7：c</td><td>5→6</td><td>符合 c</td></tr><tr><td>8：a</td><td>6→7</td><td>找到起點 2</td></tr></tbody></table><figcaption>在 abababaca 搜尋 ababaca。讀到索引 5 的 b 時，預期 c 失敗；回到長度 3 後，同一個 b 可以接上。</figcaption></figure>
+<p>建立 pi 本身也會沿失敗鏈回退。模式 ababaca 處理索引 5 的 c 時，先試已知的長度 3，預期 b；退到 pi[2]=1，預期仍是 b；再退到 pi[0]=0，c 與開頭 a 也不同，所以 pi[5]=0。同一個 c 留在原位，候選長度依序從 3→1→0。</p>
+<p>建立 pi 花 O(m)，掃描文字花 O(n)，總時間 O(n+m)、空間 O(m)，另計輸出。j 每次增加都伴隨一個新字元，回退次數受先前增加量限制。找到完整模式後也回到 pi[j−1]，所以重疊匹配會保留：在 aaaa 找 aa，可回傳 [0,1,2]。如果搜尋空字串，這個函式會回傳每個字元間隙 0…n。</p>
+<pre><code class="language-python">def prefix_function(pattern):
+    pi = [0] * len(pattern)
+    for i in range(1, len(pattern)):
+        j = pi[i - 1]
+        while j and pattern[i] != pattern[j]:
+            j = pi[j - 1]
+        if pattern[i] == pattern[j]:
+            j += 1
+        pi[i] = j
+    return pi
+
+def kmp_find_all(text, pattern):
+    if not pattern:
+        return list(range(len(text) + 1))
+    pi = prefix_function(pattern)
+    matches = []
+    j = 0
+    for i, char in enumerate(text):
+        while j and char != pattern[j]:
+            j = pi[j - 1]
+        if char == pattern[j]:
+            j += 1
+        if j == len(pattern):
+            matches.append(i - len(pattern) + 1)
+            j = pi[j - 1]
+    return matches</code></pre>
+<div class="topic-lab" data-model="kmp-matching"></div>
+<div class="check-yourself"><p>模式 aaa 的 pi 是多少？找到一次 aaa 之後，j 應回到幾？</p><details><summary>看推理</summary><p>pi=[0,1,2]，找到完整匹配後 j 回到 2，保留末尾的 aa；下一個 a 抵達就能再找到一次重疊匹配。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://algs4.cs.princeton.edu/53substring/" target="_blank" rel="noopener">Princeton．Substring Search</a></p>
+</section>
+<section class="lesson-unit" data-lesson="c16-hash-function">
+<h3 id="c16-hash-function">每個字元都參與計算，最後再找槽位</h3>
+
+<p class="lesson-question">要把字串鍵分散到雜湊表的槽位，可以把字元依序帶入 h=(h×base+字元值) mod modulus。base 讓同樣字母、不同順序得到不同的計算路徑。</p>
+<p>以 base=31、modulus=101 計算 cat，Unicode 碼點依序是 99、97、116。每加入一字，舊內容乘上 31，再加上新字。最後要放進大小 M 的表，可以使用 h%M 找槽位，再在槽位內比對原始鍵。</p>
+<figure><table><thead><tr><th scope="col">新字元</th><th scope="col">運算</th><th scope="col">h</th></tr></thead><tbody><tr><td>c</td><td>(0×31+99)%101</td><td>99</td></tr><tr><td>a</td><td>(99×31+97)%101</td><td>35</td></tr><tr><td>t</td><td>(35×31+116)%101</td><td>90</td></tr></tbody></table><figcaption>cat 的多項式可寫成 99×31²+97×31+116，每一步取餘數能維持相同結果。</figcaption></figure>
+<p>長度 m 的鍵需要 O(m) 時間、O(1) 工作空間，以固定大小整數算術計。modulus 個結果要容納任意多字串，碰撞會自然出現；查詢時沿著相同槽位尋找、再比較原始鍵，就能得到正確結果。教材用小 modulus 讓計算清楚，實際選參數時會依鍵的分布與表格大小安排。</p>
+<pre><code class="language-python">def polynomial_hash(text, base=257, modulus=1_000_000_007):
+    if base &lt; 1 or modulus &lt; 2:
+        raise ValueError(&#x27;base &gt;= 1 and modulus &gt;= 2 required&#x27;)
+    value = 0
+    for char in text:
+        value = (value * base + ord(char)) % modulus
+    return value</code></pre>
+<div class="topic-lab" data-model="polynomial-hash"></div>
+<div class="check-yourself"><p>base=1、modulus=7 時，ab 與 ba 的值是多少？這會讓哪一個步驟變重要？</p><details><summary>看推理</summary><p>兩者都是 (97+98)%7=6。同一槽位內的原始鍵比較會分辨 ab 與 ba；base=1 讓字元順序完全消失，字母排列相同的鍵會大量集中。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://algs4.cs.princeton.edu/34hash/" target="_blank" rel="noopener">Princeton．Hash Tables</a></p>
+</section>
+<section class="lesson-unit" data-lesson="c16-rolling-hash">
+<h3 id="c16-rolling-hash">視窗往右一格，扣掉最左字元再接上新字</h3>
+
+<p class="lesson-question">每個長度 m 的子字串都重算雜湊，需要 O(nm) 次字元處理。視窗只移動一格時，可以沿用中間 m−1 個字元。</p>
+<p>若 h 表示目前視窗，先扣掉左端字元的 <code>ord(left)×base^(m−1)</code>，接著整體乘 base，最後加上新右端字元並取餘數。前方扣除以模數正規化，讓 h 維持在 0…modulus−1。</p>
+<figure><table><thead><tr><th scope="col">視窗起點</th><th scope="col">視窗</th><th scope="col">雜湊</th><th scope="col">下一步</th></tr></thead><tbody><tr><td>0</td><td>aba</td><td>99</td><td>扣 a 的最高位，再加入 b</td></tr><tr><td>1</td><td>bab</td><td>20</td><td>扣 b 的最高位，再加入 c</td></tr><tr><td>2</td><td>abc</td><td>1</td><td>雜湊相同，逐字確認後回傳 2</td></tr></tbody></table><figcaption>base=31、modulus=101，在 ababc 搜尋 abc。目標雜湊為 1。</figcaption></figure>
+<p>下方 Rabin–Karp 在雜湊相等時比較原字串，精確回傳所有匹配起點。建立與滾動部分花 O(n+m)；若有 v 次雜湊相等，完整成本為 O(n+m+vm)，最壞 O(nm)。工作空間 O(m) 包含 Python 切片，另計答案；大量重複字串會增加確認工作。需要確定的 O(n+m) 比對時間時，可用前一節 KMP。</p>
+<pre><code class="language-python">def polynomial_hash(text, base=257, modulus=1_000_000_007):
+    if base &lt; 1 or modulus &lt; 2:
+        raise ValueError(&#x27;base &gt;= 1 and modulus &gt;= 2 required&#x27;)
+    value = 0
+    for char in text:
+        value = (value * base + ord(char)) % modulus
+    return value
+
+def rabin_karp(text, pattern, base=257, modulus=1_000_000_007):
+    if base &lt; 1 or modulus &lt; 2:
+        raise ValueError(&#x27;base &gt;= 1 and modulus &gt;= 2 required&#x27;)
+    n, m = len(text), len(pattern)
+    if m == 0:
+        return list(range(n + 1))
+    if m &gt; n:
+        return []
+    high = pow(base, m - 1, modulus)
+    target = polynomial_hash(pattern, base, modulus)
+    value = polynomial_hash(text[:m], base, modulus)
+    matches = []
+    for left in range(n - m + 1):
+        if value == target and text[left:left + m] == pattern:
+            matches.append(left)
+        if left + m &lt; n:
+            value = (value - ord(text[left]) * high) % modulus
+            value = (value * base + ord(text[left + m])) % modulus
+    return matches</code></pre>
+<div class="topic-lab" data-model="rolling-hash"></div>
+<div class="check-yourself"><p>模式長度是 1，最高位權重 base^(m−1) 變成多少？</p><details><summary>看推理</summary><p>變成 1。扣除唯一的舊字後，視窗的剩餘值為 0，再加入新字即可，更新公式沿用原式。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://algs4.cs.princeton.edu/53substring/" target="_blank" rel="noopener">Princeton．Substring Search</a></p>
+</section>
+<section class="lesson-unit" data-lesson="c16-suffix-array">
+<h3 id="c16-suffix-array">把所有後綴排好，共同字首就靠在一起</h3>
+
+<p class="lesson-question">banana 裡重複最長的片段是 ana。將每個起點的後綴依字典序排列，相近的後綴會相鄰，共同字首就容易比較。</p>
+<figure><table><thead><tr><th scope="col">排名</th><th scope="col">起點</th><th scope="col">後綴</th><th scope="col">與前一個的共同字首長度</th></tr></thead><tbody><tr><td>0</td><td>5</td><td>a</td><td>0</td></tr><tr><td>1</td><td>3</td><td>ana</td><td>1</td></tr><tr><td>2</td><td>1</td><td>anana</td><td>3</td></tr><tr><td>3</td><td>0</td><td>banana</td><td>0</td></tr><tr><td>4</td><td>4</td><td>na</td><td>0</td></tr><tr><td>5</td><td>2</td><td>nana</td><td>2</td></tr></tbody></table><figcaption>後綴陣列只保存起點。[5,3,1,0,4,2] 對應由小到大的後綴順序。</figcaption></figure>
+<p>直接建立每個後綴字串會複製 O(n²) 個字元。倍增法用 rank 表示長度 w 的片段排名，再以 <code>(rank[i], rank[i+w])</code> 排長度 2w 的片段。超過字尾的排名設為 −1，讓短字串排在相同字首的長字串前面。每輪把相同的 pair 壓成相同新排名，w 依序變成 1、2、4、8。</p>
+<p>這份實作用比較排序處理 pair，每輪 O(n log n)、共 O(log n) 輪，建置時間 O(n log² n)、額外空間 O(n)。排名全部不同時，後綴順序已確定，可提早停止。建好後能用二分搜尋找模式的後綴區間，基本比較版每次查詢 O(m log n)；相鄰後綴的最長共同字首長度可再用 LCP 陣列加速相關問題。</p>
+<pre><code class="language-python">def suffix_array(text):
+    n = len(text)
+    suffixes = list(range(n))
+    rank = [ord(char) for char in text]
+    width = 1
+    while width &lt; n:
+        key = lambda i: (rank[i], rank[i + width] if i + width &lt; n else -1)
+        suffixes.sort(key=key)
+        updated = [0] * n
+        for j in range(1, n):
+            updated[suffixes[j]] = updated[suffixes[j - 1]] + (key(suffixes[j]) != key(suffixes[j - 1]))
+        rank = updated
+        if rank[suffixes[-1]] == n - 1:
+            break
+        width *= 2
+    return suffixes</code></pre>
+<div class="topic-lab" data-model="suffix-array"></div>
+<div class="check-yourself"><p>為什麼只檢查排序後相鄰的後綴，就能找到最長重複片段？</p><details><summary>看推理</summary><p>所有以同一個片段開頭的後綴會形成連續區塊。只要該片段出現兩次，這個區塊至少有一對相鄰後綴；它們的共同字首至少包含這段片段。</p></details></div>
+<p class="unit-sources">延伸閱讀：<a href="https://algs4.cs.princeton.edu/63suffix/" target="_blank" rel="noopener">Princeton．Suffix Arrays</a></p>
+</section>
+</article>
